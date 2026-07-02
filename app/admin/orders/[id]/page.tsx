@@ -99,9 +99,9 @@ export default function OrderDetailPage() {
         {/* Actions panel */}
         <div className="flex flex-wrap items-center gap-2">
           {order.status === 'PENDING' && (
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => handleUpdateStatus('COMPLETED')}
               disabled={updateStatusMutation.isPending}
               className="gap-2 text-xs text-green-400 border-green-500/10 hover:bg-green-500/5 hover:border-green-500/20"
@@ -112,9 +112,9 @@ export default function OrderDetailPage() {
           )}
 
           {order.status === 'COMPLETED' && (
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => handleUpdateStatus('REFUNDED')}
               disabled={updateStatusMutation.isPending}
               className="gap-2 text-xs text-purple-400 border-purple-500/10 hover:bg-purple-500/5 hover:border-purple-500/20"
@@ -124,9 +124,9 @@ export default function OrderDetailPage() {
             </Button>
           )}
 
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => setIsDeleteOpen(true)}
             disabled={deleteOrderMutation.isPending}
             className="gap-2 text-xs border-red-500/10 text-red-400 hover:bg-red-500/5 hover:border-red-500/20 hover:text-red-300"
@@ -179,7 +179,7 @@ export default function OrderDetailPage() {
                         )}
                       </div>
                       <div className="flex flex-col">
-                        <Link 
+                        <Link
                           href={`/admin/beats/${beat.id}`}
                           className="text-sm font-bold text-neutral-200 hover:underline"
                         >
@@ -214,7 +214,7 @@ export default function OrderDetailPage() {
               </div>
               <div className="flex justify-between border-b border-card-border pb-3">
                 <span className="text-xs font-semibold text-neutral-400">Payment Gateway</span>
-                <span className="text-xs font-bold text-neutral-200 capitalize">{order.paymentMethod.replace("_", " ")}</span>
+                <span className="text-xs font-bold text-neutral-200 capitalize">{(order.paymentMethod || "").replace("_", " ")}</span>
               </div>
               <div className="flex justify-between border-b border-card-border pb-3">
                 <span className="text-xs font-semibold text-neutral-400">Transaction Status</span>

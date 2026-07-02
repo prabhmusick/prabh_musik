@@ -116,7 +116,7 @@ export function OrderTable({ orders }: OrderTableProps) {
       header: "Payment Method",
       cell: ({ row }) => (
         <span className="text-xs text-neutral-400 capitalize">
-          {row.original.paymentMethod.replace("_", " ")}
+          {(row.original.paymentMethod || "").replace("_", " ")}
         </span>
       )
     },
