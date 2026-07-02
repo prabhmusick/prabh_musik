@@ -68,9 +68,8 @@ Thumbs.db
 backend/node_modules/
 
 # Local database
-backend/Database/*.db
+
 
 # Environment
 backend/.env
 
-backend/Database/*.db
