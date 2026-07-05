@@ -1,47 +1,47 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { fetchBeats } from "@/lib/api/beats";
+import { useAppShell } from "./contexts/app-shell-context";
 
-const beats = [
+// Color palettes for visual variety
+const colorPalettes = [
   {
-    id: 1,
-    genre: "HIP HOP",
-    songs: 412,
-    label: "POPPIN'",
-    img: "/poppin.png",
     bg: "linear-gradient(135deg, #1a4a2e 0%, #0d2b1a 40%, #0a1f12 100%)",
     accent: "#00ff88",
     textOverlay: true,
   },
   {
-    id: 2,
-    genre: "HIP HOP",
-    songs: 412,
-    label: null,
-    img: "/hip-hop_tb.png",
     bg: "linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)",
     accent: "#a0c4ff",
     textOverlay: false,
   },
   {
-    id: 3,
-    genre: "HIP HOP",
-    songs: 412,
-    label: null,
-    bg: "/public/poppin.png",
+    bg: "linear-gradient(135deg, #2a1a2e 0%, #3e1650 50%, #601050 100%)",
     accent: "#ffffff",
     textOverlay: false,
   },
   {
-    id: 4,
-    genre: "HIP HOP",
-    songs: 412,
-    label: null,
     bg: "linear-gradient(135deg, #1a0030 0%, #2d0060 30%, #0a0030 60%, #200050 100%)",
     accent: "#ff00ff",
     textOverlay: false,
     cityGlow: true,
   },
 ];
+
+// Map API beat to display format
+function formatBeatForDisplay(beat, index) {
+  const palette = colorPalettes[index % colorPalettes.length];
+  return {
+    ...beat,
+    songs: 412, // Default fallback
+    ...palette,
+    id: beat.id,
+    genre: beat.genre || "MUSIC",
+    label: beat.beat_name,
+    img: beat.cover_image_url || beat.banner_image_url,
+  };
+}
 
 function MusicIcon() {
   return (
@@ -75,7 +75,7 @@ function ChevronIcon({ direction }) {
   );
 }
 
-function BeatCard({ beat, index }) {
+function BeatCard({ beat, index, onPurchase }) {
   const [hovered, setHovered] = useState(false);
   const [playHovered, setPlayHovered] = useState(false);
   const [cartHovered, setCartHovered] = useState(false);
@@ -303,6 +303,10 @@ function BeatCard({ beat, index }) {
           className="beat-card-btn"
           onMouseEnter={() => setCartHovered(true)}
           onMouseLeave={() => setCartHovered(false)}
+          onClick={(event) => {
+            event.stopPropagation();
+            onPurchase(beat);
+          }}
           style={{
             width: "100%",
             padding: "10px 0",
@@ -331,8 +335,52 @@ function BeatCard({ beat, index }) {
 }
 
 export default function TrendingTypeBeats() {
+  const [beats, setBeats] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [leftHovered, setLeftHovered] = useState(false);
   const [rightHovered, setRightHovered] = useState(false);
+  const router = useRouter();
+  const { isAuthenticated, addToCart } = useAppShell();
+
+  const handlePurchase = (beat) => {
+    if (!isAuthenticated) {
+      router.push("/login");
+      return;
+    }
+    addToCart({
+      id: beat.id,
+      title: beat.label || beat.title || beat.beat_name || "Untitled",
+      producer: beat.producer || beat.artist_name || "Unknown Artist",
+      price: beat.price ?? null,
+      cover: beat.cover || beat.img || beat.cover_image_url || beat.banner_image_url || "",
+      genre: beat.genre,
+      bpm: beat.bpm,
+      previewUrl: beat.previewUrl || beat.audio_url || "",
+      plays: beat.plays || 0,
+    });
+  };
+
+  useEffect(() => {
+    async function getBeats() {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await fetchBeats();
+        // Format beats for display with color palettes
+        const formattedBeats = data.slice(0, 4).map((beat, i) => formatBeatForDisplay(beat, i));
+        setBeats(formattedBeats);
+      } catch (err) {
+        console.error("Error fetching beats:", err);
+        setError(err.message || "Failed to load beats");
+        setBeats([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    getBeats();
+  }, []);
 
   return (
     <>
@@ -458,89 +506,111 @@ export default function TrendingTypeBeats() {
           fontFamily: "sans-serif",
         }}
       >
-        {/* Header */}
-        <div
-          className="trending-header"
-          style={{
-            display: "flex",
-            alignItems: "flex-start",
-            justifyContent: "space-between",
-            marginBottom: "40px",
-          }}
-        >
-          <div style={{ maxWidth: "420px" }}>
-            <h1
-              className="trending-title"
-              style={{
-                fontFamily: "'Georgia', serif",
-                fontSize: "clamp(32px, 4vw, 52px)",
-                fontWeight: "700",
-                color: "#ffffff",
-                lineHeight: "1.1",
-                marginBottom: "12px",
-                letterSpacing: "-0.5px",
-              }}
-            >
-              Trending Type Beats
-            </h1>
-            <p
-              className="trending-desc"
-              style={{
-                color: "rgba(255,255,255,0.4)",
-                fontSize: "13px",
-                lineHeight: "1.6",
-                maxWidth: "320px",
-              }}
-            >
-              Say goodbye to interruptions and enjoy uninterrupted music streaming.
-              With our ad-free platform, you'll have access to millions to songs
-            </p>
+        {loading && (
+          <div style={{ textAlign: "center", padding: "60px 20px", color: "#fff" }}>
+            <p>Loading beats...</p>
           </div>
+        )}
 
-          {/* Nav arrows */}
-          <div className="trending-nav" style={{ display: "flex", gap: "10px", paddingTop: "8px" }}>
-            {["left", "right"].map((dir) => {
-              const isHov = dir === "left" ? leftHovered : rightHovered;
-              return (
-                <button
-                  key={dir}
-                  onMouseEnter={() => dir === "left" ? setLeftHovered(true) : setRightHovered(true)}
-                  onMouseLeave={() => dir === "left" ? setLeftHovered(false) : setRightHovered(false)}
+        {error && (
+          <div style={{ textAlign: "center", padding: "60px 20px", color: "#ff6b6b" }}>
+            <p>Error: {error}</p>
+          </div>
+        )}
+
+        {!loading && !error && beats.length === 0 && (
+          <div style={{ textAlign: "center", padding: "60px 20px", color: "#aaa" }}>
+            <p>No beats available</p>
+          </div>
+        )}
+
+        {!loading && !error && beats.length > 0 && (
+          <>
+            {/* Header */}
+            <div
+              className="trending-header"
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                justifyContent: "space-between",
+                marginBottom: "40px",
+              }}
+            >
+              <div style={{ maxWidth: "420px" }}>
+                <h1
+                  className="trending-title"
                   style={{
-                    width: "36px",
-                    height: "36px",
-                    borderRadius: "50%",
-                    border: "1.5px solid rgba(255,255,255,0.2)",
-                    background: isHov ? "rgba(255,255,255,0.12)" : "transparent",
+                    fontFamily: "'Georgia', serif",
+                    fontSize: "clamp(32px, 4vw, 52px)",
+                    fontWeight: "700",
                     color: "#ffffff",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    cursor: "pointer",
-                    transition: "background 0.2s ease, transform 0.15s ease",
-                    transform: isHov ? "scale(1.08)" : "scale(1)",
+                    lineHeight: "1.1",
+                    marginBottom: "12px",
+                    letterSpacing: "-0.5px",
                   }}
                 >
-                  <ChevronIcon direction={dir} />
-                </button>
-              );
-            })}
-          </div>
-        </div>
+                  Trending Type Beats
+                </h1>
+                <p
+                  className="trending-desc"
+                  style={{
+                    color: "rgba(255,255,255,0.4)",
+                    fontSize: "13px",
+                    lineHeight: "1.6",
+                    maxWidth: "320px",
+                  }}
+                >
+                  Say goodbye to interruptions and enjoy uninterrupted music streaming.
+                  With our ad-free platform, you'll have access to millions to songs
+                </p>
+              </div>
 
-        {/* Beat Cards Grid */}
-        <div
-          className="trending-grid"
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(4, 1fr)",
-            gap: "28px",
-          }}
-        >
-          {beats.map((beat, i) => (
-            <BeatCard key={beat.id} beat={beat} index={i} />
-          ))}
-        </div>
+              {/* Nav arrows */}
+              <div className="trending-nav" style={{ display: "flex", gap: "10px", paddingTop: "8px" }}>
+                {["left", "right"].map((dir) => {
+                  const isHov = dir === "left" ? leftHovered : rightHovered;
+                  return (
+                    <button
+                      key={dir}
+                      onMouseEnter={() => dir === "left" ? setLeftHovered(true) : setRightHovered(true)}
+                      onMouseLeave={() => dir === "left" ? setLeftHovered(false) : setRightHovered(false)}
+                      style={{
+                        width: "36px",
+                        height: "36px",
+                        borderRadius: "50%",
+                        border: "1.5px solid rgba(255,255,255,0.2)",
+                        background: isHov ? "rgba(255,255,255,0.12)" : "transparent",
+                        color: "#ffffff",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        cursor: "pointer",
+                        transition: "background 0.2s ease, transform 0.15s ease",
+                        transform: isHov ? "scale(1.08)" : "scale(1)",
+                      }}
+                    >
+                      <ChevronIcon direction={dir} />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Beat Cards Grid */}
+            <div
+              className="trending-grid"
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(4, 1fr)",
+                gap: "28px",
+              }}
+            >
+              {beats.map((beat, i) => (
+                <BeatCard key={beat.id} beat={beat} index={i} onPurchase={handlePurchase} />
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </>
   );

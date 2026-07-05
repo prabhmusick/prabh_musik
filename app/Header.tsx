@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { useAppShell } from "./contexts/app-shell-context";
 
 const navLinks = ["Home", "About", "Services", "Beats"];
 
@@ -8,6 +9,7 @@ const navLinks = ["Home", "About", "Services", "Beats"];
 export default function Header() {
   const router = useRouter();
   const pathname = usePathname();
+  const { isAuthenticated, user, cart, cartOpen, openCart, closeCart, logout } = useAppShell();
   if (pathname?.startsWith("/admin")) return null;
   const [activeLink, setActiveLink] = useState("Home");
   const [searchFocused, setSearchFocused] = useState(false);
@@ -205,46 +207,94 @@ export default function Header() {
               />
             </div>
 
-            {/* Log In */}
             <button
-              onMouseEnter={() => setLoginHov(true)}
-              onMouseLeave={() => setLoginHov(false)}
+              onClick={() => { if (isAuthenticated) { openCart(); } else { router.push("/login"); } }}
               style={{
-                background: "transparent",
-                border: "none",
-                color: loginHov ? "#ffffff" : "rgba(255,255,255,0.75)",
+                background: "rgba(255,255,255,0.07)",
+                border: "1px solid rgba(255,255,255,0.12)",
+                color: "#ffffff",
                 fontFamily: "'Inter', sans-serif",
                 fontSize: "14px",
-                fontWeight: 500,
+                fontWeight: 600,
                 cursor: "pointer",
-                padding: "6px 4px",
-                transition: "color 0.2s ease",
+                padding: "7px 12px",
+                borderRadius: "999px",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
               }}
             >
-              Log in
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 3h2l.4 2M7 13h10l3-8H6.4"/><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/></svg>
+              Cart {cart.length}
             </button>
 
-            {/* Sign up */}
-            <button
-              onMouseEnter={() => setSignupHov(true)}
-              onMouseLeave={() => setSignupHov(false)}
-              style={{
-                background: signupHov ? "#e8920a" : "#d4820a",
-                border: "none",
-                color: "#000000",
-                fontFamily: "'Inter', sans-serif",
-                fontSize: "14px",
-                fontWeight: 700,
-                cursor: "pointer",
-                padding: "7px 18px",
-                borderRadius: "6px",
-                transition: "background 0.2s ease, transform 0.15s ease",
-                transform: signupHov ? "translateY(-1px)" : "translateY(0)",
-                boxShadow: signupHov ? "0 4px 14px #d4820a55" : "none",
-              }}
-            >
-              Sign up
-            </button>
+            {isAuthenticated ? (
+              <button
+                onClick={() => router.push("/profile")}
+                style={{
+                  background: "transparent",
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  color: "#ffffff",
+                  fontFamily: "'Inter', sans-serif",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  padding: "7px 12px",
+                  borderRadius: "999px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
+                <span style={{ width: 24, height: 24, borderRadius: "50%", background: "rgba(212,130,10,0.2)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 12 }}>
+                  {user?.fullName?.charAt(0) || "P"}
+                </span>
+                Profile
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={() => router.push("/login")}
+                  onMouseEnter={() => setLoginHov(true)}
+                  onMouseLeave={() => setLoginHov(false)}
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    color: loginHov ? "#ffffff" : "rgba(255,255,255,0.75)",
+                    fontFamily: "'Inter', sans-serif",
+                    fontSize: "14px",
+                    fontWeight: 500,
+                    cursor: "pointer",
+                    padding: "6px 4px",
+                    transition: "color 0.2s ease",
+                  }}
+                >
+                  Log in
+                </button>
+
+                <button
+                  onClick={() => router.push("/signup")}
+                  onMouseEnter={() => setSignupHov(true)}
+                  onMouseLeave={() => setSignupHov(false)}
+                  style={{
+                    background: signupHov ? "#e8920a" : "#d4820a",
+                    border: "none",
+                    color: "#000000",
+                    fontFamily: "'Inter', sans-serif",
+                    fontSize: "14px",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    padding: "7px 18px",
+                    borderRadius: "6px",
+                    transition: "background 0.2s ease, transform 0.15s ease",
+                    transform: signupHov ? "translateY(-1px)" : "translateY(0)",
+                    boxShadow: signupHov ? "0 4px 14px #d4820a55" : "none",
+                  }}
+                >
+                  Sign up
+                </button>
+              </>
+            )}
           </div>
 
           {/* ── Mobile hamburger ── */}
@@ -271,6 +321,40 @@ export default function Header() {
             </svg>
           </button>
         </div>
+
+        {cartOpen && (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 120, display: "flex", justifyContent: "flex-end" }} onClick={closeCart}>
+            <div onClick={(e) => e.stopPropagation()} style={{ width: "min(420px, 100%)", height: "100%", background: "#0f1117", borderLeft: "1px solid rgba(255,255,255,0.1)", boxShadow: "-16px 0 45px rgba(0,0,0,0.4)", padding: "24px", display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <h3 style={{ color: "#fff", fontSize: 20, margin: 0 }}>Your cart</h3>
+                <button onClick={closeCart} style={{ background: "transparent", border: "none", color: "#fff", cursor: "pointer", fontSize: 18 }}>✕</button>
+              </div>
+              {cart.length === 0 ? (
+                <div style={{ padding: "32px 0", color: "rgba(255,255,255,0.65)", textAlign: "center" }}>Your selected beats will appear here.</div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px", overflowY: "auto" }}>
+                  {cart.map((item) => (
+                    <div key={item.id} style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "12px", padding: "12px", display: "flex", gap: "12px", alignItems: "center" }}>
+                      <img src={item.cover} alt={item.title} style={{ width: 56, height: 56, objectFit: "cover", borderRadius: 10 }} />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ color: "#fff", fontWeight: 700 }}>{item.title}</div>
+                        <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 13 }}>{item.producer}</div>
+                      </div>
+                      <div style={{ color: "#fbbf24", fontWeight: 700 }}>{item.price ? `₹${item.price.toLocaleString("en-IN")}` : "Free"}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div style={{ marginTop: "auto", paddingTop: "16px", borderTop: "1px solid rgba(255,255,255,0.08)", display: "flex", flexDirection: "column", gap: "12px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", color: "#fff" }}>
+                  <span>Total</span>
+                  <span>₹{cart.reduce((sum, item) => sum + (item.price || 0), 0).toLocaleString("en-IN")}</span>
+                </div>
+                <button onClick={() => { if (cart.length) { router.push("/profile"); closeCart(); } }} style={{ background: "#d4820a", border: "none", color: "#000", fontWeight: 700, borderRadius: 10, padding: "12px 16px", cursor: "pointer" }}>Proceed to checkout</button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── Mobile dropdown ── */}
         {mobileOpen && (
@@ -308,16 +392,50 @@ export default function Header() {
               </button>
             ))}
             <div style={{ display: "flex", gap: "12px", marginTop: "8px" }}>
-              <button style={{
-                background: "transparent", border: "none",
-                color: "rgba(255,255,255,0.75)", fontFamily: "'Inter', sans-serif",
-                fontSize: "14px", fontWeight: 500, cursor: "pointer", padding: 0,
-              }}>Log in</button>
-              <button style={{
-                background: "#d4820a", border: "none", color: "#000",
-                fontFamily: "'Inter', sans-serif", fontSize: "14px",
-                fontWeight: 700, cursor: "pointer", padding: "7px 18px", borderRadius: "6px",
-              }}>Sign up</button>
+              {isAuthenticated ? (
+                <button
+                  onClick={() => {
+                    router.push("/profile");
+                    setMobileOpen(false);
+                  }}
+                  style={{
+                    background: "transparent",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    color: "#ffffff",
+                    fontFamily: "'Inter', sans-serif",
+                    fontSize: "14px",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    padding: "7px 12px",
+                    borderRadius: "999px",
+                  }}
+                >
+                  Profile
+                </button>
+              ) : (
+                <>
+                  <button 
+                    onClick={() => {
+                      router.push("/login");
+                      setMobileOpen(false);
+                    }}
+                    style={{
+                    background: "transparent", border: "none",
+                    color: "rgba(255,255,255,0.75)", fontFamily: "'Inter', sans-serif",
+                    fontSize: "14px", fontWeight: 500, cursor: "pointer", padding: 0,
+                  }}>Log in</button>
+                  <button 
+                    onClick={() => {
+                      router.push("/signup");
+                      setMobileOpen(false);
+                    }}
+                    style={{
+                    background: "#d4820a", border: "none", color: "#000",
+                    fontFamily: "'Inter', sans-serif", fontSize: "14px",
+                    fontWeight: 700, cursor: "pointer", padding: "7px 18px", borderRadius: "6px",
+                  }}>Sign up</button>
+                </>
+              )}
             </div>
           </div>
         )}

@@ -116,17 +116,34 @@ export function mapFrontendToBackend(beat: any): any {
  * Retrieves all active non-archived beat records
  */
 export async function getBeats(): Promise<Beat[]> {
-  const response = await api.get("/beats");
-  const rawList = response.data.data || [];
-  return rawList.map(mapBackendToFrontend);
+  try {
+    const response = await api.get("/beats");
+    const rawList = response?.data?.data || [];
+    if (!Array.isArray(rawList)) {
+      console.warn("Backend returned non-array data structure:", rawList);
+      return [];
+    }
+    return rawList.map(mapBackendToFrontend);
+  } catch (error) {
+    console.error("Error fetching beats:", error);
+    return [];
+  }
 }
 
 /**
  * Retrieves a single beat record by ID
  */
 export async function getBeat(id: string): Promise<Beat> {
-  const response = await api.get(`/beats/${id}`);
-  return mapBackendToFrontend(response.data.data);
+  try {
+    const response = await api.get(`/beats/${id}`);
+    if (!response?.data?.data) {
+      throw new Error("Invalid response structure from backend");
+    }
+    return mapBackendToFrontend(response.data.data);
+  } catch (error) {
+    console.error(`Error fetching beat ${id}:`, error);
+    throw error;
+  }
 }
 
 /**

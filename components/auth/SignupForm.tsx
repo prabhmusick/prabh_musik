@@ -2,6 +2,8 @@
 
 import { useState, useCallback } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useAppShell } from "@/app/contexts/app-shell-context";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -151,6 +153,9 @@ export default function SignupForm() {
   const [showCpw, setShowCpw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { signup } = useAppShell();
 
   const handleChange = useCallback(
     (id: keyof FormFields, value: string) => {
@@ -177,18 +182,12 @@ export default function SignupForm() {
     setErrors({});
     setLoading(true);
     try {
-      // TODO: Replace with real API call, e.g.:
-      // await fetch("/api/auth/signup", {
-      //   method: "POST",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify({
-      //     fullName: fields.fullName,
-      //     username: fields.username,
-      //     email: fields.email,
-      //     password: fields.password,
-      //   }),
-      // });
-      await new Promise((r) => setTimeout(r, 1400));
+      await new Promise((r) => setTimeout(r, 800));
+      signup({
+        fullName: fields.fullName,
+        username: fields.username,
+        email: fields.email,
+      });
       setSuccess(true);
     } catch (err: unknown) {
       setErrors({ form: err instanceof Error ? err.message : "Something went wrong." });
@@ -210,10 +209,16 @@ export default function SignupForm() {
         <p className="text-sm text-gray-400 max-w-xs">
           Check your inbox to verify your email and start your production journey.
         </p>
-        {/* TODO: redirect to /dashboard */}
-        <Link href="/login" className="mt-2 rounded-md bg-[#f59e0b] px-8 py-2.5 text-sm font-black text-black hover:bg-[#f5a623] transition-colors">
-          Go to Login
-        </Link>
+        <button
+          type="button"
+          className="mt-2 rounded-md bg-[#f59e0b] px-8 py-2.5 text-sm font-black text-black hover:bg-[#f5a623] transition-colors"
+          onClick={() => {
+            const redirectTo = searchParams.get("redirect") || "/";
+            router.push(redirectTo);
+          }}
+        >
+          Continue
+        </button>
       </div>
     );
   }

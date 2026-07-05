@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import LoginForm from "@/components/auth/LoginForm";
 
 // ─── SEO Metadata ───────────────────────────────────────────────────────────
@@ -485,7 +486,9 @@ export default function LoginPage() {
 
             {/* Login Form wrapped inside a styled div with proper padding & margin */}
             <div className="signup-card">
-              <LoginForm />
+              <Suspense fallback={<div style={{ color: "#fff", textAlign: "center" }}>Loading…</div>}>
+                <LoginForm />
+              </Suspense>
             </div>
           </div>
         </section>
