@@ -1,0 +1,452 @@
+{
+  "info": {
+    "_postman_id": "a9db8c06-039c-449e-ba69-0cfbb45f9e8f",
+    "name": "Prabh Musik API",
+    "description": "Comprehensive automated manual test suite mapping Health check, Uploads pipeline, and Beats operations.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "GET Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            },
+            "description": "Performs system health check and returns version details."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Success is true\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Uploads",
+      "item": [
+        {
+          "name": "Upload Audio",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "audio",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/uploads/upload-audio",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "uploads",
+                "upload-audio"
+              ]
+            },
+            "description": "Uploads a raw track audio file directly to R2. Dynamically extracts the returned key and writes it to collection variables."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Success is true\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "});",
+                  "pm.test(\"fileName exists\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.fileName).to.exist;",
+                  "});",
+                  "pm.collectionVariables.set(\"audio_key\", pm.response.json().fileName);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Beats",
+      "item": [
+        {
+          "name": "Create Beat",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"beat_name\": \"Midnight Drive\",\n    \"beat_type\": \"Premium\",\n    \"price\": 2999,\n    \"genre\": \"Trap\",\n    \"bpm\": 140,\n    \"description\": \"Demo Beat\",\n    \"audio_key\": \"{{audio_key}}\",\n    \"cover_key\": \"cover.jpg\",\n    \"banner_key\": \"banner.jpg\",\n    \"duration\": 180,\n    \"track_type\": \"WAV\",\n    \"mood\": \"Dark\",\n    \"selling_status\": \"available\",\n    \"status\": \"published\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/beats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "beats"
+              ]
+            },
+            "description": "Registers a new beat utilizing the dynamic {{audio_key}} reference generated in the uploads phase."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test(\"Success is true\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "});",
+                  "pm.test(\"Data ID exists\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data.id).to.exist;",
+                  "});",
+                  "pm.collectionVariables.set(\"beatId\", pm.response.json().data.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get All Beats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/beats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "beats"
+              ]
+            },
+            "description": "Lists all active, non-archived beat records."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Response contains success\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "});",
+                  "pm.test(\"Response contains data array\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.be.an(\"array\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Beat By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/beats/{{beatId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "beats",
+                "{{beatId}}"
+              ]
+            },
+            "description": "Fetches a single active beat details by its database ID."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Success is true\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "});",
+                  "pm.test(\"Beat name matches\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data.beat_name).to.eql(\"Midnight Drive\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Beat",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"beat_name\": \"Midnight Drive V2\",\n    \"price\": 3499\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/beats/{{beatId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "beats",
+                "{{beatId}}"
+              ]
+            },
+            "description": "Modifies properties of a beat record dynamically."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Updated beat name is correct\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data.beat_name).to.eql(\"Midnight Drive V2\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Archive Beat",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/beats/{{beatId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "beats",
+                "{{beatId}}"
+              ]
+            },
+            "description": "Soft deletes/archives a beat in the database."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Success is true\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get All Beats After Archiving",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/beats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "beats"
+              ]
+            },
+            "description": "Confirms that the archived beat no longer appears in general listings queries."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Archived beat does not exist in response data\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    var archivedBeatId = pm.collectionVariables.get(\"beatId\");",
+                  "    var found = jsonData.data.some(function(beat) {",
+                  "        return beat.id == archivedBeatId;",
+                  "    });",
+                  "    pm.expect(found).to.be.false;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Invalid Beat",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/beats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "beats"
+              ]
+            },
+            "description": "Verifies that sending empty creation parameters throws a 400 validation operational error."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Response has success false\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(false);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET Beat Not Found",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/beats/999999",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "beats",
+                "999999"
+              ]
+            },
+            "description": "Verifies that searching for a non-existent or archived beat ID throws a 404 AppError."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status is 404\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "pm.test(\"Response has success false\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(false);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "beatId",
+      "value": ""
+    },
+    {
+      "key": "audio_key",
+      "value": ""
+    }
+  ]
+}

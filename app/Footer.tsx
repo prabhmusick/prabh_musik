@@ -158,7 +158,7 @@ const LegalLink: React.FC<{ label: string; href?: string }> = ({ label, href = "
 
 const GraphyFooter: React.FC = () => {
   const pathname = usePathname();
-  if (pathname === "/signup") return null;
+  if (pathname === "/signup" || pathname?.startsWith("/admin")) return null;
 
   return (
     <footer className="footer">

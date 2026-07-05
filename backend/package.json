@@ -1,0 +1,30 @@
+{
+  "name": "prabh-musik-backend",
+  "version": "1.0.0",
+  "description": "Backend API for Prabh Musik Beat Marketplace",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "private": true,
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1058.0",
+    "@aws-sdk/s3-request-presigner": "^3.1077.0",
+    "axios": "^1.4.0",
+    "bcrypt": "^5.1.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "helmet": "^7.0.0",
+    "morgan": "^1.10.0",
+    "multer": "^2.1.1",
+    "nodemon": "^3.1.14",
+    "sqlite3": "^5.1.6"
+  }
+}

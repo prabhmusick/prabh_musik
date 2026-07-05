@@ -356,23 +356,39 @@ export default function SignupPage() {
           display: flex !important;
           align-items: center !important;
           justify-content: center !important;
-          gap: 8px !important;
+          gap: 10px !important;
           border-radius: 12px !important;
           border: 1px solid rgba(255, 255, 255, 0.08) !important;
           background-color: rgba(255, 255, 255, 0.03) !important;
-          padding: 10px 16px !important;
+          padding: 11px 18px !important;
           font-size: 14px !important;
           font-weight: 600 !important;
-          color: rgba(255, 255, 255, 0.9) !important;
+          color: rgba(255, 255, 255, 0.8) !important;
           cursor: pointer !important;
-          transition: all 0.2s ease !important;
+          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
           font-family: 'Inter', sans-serif !important;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+        }
+
+        .auth-social-btn svg {
+          transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
         }
 
         .auth-social-btn:hover {
-          background-color: rgba(255, 255, 255, 0.06) !important;
-          border-color: rgba(255, 255, 255, 0.15) !important;
+          background-color: rgba(255, 255, 255, 0.07) !important;
+          border-color: rgba(255, 255, 255, 0.25) !important;
           color: #ffffff !important;
+          transform: translateY(-2px) !important;
+          box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4), 0 0 15px rgba(255, 255, 255, 0.03) !important;
+        }
+
+        .auth-social-btn:hover svg {
+          transform: scale(1.1) !important;
+        }
+
+        .auth-social-btn:active {
+          transform: translateY(0) scale(0.98) !important;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
         }
 
         .auth-divider-line {

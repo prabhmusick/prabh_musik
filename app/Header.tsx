@@ -8,6 +8,7 @@ const navLinks = ["Home", "About", "Services", "Beats"];
 export default function Header() {
   const router = useRouter();
   const pathname = usePathname();
+  if (pathname?.startsWith("/admin")) return null;
   const [activeLink, setActiveLink] = useState("Home");
   const [searchFocused, setSearchFocused] = useState(false);
   const [searchVal, setSearchVal] = useState("");
