@@ -1,7 +1,9 @@
 const { db } = require("../../config/db");
+const crypto = require("crypto");
 
 const OWNERSHIP_COLUMNS = `
   o.id,
+  o.public_id,
   o.user_id,
   o.beat_id,
   o.order_id,
@@ -68,6 +70,7 @@ const all = (sql, params = []) => {
 const insertOwnershipsTransaction = async (userId, orderId, items, tx) => {
   const sql = `
     INSERT INTO ownerships (
+      public_id,
       user_id,
       beat_id,
       order_id,
@@ -78,7 +81,7 @@ const insertOwnershipsTransaction = async (userId, orderId, items, tx) => {
       download_token,
       status,
       created_by_order_status
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', 'paid')
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 'paid')
   `;
 
   if (!tx) {
@@ -104,9 +107,11 @@ const insertOwnershipsTransaction = async (userId, orderId, items, tx) => {
 
           items.forEach((item) => {
             if (failed) return;
+            const publicId = crypto.randomUUID();
             db.run(
               sql,
               [
+                publicId,
                 userId,
                 item.beatId,
                 orderId,
@@ -142,10 +147,12 @@ const insertOwnershipsTransaction = async (userId, orderId, items, tx) => {
   } else {
     const insertedIds = [];
     for (const item of items) {
+      const publicId = crypto.randomUUID();
       const resultId = await new Promise((resolve, reject) => {
         tx.run(
           sql,
           [
+            publicId,
             userId,
             item.beatId,
             orderId,

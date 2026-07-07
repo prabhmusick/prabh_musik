@@ -89,9 +89,9 @@ export function OrderTable({ orders }: OrderTableProps) {
 
         return (
           <div className="flex flex-wrap gap-1.5 max-w-[200px]">
-            {purchasedBeats.map(beat => (
+            {purchasedBeats.map((beat, index) => (
               <span 
-                key={beat!.id}
+                key={`${beat!.id}-${index}`}
                 className="px-2 py-0.5 rounded bg-neutral-900 border border-card-border text-[10px] text-neutral-300 font-medium"
               >
                 {beat!.title}

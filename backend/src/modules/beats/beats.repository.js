@@ -1,4 +1,5 @@
 const { db } = require("../../config/db");
+const crypto = require("crypto");
 
 // ==========================================
 // Constants & SQL Segments
@@ -7,6 +8,7 @@ const { db } = require("../../config/db");
 // Explicit list of columns to retrieve (never use SELECT *)
 const BEAT_COLUMNS = `
   id,
+  public_id,
   beat_name,
   slug,
   beat_type,
@@ -152,8 +154,10 @@ const existsBySlug = async (slug) => {
  * @returns {Promise<number>} The newly created beat record row ID
  */
 const createBeat = async (beat) => {
+  const publicId = crypto.randomUUID();
   const sql = `
     INSERT INTO beats (
+      public_id,
       beat_name,
       slug,
       beat_type,
@@ -170,11 +174,12 @@ const createBeat = async (beat) => {
       selling_status,
       status
     ) VALUES (
-      ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+      ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
     )
   `;
 
   const params = [
+    publicId,
     beat.beat_name,
     beat.slug,
     beat.beat_type,

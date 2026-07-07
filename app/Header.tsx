@@ -11,12 +11,21 @@ export default function Header() {
   const pathname = usePathname();
   const { isAuthenticated, user, cart, cartOpen, openCart, closeCart, logout } = useAppShell();
   if (pathname?.startsWith("/admin")) return null;
-  const [activeLink, setActiveLink] = useState("Home");
   const [searchFocused, setSearchFocused] = useState(false);
   const [searchVal, setSearchVal] = useState("");
   const [loginHov, setLoginHov] = useState(false);
   const [signupHov, setSignupHov] = useState(false);
+  const [logoutHov, setLogoutHov] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const getActiveLink = () => {
+    if (pathname === "/") return "Home";
+    if (pathname === "/about") return "About";
+    if (pathname === "/services") return "Services";
+    if (pathname === "/beat") return "Beats";
+    return "";
+  };
+  const activeLink = getActiveLink();
 
   return (
     <>
@@ -149,7 +158,6 @@ export default function Header() {
               <button
                 key={link}
                 onClick={() => {
-                  setActiveLink(link);
                   if (link === "About") {
                     router.push("/about");
                   } else if (link === "Home") {
@@ -207,6 +215,7 @@ export default function Header() {
               />
             </div>
 
+            {/* Cart Button */}
             <button
               onClick={() => { if (isAuthenticated) { openCart(); } else { router.push("/login"); } }}
               style={{
@@ -224,10 +233,11 @@ export default function Header() {
                 gap: "8px",
               }}
             >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 3h2l.4 2M7 13h10l3-8H6.4"/><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/></svg>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 3h2l.4 2M7 13h10l3-8H6.4" /><circle cx="9" cy="20" r="1.5" /><circle cx="18" cy="20" r="1.5" /></svg>
               Cart {cart.length}
             </button>
 
+            {/* Profile / Auth actions */}
             {isAuthenticated ? (
               <button
                 onClick={() => router.push("/profile")}
@@ -253,46 +263,61 @@ export default function Header() {
               </button>
             ) : (
               <>
-                <button
-                  onClick={() => router.push("/login")}
-                  onMouseEnter={() => setLoginHov(true)}
-                  onMouseLeave={() => setLoginHov(false)}
-                  style={{
-                    background: "transparent",
-                    border: "none",
-                    color: loginHov ? "#ffffff" : "rgba(255,255,255,0.75)",
-                    fontFamily: "'Inter', sans-serif",
-                    fontSize: "14px",
-                    fontWeight: 500,
-                    cursor: "pointer",
-                    padding: "6px 4px",
-                    transition: "color 0.2s ease",
-                  }}
-                >
-                  Log in
-                </button>
+                {pathname === "/login" && (
+                  <span style={{ color: "rgba(255,255,255,0.5)", fontFamily: "'Inter', sans-serif", fontSize: "14px", marginRight: "4px" }}>
+                    Need an account?
+                  </span>
+                )}
+                {pathname !== "/login" && (
+                  <button
+                    onClick={() => router.push("/login")}
+                    onMouseEnter={() => setLoginHov(true)}
+                    onMouseLeave={() => setLoginHov(false)}
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      color: loginHov ? "#ffffff" : "rgba(255,255,255,0.75)",
+                      fontFamily: "'Inter', sans-serif",
+                      fontSize: "14px",
+                      fontWeight: 500,
+                      cursor: "pointer",
+                      padding: "6px 4px",
+                      transition: "color 0.2s ease",
+                      marginRight: pathname === "/signup" ? "8px" : "0"
+                    }}
+                  >
+                    Log in
+                  </button>
+                )}
 
-                <button
-                  onClick={() => router.push("/signup")}
-                  onMouseEnter={() => setSignupHov(true)}
-                  onMouseLeave={() => setSignupHov(false)}
-                  style={{
-                    background: signupHov ? "#e8920a" : "#d4820a",
-                    border: "none",
-                    color: "#000000",
-                    fontFamily: "'Inter', sans-serif",
-                    fontSize: "14px",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    padding: "7px 18px",
-                    borderRadius: "6px",
-                    transition: "background 0.2s ease, transform 0.15s ease",
-                    transform: signupHov ? "translateY(-1px)" : "translateY(0)",
-                    boxShadow: signupHov ? "0 4px 14px #d4820a55" : "none",
-                  }}
-                >
-                  Sign up
-                </button>
+                {pathname === "/signup" && (
+                  <span style={{ color: "rgba(255,255,255,0.5)", fontFamily: "'Inter', sans-serif", fontSize: "14px", marginRight: "4px" }}>
+                    Already a member?
+                  </span>
+                )}
+                {pathname !== "/signup" && (
+                  <button
+                    onClick={() => router.push("/signup")}
+                    onMouseEnter={() => setSignupHov(true)}
+                    onMouseLeave={() => setSignupHov(false)}
+                    style={{
+                      background: signupHov ? "#e8920a" : "#d4820a",
+                      border: "none",
+                      color: "#000000",
+                      fontFamily: "'Inter', sans-serif",
+                      fontSize: "14px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      padding: "7px 18px",
+                      borderRadius: "6px",
+                      transition: "background 0.2s ease, transform 0.15s ease",
+                      transform: signupHov ? "translateY(-1px)" : "translateY(0)",
+                      boxShadow: signupHov ? "0 4px 14px #d4820a55" : "none",
+                    }}
+                  >
+                    Sign up
+                  </button>
+                )}
               </>
             )}
           </div>
@@ -373,7 +398,6 @@ export default function Header() {
               <button
                 key={link}
                 onClick={() => {
-                  setActiveLink(link);
                   setMobileOpen(false);
                   if (link === "About") {
                     router.push("/about");
@@ -393,47 +417,86 @@ export default function Header() {
             ))}
             <div style={{ display: "flex", gap: "12px", marginTop: "8px" }}>
               {isAuthenticated ? (
-                <button
-                  onClick={() => {
-                    router.push("/profile");
-                    setMobileOpen(false);
-                  }}
-                  style={{
-                    background: "transparent",
-                    border: "1px solid rgba(255,255,255,0.12)",
-                    color: "#ffffff",
-                    fontFamily: "'Inter', sans-serif",
-                    fontSize: "14px",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    padding: "7px 12px",
-                    borderRadius: "999px",
-                  }}
-                >
-                  Profile
-                </button>
+                <>
+                  <button
+                    onClick={() => {
+                      router.push("/profile");
+                      setMobileOpen(false);
+                    }}
+                    style={{
+                      background: "transparent",
+                      border: "1px solid rgba(255,255,255,0.12)",
+                      color: "#ffffff",
+                      fontFamily: "'Inter', sans-serif",
+                      fontSize: "14px",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      padding: "7px 12px",
+                      borderRadius: "999px",
+                    }}
+                  >
+                    Profile
+                  </button>
+                  <button
+                    onClick={() => {
+                      logout();
+                      setMobileOpen(false);
+                      router.push("/");
+                    }}
+                    style={{
+                      background: "transparent",
+                      border: "1px solid rgba(255,255,255,0.12)",
+                      color: "rgba(255,255,255,0.75)",
+                      fontFamily: "'Inter', sans-serif",
+                      fontSize: "14px",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      padding: "7px 12px",
+                      borderRadius: "999px",
+                    }}
+                  >
+                    Log out
+                  </button>
+                </>
               ) : (
                 <>
-                  <button 
+                  <button
                     onClick={() => {
                       router.push("/login");
                       setMobileOpen(false);
                     }}
                     style={{
-                    background: "transparent", border: "none",
-                    color: "rgba(255,255,255,0.75)", fontFamily: "'Inter', sans-serif",
-                    fontSize: "14px", fontWeight: 500, cursor: "pointer", padding: 0,
-                  }}>Log in</button>
-                  <button 
+                      background: "transparent",
+                      border: "none",
+                      color: "rgba(255,255,255,0.75)",
+                      fontFamily: "'Inter', sans-serif",
+                      fontSize: "14px",
+                      fontWeight: 500,
+                      cursor: "pointer",
+                      padding: 0,
+                    }}
+                  >
+                    Log in
+                  </button>
+                  <button
                     onClick={() => {
                       router.push("/signup");
                       setMobileOpen(false);
                     }}
                     style={{
-                    background: "#d4820a", border: "none", color: "#000",
-                    fontFamily: "'Inter', sans-serif", fontSize: "14px",
-                    fontWeight: 700, cursor: "pointer", padding: "7px 18px", borderRadius: "6px",
-                  }}>Sign up</button>
+                      background: "#d4820a",
+                      border: "none",
+                      color: "#000",
+                      fontFamily: "'Inter', sans-serif",
+                      fontSize: "14px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      padding: "7px 18px",
+                      borderRadius: "6px",
+                    }}
+                  >
+                    Sign up
+                  </button>
                 </>
               )}
             </div>

@@ -1,8 +1,10 @@
 const { db } = require("../../config/db");
+const crypto = require("crypto");
 
 // Explicit list of columns to retrieve (never use SELECT *)
 const ORDER_COLUMNS = `
   o.id,
+  o.public_id,
   o.customer_id,
   o.total_amount,
   o.payment_method,
@@ -65,6 +67,7 @@ const all = (sql, params = []) => {
  * Creates a new order along with its order items in a transaction.
  */
 const createOrder = async (customerId, totalAmount, paymentMethod, status, items, extra = {}) => {
+  const publicId = crypto.randomUUID();
   return new Promise((resolve, reject) => {
     db.serialize(() => {
       db.run("BEGIN TRANSACTION", (err) => {
@@ -72,6 +75,7 @@ const createOrder = async (customerId, totalAmount, paymentMethod, status, items
 
         const orderSql = `
           INSERT INTO orders (
+            public_id,
             customer_id,
             total_amount,
             payment_method,
@@ -79,11 +83,12 @@ const createOrder = async (customerId, totalAmount, paymentMethod, status, items
             transaction_id,
             gateway,
             status
-          ) VALUES (?, ?, ?, ?, ?, ?, ?)
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `;
         db.run(
           orderSql,
           [
+            publicId,
             customerId,
             totalAmount,
             paymentMethod,
