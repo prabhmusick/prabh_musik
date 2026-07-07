@@ -166,10 +166,10 @@ export default function OrderDetailPage() {
               <h3 className="text-sm font-bold text-white uppercase tracking-wider">Order Items</h3>
             </div>
             <CardContent className="p-0 divide-y divide-card-border">
-              {purchasedBeats.map((beat: BeatType) => {
+              {purchasedBeats.map((beat: BeatType, index) => {
                 const artist = artists.find((a: ArtistType) => a.id === beat.artistId)
                 return (
-                  <div key={beat.id} className="flex items-center justify-between p-4 px-6 hover:bg-neutral-900/10 transition-colors">
+                  <div key={`${beat.id}-${index}`} className="flex items-center justify-between p-4 px-6 hover:bg-neutral-900/10 transition-colors">
                     <div className="flex items-center gap-3">
                       <div className="h-10 w-10 rounded bg-neutral-900 border border-card-border overflow-hidden flex items-center justify-center shrink-0">
                         {beat.assets.coverImage ? (

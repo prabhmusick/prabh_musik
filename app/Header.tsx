@@ -206,45 +206,62 @@ export default function Header() {
             </div>
 
             {/* Log In */}
-            <button
-              onMouseEnter={() => setLoginHov(true)}
-              onMouseLeave={() => setLoginHov(false)}
-              style={{
-                background: "transparent",
-                border: "none",
-                color: loginHov ? "#ffffff" : "rgba(255,255,255,0.75)",
-                fontFamily: "'Inter', sans-serif",
-                fontSize: "14px",
-                fontWeight: 500,
-                cursor: "pointer",
-                padding: "6px 4px",
-                transition: "color 0.2s ease",
-              }}
-            >
-              Log in
-            </button>
+            {pathname === "/login" && (
+              <span style={{ color: "rgba(255,255,255,0.5)", fontFamily: "'Inter', sans-serif", fontSize: "14px", marginRight: "4px" }}>
+                Need an account?
+              </span>
+            )}
+            {pathname !== "/login" && (
+              <button
+                onClick={() => router.push("/login")}
+                onMouseEnter={() => setLoginHov(true)}
+                onMouseLeave={() => setLoginHov(false)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: loginHov ? "#ffffff" : "rgba(255,255,255,0.75)",
+                  fontFamily: "'Inter', sans-serif",
+                  fontSize: "14px",
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  padding: "6px 4px",
+                  transition: "color 0.2s ease",
+                  marginRight: pathname === "/signup" ? "8px" : "0"
+                }}
+              >
+                Log in
+              </button>
+            )}
 
             {/* Sign up */}
-            <button
-              onMouseEnter={() => setSignupHov(true)}
-              onMouseLeave={() => setSignupHov(false)}
-              style={{
-                background: signupHov ? "#e8920a" : "#d4820a",
-                border: "none",
-                color: "#000000",
-                fontFamily: "'Inter', sans-serif",
-                fontSize: "14px",
-                fontWeight: 700,
-                cursor: "pointer",
-                padding: "7px 18px",
-                borderRadius: "6px",
-                transition: "background 0.2s ease, transform 0.15s ease",
-                transform: signupHov ? "translateY(-1px)" : "translateY(0)",
-                boxShadow: signupHov ? "0 4px 14px #d4820a55" : "none",
-              }}
-            >
-              Sign up
-            </button>
+            {pathname === "/signup" && (
+              <span style={{ color: "rgba(255,255,255,0.5)", fontFamily: "'Inter', sans-serif", fontSize: "14px", marginRight: "4px" }}>
+                Already a member?
+              </span>
+            )}
+            {pathname !== "/signup" && (
+              <button
+                onClick={() => router.push("/signup")}
+                onMouseEnter={() => setSignupHov(true)}
+                onMouseLeave={() => setSignupHov(false)}
+                style={{
+                  background: signupHov ? "#e8920a" : "#d4820a",
+                  border: "none",
+                  color: "#000000",
+                  fontFamily: "'Inter', sans-serif",
+                  fontSize: "14px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  padding: "7px 18px",
+                  borderRadius: "6px",
+                  transition: "background 0.2s ease, transform 0.15s ease",
+                  transform: signupHov ? "translateY(-1px)" : "translateY(0)",
+                  boxShadow: signupHov ? "0 4px 14px #d4820a55" : "none",
+                }}
+              >
+                Sign up
+              </button>
+            )}
           </div>
 
           {/* ── Mobile hamburger ── */}
@@ -307,17 +324,48 @@ export default function Header() {
                 {link}
               </button>
             ))}
-            <div style={{ display: "flex", gap: "12px", marginTop: "8px" }}>
-              <button style={{
-                background: "transparent", border: "none",
-                color: "rgba(255,255,255,0.75)", fontFamily: "'Inter', sans-serif",
-                fontSize: "14px", fontWeight: 500, cursor: "pointer", padding: 0,
-              }}>Log in</button>
-              <button style={{
-                background: "#d4820a", border: "none", color: "#000",
-                fontFamily: "'Inter', sans-serif", fontSize: "14px",
-                fontWeight: 700, cursor: "pointer", padding: "7px 18px", borderRadius: "6px",
-              }}>Sign up</button>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "8px" }}>
+              {pathname === "/login" && (
+                <span style={{ color: "rgba(255,255,255,0.5)", fontFamily: "'Inter', sans-serif", fontSize: "14px" }}>
+                  Need an account?
+                </span>
+              )}
+              {pathname !== "/login" && (
+                <button
+                  onClick={() => {
+                    setMobileOpen(false);
+                    router.push("/login");
+                  }}
+                  style={{
+                    background: "transparent", border: "none",
+                    color: "rgba(255,255,255,0.75)", fontFamily: "'Inter', sans-serif",
+                    fontSize: "14px", fontWeight: 500, cursor: "pointer", padding: 0,
+                  }}
+                >
+                  Log in
+                </button>
+              )}
+
+              {pathname === "/signup" && (
+                <span style={{ color: "rgba(255,255,255,0.5)", fontFamily: "'Inter', sans-serif", fontSize: "14px" }}>
+                  Already a member?
+                </span>
+              )}
+              {pathname !== "/signup" && (
+                <button
+                  onClick={() => {
+                    setMobileOpen(false);
+                    router.push("/signup");
+                  }}
+                  style={{
+                    background: "#d4820a", border: "none", color: "#000",
+                    fontFamily: "'Inter', sans-serif", fontSize: "14px",
+                    fontWeight: 700, cursor: "pointer", padding: "7px 18px", borderRadius: "6px",
+                  }}
+                >
+                  Sign up
+                </button>
+              )}
             </div>
           </div>
         )}
