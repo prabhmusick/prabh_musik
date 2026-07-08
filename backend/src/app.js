@@ -75,6 +75,7 @@ const ordersRouter = require("./modules/orders/orders.routes");
 const ownershipsRouter = require("./modules/ownerships/ownerships.routes");
 const downloadsRouter = require("./modules/downloads/downloads.routes");
 const authRouter = require("./modules/auth/auth.routes");
+const paymentsRouter = require("./modules/payments/payments.routes");
 const ownershipsController = require("./modules/ownerships/ownerships.controller");
 
 const requestIdMiddleware = require("./middleware/requestId.middleware");
@@ -127,6 +128,7 @@ app.use("/api/users", usersRouter);
 app.use("/api/orders", ordersRouter);
 app.use("/api/ownerships", ownershipsRouter);
 app.use("/api/downloads", downloadsRouter);
+app.use("/api/payments", paymentsRouter);
 app.get("/api/me/library", ownershipsController.getLibraryByUser);
 
 // Register standardized global error handling middleware as the last handler

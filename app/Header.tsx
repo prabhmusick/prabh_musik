@@ -347,40 +347,6 @@ export default function Header() {
           </button>
         </div>
 
-        {cartOpen && (
-          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 120, display: "flex", justifyContent: "flex-end" }} onClick={closeCart}>
-            <div onClick={(e) => e.stopPropagation()} style={{ width: "min(420px, 100%)", height: "100%", background: "#0f1117", borderLeft: "1px solid rgba(255,255,255,0.1)", boxShadow: "-16px 0 45px rgba(0,0,0,0.4)", padding: "24px", display: "flex", flexDirection: "column", gap: "16px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <h3 style={{ color: "#fff", fontSize: 20, margin: 0 }}>Your cart</h3>
-                <button onClick={closeCart} style={{ background: "transparent", border: "none", color: "#fff", cursor: "pointer", fontSize: 18 }}>✕</button>
-              </div>
-              {cart.length === 0 ? (
-                <div style={{ padding: "32px 0", color: "rgba(255,255,255,0.65)", textAlign: "center" }}>Your selected beats will appear here.</div>
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: "12px", overflowY: "auto" }}>
-                  {cart.map((item) => (
-                    <div key={item.id} style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "12px", padding: "12px", display: "flex", gap: "12px", alignItems: "center" }}>
-                      <img src={item.cover} alt={item.title} style={{ width: 56, height: 56, objectFit: "cover", borderRadius: 10 }} />
-                      <div style={{ flex: 1 }}>
-                        <div style={{ color: "#fff", fontWeight: 700 }}>{item.title}</div>
-                        <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 13 }}>{item.producer}</div>
-                      </div>
-                      <div style={{ color: "#fbbf24", fontWeight: 700 }}>{item.price ? `₹${item.price.toLocaleString("en-IN")}` : "Free"}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <div style={{ marginTop: "auto", paddingTop: "16px", borderTop: "1px solid rgba(255,255,255,0.08)", display: "flex", flexDirection: "column", gap: "12px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", color: "#fff" }}>
-                  <span>Total</span>
-                  <span>₹{cart.reduce((sum, item) => sum + (item.price || 0), 0).toLocaleString("en-IN")}</span>
-                </div>
-                <button onClick={() => { if (cart.length) { router.push("/profile"); closeCart(); } }} style={{ background: "#d4820a", border: "none", color: "#000", fontWeight: 700, borderRadius: 10, padding: "12px 16px", cursor: "pointer" }}>Proceed to checkout</button>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* ── Mobile dropdown ── */}
         {mobileOpen && (
           <div
