@@ -1,0 +1,13 @@
+/**
+ * @fileoverview Centralized Revocation Reasons Constants
+ */
+
+const REVOCATION_REASONS = {
+  USER_LOGOUT: "USER_LOGOUT",
+  TOKEN_REPLAY: "TOKEN_REPLAY",
+  ADMIN_REVOKED: "ADMIN_REVOKED",
+  PASSWORD_RESET: "PASSWORD_RESET",
+  ACCOUNT_DELETED: "ACCOUNT_DELETED"
+};
+
+module.exports = REVOCATION_REASONS;

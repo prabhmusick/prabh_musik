@@ -1,25 +1,52 @@
--- Users
--- Seed users (passwords are plain-text placeholders; change in production)
-INSERT INTO users (name, email, mobile, password, address)
+-- ==========================================
+-- SEED DATA
+-- ==========================================
+
+-- Seed Users
+INSERT INTO users (id, public_id, email, name, mobile, address, role, status, email_verified)
 VALUES
 (
-    'Sanskar Sharma',
+    1,
+    '550e8400-e29b-41d4-a716-446655440000',
     'sanskar@gmail.com',
+    'Sanskar Sharma',
     '+919999999999',
-    'password',
-    'Gurgaon, India'
+    'Gurgaon, India',
+    'admin',
+    'active',
+    1
 ),
 (
-    'Amit Garg',
+    2,
+    '550e8400-e29b-41d4-a716-446655440001',
     'amit@gmail.com',
+    'Amit Garg',
     '+918888888888',
-    'password',
-    'Delhi, India'
+    'Delhi, India',
+    'customer',
+    'active',
+    1
 );
 
--- Seed a beat (using R2 key naming conventions instead of absolute URLs, providing unique slugs)
-INSERT INTO beats (beat_name, slug, genre, audio_key, status, price, duration, track_type)
+-- Seed Credentials (password is bcrypt hash of 'password')
+INSERT INTO user_credentials (user_id, provider, password_hash)
+VALUES
+(
+    1,
+    'email',
+    '$2b$10$eImiTXuWVxfM37uY4bESoO2kh.1G5dUX3B0M/YdGg3YmCjY6rJ/mG'
+),
+(
+    2,
+    'email',
+    '$2b$10$eImiTXuWVxfM37uY4bESoO2kh.1G5dUX3B0M/YdGg3YmCjY6rJ/mG'
+);
+
+-- Seed Beats (with generated public_id)
+INSERT INTO beats (id, public_id, beat_name, slug, genre, audio_key, status, price, duration, track_type)
 VALUES (
+    1,
+    'b4af6389-11c5-4d76-90dc-2a8d11624021',
     'The Mountain Storytelling',
     'the-mountain-storytelling',
     'Storytelling',

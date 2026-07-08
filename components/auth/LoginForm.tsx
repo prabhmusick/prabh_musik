@@ -2,6 +2,8 @@
 
 import { useState, useCallback } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useAppShell } from "@/app/contexts/app-shell-context";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -137,6 +139,9 @@ export default function LoginForm() {
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { login } = useAppShell();
 
   const handleChange = useCallback(
     (id: keyof FormFields, value: string) => {
@@ -164,8 +169,13 @@ export default function LoginForm() {
     setErrors({});
     setLoading(true);
     try {
-      // Stub login API call
-      await new Promise((r) => setTimeout(r, 1400));
+      await new Promise((r) => setTimeout(r, 800));
+      login({
+        emailOrUsername: fields.emailOrUsername,
+        fullName: fields.emailOrUsername.includes("@") ? fields.emailOrUsername.split("@")[0] : fields.emailOrUsername,
+        username: (fields.emailOrUsername.includes("@") ? fields.emailOrUsername.split("@")[0] : fields.emailOrUsername).replace(/\s+/g, "_"),
+        email: fields.emailOrUsername.includes("@") ? fields.emailOrUsername : "producer@prabhmusik.com",
+      });
       setSuccess(true);
     } catch (err: unknown) {
       setErrors({ form: err instanceof Error ? err.message : "Invalid credentials." });
@@ -187,9 +197,17 @@ export default function LoginForm() {
         <p style={{ fontSize: "14px", color: "rgba(255, 255, 255, 0.5)", maxWidth: "280px", margin: "0 auto 16px" }}>
           You've logged in successfully.
         </p>
-        <Link href="/" className="auth-submit-btn" style={{ textDecoration: "none" }}>
-          Go to Dashboard
-        </Link>
+        <button
+          type="button"
+          className="auth-submit-btn"
+          style={{ textDecoration: "none", border: "none", display: "inline-flex", justifyContent: "center" }}
+          onClick={() => {
+            const redirectTo = searchParams.get("redirect") || "/";
+            router.push(redirectTo);
+          }}
+        >
+          Continue
+        </button>
       </div>
     );
   }

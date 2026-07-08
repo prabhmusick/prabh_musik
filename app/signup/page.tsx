@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import SignupForm from "@/components/auth/SignupForm";
 
 // ─── SEO Metadata ───────────────────────────────────────────────────────────
@@ -528,7 +529,9 @@ export default function SignupPage() {
 
             {/* Signup Form wrapped inside a styled div with proper padding & margin */}
             <div className="signup-card">
-              <SignupForm />
+              <Suspense fallback={<div style={{ color: "#fff", textAlign: "center" }}>Loading…</div>}>
+                <SignupForm />
+              </Suspense>
             </div>
           </div>
         </section>

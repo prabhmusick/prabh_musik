@@ -63,6 +63,7 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
+const cookieParser = require("cookie-parser");
 
 const db = require("./config/db");
 console.log("DB MODULE:", db);
@@ -73,15 +74,38 @@ const usersRouter = require("./modules/users/users.routes");
 const ordersRouter = require("./modules/orders/orders.routes");
 const ownershipsRouter = require("./modules/ownerships/ownerships.routes");
 const downloadsRouter = require("./modules/downloads/downloads.routes");
+const authRouter = require("./modules/auth/auth.routes");
 const ownershipsController = require("./modules/ownerships/ownerships.controller");
+
+const requestIdMiddleware = require("./middleware/requestId.middleware");
+const errorHandler = require("./middleware/error");
 
 const app = express();
 
-app.use(express.json());
+// Trust Proxy Configuration from Environment Variables (No hardcoding)
+const trustProxyVal = process.env.TRUST_PROXY;
+if (trustProxyVal) {
+  if (trustProxyVal === "true" || trustProxyVal === "false") {
+    app.set("trust proxy", trustProxyVal === "true");
+  } else if (!isNaN(Number(trustProxyVal))) {
+    app.set("trust proxy", Number(trustProxyVal));
+  } else {
+    app.set("trust proxy", trustProxyVal);
+  }
+}
+
+// Global correlation tracing at the very top of the stack
+app.use(requestIdMiddleware);
+
+// Standard JSON body limits to mitigate DoS payloads
+app.use(express.json({ limit: "10kb" }));
+app.use(cookieParser());
 app.use(cors());
-app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" }
-}));
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" }
+  })
+);
 app.use(morgan("dev"));
 
 db.init();
@@ -92,10 +116,11 @@ app.get("/api/health", (req, res) => {
     status: "OK",
     service: "Prabh Musik API",
     version: "1.0.0",
-    timestamp: new Date().toISOString(),
+    timestamp: new Date().toISOString()
   });
 });
 
+app.use("/api/auth", authRouter);
 app.use("/api/uploads", uploadsRouter);
 app.use("/api/beats", beatsRouter);
 app.use("/api/users", usersRouter);
@@ -104,13 +129,7 @@ app.use("/api/ownerships", ownershipsRouter);
 app.use("/api/downloads", downloadsRouter);
 app.get("/api/me/library", ownershipsController.getLibraryByUser);
 
-app.use((err, req, res, next) => {
-  console.error(err);
-
-  res.status(err.status || 500).json({
-    success: false,
-    message: err.message || "Internal Server Error",
-  });
-});
+// Register standardized global error handling middleware as the last handler
+app.use(errorHandler);
 
 module.exports = app;

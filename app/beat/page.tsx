@@ -1,5 +1,8 @@
 'use client';
 import { useState, useEffect, useCallback, useRef } from "react";
+import { fetchBeats as fetchBeatsAPI } from "@/lib/api/beats";
+import { useAppShell } from "../contexts/app-shell-context";
+import { useRouter } from "next/navigation";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -15,56 +18,48 @@ interface Beat {
   plays: number;
 }
 
-// ─── Fake API ─────────────────────────────────────────────────────────────────
+// ─── API Integration ──────────────────────────────────────────────────────────
 
-const COVERS = [
-  "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=400&fit=crop",
-  "https://images.unsplash.com/photo-1571330735066-03aaa9429d89?w=400&h=400&fit=crop",
-  "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=400&h=400&fit=crop",
-  "https://images.unsplash.com/photo-1506157786151-b8491531f063?w=400&h=400&fit=crop",
-  "https://images.unsplash.com/photo-1501386761578-eaa54b915a07?w=400&h=400&fit=crop",
-  "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400&h=400&fit=crop",
-  "https://images.unsplash.com/photo-1524368535928-5b5e00ddc76b?w=400&h=400&fit=crop",
-  "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=400&h=400&fit=crop",
-  "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=400&h=400&fit=crop",
-  "https://images.unsplash.com/photo-1487180144351-b8472da7d491?w=400&h=400&fit=crop",
-  "https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=400&h=400&fit=crop",
-  "https://images.unsplash.com/photo-1614680376573-df3480f0c6ff?w=400&h=400&fit=crop",
-];
-const PRODUCERS = ["prodtrendyb","sharkeybeatz","brentlandis","calibre000","naahfm","marroybeats","grybeatz","aatolk","linrix","rbymusic","shama","aminprod","afartuluyar"];
-const TITLES = ["Sesme Rod Alert","Sexy Sexy Roadtrip","Truth And Lies","Inspired","Petals","Urgent","Frozen Body","Never Miss","Groove Miracle","Pahadi Drill","Did I Miss?","Memories","Goosebumps","Nocturnal","Phantom"];
-const GENRES = ["Hip-Hop","Trap","Drill","R&B","Afrobeats","Pop","Lo-Fi"];
-const PRICES = [null, 499, 499, 500, 399, 499, 499, 10000, 499, 499, 1000, 595, 599, 485, 490];
-const PREVIEWS = [
-  "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
-  "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
-  "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
-  "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3",
-];
+interface ApiResponse {
+  beat_name: string;
+  artist_name: string;
+  price: number;
+  cover_image_url: string;
+  banner_image_url: string;
+  genre: string;
+  bpm: number;
+  audio_url: string;
+  duration: number;
+}
 
-function generateBeats(page: number, perPage = 20): { beats: Beat[]; total: number } {
-  const total = 20 * 8;
-  const beats: Beat[] = Array.from({ length: perPage }, (_, i) => {
-    const seed = (page - 1) * perPage + i;
-    return {
-      id: seed + 1,
-      title: TITLES[seed % TITLES.length],
-      producer: PRODUCERS[seed % PRODUCERS.length],
-      price: PRICES[seed % PRICES.length],
-      cover: COVERS[seed % COVERS.length],
-      genre: GENRES[seed % GENRES.length],
-      bpm: 70 + ((seed * 13) % 90),
-      previewUrl: PREVIEWS[seed % PREVIEWS.length],
-      plays: 120 + ((seed * 37) % 1100),
-    };
-  });
-  return { beats, total };
+function formatApiBeats(apiBeats: ApiResponse[]): Beat[] {
+  return apiBeats.map((beat: ApiResponse) => ({
+    id: Math.random(), // Generate unique IDs
+    title: beat.beat_name || "Untitled",
+    producer: beat.artist_name || "Unknown Artist",
+    price: beat.price || null,
+    cover: beat.cover_image_url || beat.banner_image_url || "https://via.placeholder.com/400?text=No+Cover",
+    genre: beat.genre || "Music",
+    bpm: beat.bpm || 120,
+    previewUrl: beat.audio_url || "",
+    plays: Math.floor(Math.random() * 5000),
+  }));
 }
 
 async function fetchBeats(page: number): Promise<{ beats: Beat[]; total: number; pages: number }> {
-  await new Promise((r) => setTimeout(r, 420));
-  const { beats, total } = generateBeats(page);
-  return { beats, total, pages: Math.ceil(total / 20) };
+  try {
+    const allBeats = await fetchBeatsAPI();
+    const formattedBeats = formatApiBeats(allBeats);
+    const perPage = 20;
+    const total = formattedBeats.length;
+    const pages = Math.ceil(total / perPage);
+    const start = (page - 1) * perPage;
+    const paginatedBeats = formattedBeats.slice(start, start + perPage);
+    return { beats: paginatedBeats, total, pages };
+  } catch (error) {
+    console.error("Failed to fetch beats from API:", error);
+    return { beats: [], total: 0, pages: 0 };
+  }
 }
 
 // ─── Artist data ──────────────────────────────────────────────────────────────
@@ -81,17 +76,35 @@ const ARTISTS = [
 
 const TAGS = ["drake", "trap", "guitar", "travis scott", "lil baby", "rnb", "gunna"];
 
-const FILTER_DROPDOWNS = ["All time", "Genre", "Track Type", "Price", "Mood", "BPM"];
+function getFilterOptions(beats: Beat[]) {
+  return {
+    genres: Array.from(new Set(beats.map(b => b.genre).filter(Boolean))).sort(),
+    moods: ["Energetic", "Chill", "Dark", "Uplifting", "Aggressive"],
+    priceRanges: ["Free", "₹0-500", "₹500-1000", "₹1000+"],
+    bpmRanges: ["Slow (60-90)", "Normal (90-130)", "Fast (130-160)", "Very Fast (160+)"],
+  };
+}
+
+interface FilterState {
+  genre: string | null;
+  mood: string | null;
+  priceRange: string | null;
+  bpmRange: string | null;
+}
 
 // ─── Price Button ─────────────────────────────────────────────────────────────
 
-function PriceButton({ price }: { price: number | null }) {
+function PriceButton({ price, beat, onPurchase }: { price: number | null; beat: Beat; onPurchase: (selectedBeat: Beat) => void }) {
   const [hov, setHov] = useState(false);
   const free = price === null;
   return (
     <button
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
+      onClick={(event) => {
+        event.stopPropagation();
+        onPurchase(beat);
+      }}
       style={{
         width: "100%",
         display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
@@ -126,12 +139,14 @@ function BeatCard({
   onPlay,
   isActive,
   isPlaying,
+  onPurchase,
 }: {
   beat: Beat;
   index: number;
   onPlay: (beat: Beat) => void;
   isActive: boolean;
   isPlaying: boolean;
+  onPurchase: (beat: Beat) => void;
 }) {
   const [hovered, setHovered] = useState(false);
   const [imgLoaded, setImgLoaded] = useState(false);
@@ -214,7 +229,7 @@ function BeatCard({
           {beat.producer}
           <span style={{ fontSize: 12 }}>👑</span>
         </p>
-        <PriceButton price={beat.price} />
+        <PriceButton price={beat.price} beat={beat} onPurchase={onPurchase} />
       </div>
     </div>
   );
@@ -287,9 +302,11 @@ function Pagination({ current, total, onChange }: { current: number; total: numb
 
 // ─── Trending Beat Types Header ───────────────────────────────────────────────
 
-function TrendingHeader({ search, onSearch, isMobile }: { search: string; onSearch: (v: string) => void; isMobile: boolean }) {
-  const [activeArtist, setActiveArtist] = useState(1); // Sidhu Moose Wala default
+function TrendingHeader({ search, onSearch, isMobile, beats, filters, onFilterChange }: { search: string; onSearch: (v: string) => void; isMobile: boolean; beats: Beat[]; filters: FilterState; onFilterChange: (filters: FilterState) => void }) {
+  const [activeArtist, setActiveArtist] = useState(1);
   const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const filterOptions = getFilterOptions(beats);
 
   return (
     <div style={{ paddingTop: 36, paddingBottom: 10 }}>
@@ -435,29 +452,29 @@ function TrendingHeader({ search, onSearch, isMobile }: { search: string; onSear
 
       {/* ── Row 2: Filter dropdowns ── */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4, flexWrap: "wrap", justifyContent: "flex-start" }}>
-        {FILTER_DROPDOWNS.map((f) => (
-          <button
-            key={f}
-            style={{
-              display: "flex", alignItems: "center", gap: 7,
-              padding: "8px 14px",
-              borderRadius: 8,
-              border: "1px solid rgba(255,255,255,0.18)",
-              background: "transparent",
-              color: "rgba(255,255,255,0.8)",
-              fontSize: 13.5, fontWeight: 500,
-              cursor: "pointer",
-              fontFamily: "'DM Sans', sans-serif",
-              transition: "border-color 0.15s, color 0.15s",
-              whiteSpace: "nowrap",
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.borderColor = "rgba(251,191,36,0.5)"; e.currentTarget.style.color = "#fff"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.18)"; e.currentTarget.style.color = "rgba(255,255,255,0.8)"; }}
-          >
-            {f}
-            <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M2 4l4 4 4-4"/></svg>
-          </button>
-        ))}
+        {/* Genre Filter */}
+        <div style={{ position: "relative" }}>
+          <button onClick={() => setOpenDropdown(openDropdown === "genre" ? null : "genre")} style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 14px", borderRadius: 8, border: `1px solid ${filters.genre ? "rgba(251,191,36,0.6)" : "rgba(255,255,255,0.18)"}`, background: filters.genre ? "rgba(251,191,36,0.15)" : "transparent", color: filters.genre ? "#fbbf24" : "rgba(255,255,255,0.8)", fontSize: 13.5, fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", transition: "border-color 0.15s, color 0.15s", whiteSpace: "nowrap" }}>Genre {filters.genre && `(${filters.genre})`} <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M2 4l4 4 4-4"/></svg></button>
+          {openDropdown === "genre" && (<div style={{ position: "absolute", top: "100%", left: 0, marginTop: 4, background: "#1a1409", border: "1px solid rgba(251,191,36,0.3)", borderRadius: 8, padding: "8px 0", minWidth: 200, zIndex: 10, boxShadow: "0 4px 12px rgba(0,0,0,0.5)" }}><button onClick={() => { onFilterChange({ ...filters, genre: null }); setOpenDropdown(null); }} style={{ width: "100%", padding: "8px 14px", background: !filters.genre ? "rgba(251,191,36,0.2)" : "transparent", color: "rgba(255,255,255,0.8)", border: "none", cursor: "pointer", fontSize: 13, textAlign: "left" }}>All Genres</button>{filterOptions.genres.map((g) => (<button key={g} onClick={() => { onFilterChange({ ...filters, genre: g }); setOpenDropdown(null); }} style={{ width: "100%", padding: "8px 14px", background: filters.genre === g ? "rgba(251,191,36,0.2)" : "transparent", color: "rgba(255,255,255,0.8)", border: "none", cursor: "pointer", fontSize: 13, textAlign: "left" }}>{g}</button>))}</div>)}
+        </div>
+
+        {/* Price Filter */}
+        <div style={{ position: "relative" }}>
+          <button onClick={() => setOpenDropdown(openDropdown === "price" ? null : "price")} style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 14px", borderRadius: 8, border: `1px solid ${filters.priceRange ? "rgba(251,191,36,0.6)" : "rgba(255,255,255,0.18)"}`, background: filters.priceRange ? "rgba(251,191,36,0.15)" : "transparent", color: filters.priceRange ? "#fbbf24" : "rgba(255,255,255,0.8)", fontSize: 13.5, fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", transition: "border-color 0.15s, color 0.15s", whiteSpace: "nowrap" }}>Price {filters.priceRange && `(${filters.priceRange})`} <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M2 4l4 4 4-4"/></svg></button>
+          {openDropdown === "price" && (<div style={{ position: "absolute", top: "100%", left: 0, marginTop: 4, background: "#1a1409", border: "1px solid rgba(251,191,36,0.3)", borderRadius: 8, padding: "8px 0", minWidth: 160, zIndex: 10, boxShadow: "0 4px 12px rgba(0,0,0,0.5)" }}><button onClick={() => { onFilterChange({ ...filters, priceRange: null }); setOpenDropdown(null); }} style={{ width: "100%", padding: "8px 14px", background: !filters.priceRange ? "rgba(251,191,36,0.2)" : "transparent", color: "rgba(255,255,255,0.8)", border: "none", cursor: "pointer", fontSize: 13, textAlign: "left" }}>All Prices</button>{filterOptions.priceRanges.map((p) => (<button key={p} onClick={() => { onFilterChange({ ...filters, priceRange: p }); setOpenDropdown(null); }} style={{ width: "100%", padding: "8px 14px", background: filters.priceRange === p ? "rgba(251,191,36,0.2)" : "transparent", color: "rgba(255,255,255,0.8)", border: "none", cursor: "pointer", fontSize: 13, textAlign: "left" }}>{p}</button>))}</div>)}
+        </div>
+
+        {/* Mood Filter */}
+        <div style={{ position: "relative" }}>
+          <button onClick={() => setOpenDropdown(openDropdown === "mood" ? null : "mood")} style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 14px", borderRadius: 8, border: `1px solid ${filters.mood ? "rgba(251,191,36,0.6)" : "rgba(255,255,255,0.18)"}`, background: filters.mood ? "rgba(251,191,36,0.15)" : "transparent", color: filters.mood ? "#fbbf24" : "rgba(255,255,255,0.8)", fontSize: 13.5, fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", transition: "border-color 0.15s, color 0.15s", whiteSpace: "nowrap" }}>Mood {filters.mood && `(${filters.mood})`} <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M2 4l4 4 4-4"/></svg></button>
+          {openDropdown === "mood" && (<div style={{ position: "absolute", top: "100%", left: 0, marginTop: 4, background: "#1a1409", border: "1px solid rgba(251,191,36,0.3)", borderRadius: 8, padding: "8px 0", minWidth: 160, zIndex: 10, boxShadow: "0 4px 12px rgba(0,0,0,0.5)" }}><button onClick={() => { onFilterChange({ ...filters, mood: null }); setOpenDropdown(null); }} style={{ width: "100%", padding: "8px 14px", background: !filters.mood ? "rgba(251,191,36,0.2)" : "transparent", color: "rgba(255,255,255,0.8)", border: "none", cursor: "pointer", fontSize: 13, textAlign: "left" }}>All Moods</button>{filterOptions.moods.map((m) => (<button key={m} onClick={() => { onFilterChange({ ...filters, mood: m }); setOpenDropdown(null); }} style={{ width: "100%", padding: "8px 14px", background: filters.mood === m ? "rgba(251,191,36,0.2)" : "transparent", color: "rgba(255,255,255,0.8)", border: "none", cursor: "pointer", fontSize: 13, textAlign: "left" }}>{m}</button>))}</div>)}
+        </div>
+
+        {/* BPM Filter */}
+        <div style={{ position: "relative" }}>
+          <button onClick={() => setOpenDropdown(openDropdown === "bpm" ? null : "bpm")} style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 14px", borderRadius: 8, border: `1px solid ${filters.bpmRange ? "rgba(251,191,36,0.6)" : "rgba(255,255,255,0.18)"}`, background: filters.bpmRange ? "rgba(251,191,36,0.15)" : "transparent", color: filters.bpmRange ? "#fbbf24" : "rgba(255,255,255,0.8)", fontSize: 13.5, fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", transition: "border-color 0.15s, color 0.15s", whiteSpace: "nowrap" }}>BPM {filters.bpmRange && `(${filters.bpmRange})`} <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M2 4l4 4 4-4"/></svg></button>
+          {openDropdown === "bpm" && (<div style={{ position: "absolute", top: "100%", left: 0, marginTop: 4, background: "#1a1409", border: "1px solid rgba(251,191,36,0.3)", borderRadius: 8, padding: "8px 0", minWidth: 180, zIndex: 10, boxShadow: "0 4px 12px rgba(0,0,0,0.5)" }}><button onClick={() => { onFilterChange({ ...filters, bpmRange: null }); setOpenDropdown(null); }} style={{ width: "100%", padding: "8px 14px", background: !filters.bpmRange ? "rgba(251,191,36,0.2)" : "transparent", color: "rgba(255,255,255,0.8)", border: "none", cursor: "pointer", fontSize: 13, textAlign: "left" }}>All BPM</button>{filterOptions.bpmRanges.map((b) => (<button key={b} onClick={() => { onFilterChange({ ...filters, bpmRange: b }); setOpenDropdown(null); }} style={{ width: "100%", padding: "8px 14px", background: filters.bpmRange === b ? "rgba(251,191,36,0.2)" : "transparent", color: "rgba(255,255,255,0.8)", border: "none", cursor: "pointer", fontSize: 13, textAlign: "left" }}>{b}</button>))}</div>)}
+        </div>
       </div>
     </div>
   );
@@ -479,7 +496,10 @@ export default function BeatMarketplace() {
   const [isLooping, setIsLooping] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [filters, setFilters] = useState<FilterState>({ genre: null, mood: null, priceRange: null, bpmRange: null });
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const router = useRouter();
+  const { isAuthenticated, addToCart } = useAppShell();
 
   const load = useCallback(async (p: number) => {
     setLoading(true);
@@ -531,11 +551,39 @@ export default function BeatMarketplace() {
     }
   }, [isLooping]);
 
-  const filtered = beats.filter(
-    (b) =>
-      b.title.toLowerCase().includes(search.toLowerCase()) ||
-      b.producer.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = beats.filter((b) => {
+    const matchesSearch = b.title.toLowerCase().includes(search.toLowerCase()) || b.producer.toLowerCase().includes(search.toLowerCase());
+    
+    const matchesGenre = !filters.genre || b.genre === filters.genre;
+    
+    const matchesMood = true; // Mood filter can be added when API data includes it
+    
+    let matchesBpm = true;
+    if (filters.bpmRange) {
+      if (filters.bpmRange.includes("60-90")) matchesBpm = b.bpm >= 60 && b.bpm <= 90;
+      else if (filters.bpmRange.includes("90-130")) matchesBpm = b.bpm > 90 && b.bpm <= 130;
+      else if (filters.bpmRange.includes("130-160")) matchesBpm = b.bpm > 130 && b.bpm <= 160;
+      else if (filters.bpmRange.includes("160+")) matchesBpm = b.bpm > 160;
+    }
+
+    let matchesPrice = true;
+    if (filters.priceRange) {
+      if (filters.priceRange === "Free") matchesPrice = !b.price || b.price === 0;
+      else if (filters.priceRange === "₹0-500") matchesPrice = (b.price || 0) > 0 && (b.price || 0) <= 500;
+      else if (filters.priceRange === "₹500-1000") matchesPrice = (b.price || 0) > 500 && (b.price || 0) <= 1000;
+      else if (filters.priceRange === "₹1000+") matchesPrice = (b.price || 0) > 1000;
+    }
+
+    return matchesSearch && matchesGenre && matchesMood && matchesBpm && matchesPrice;
+  });
+
+  const handlePurchase = useCallback((beat: Beat) => {
+    if (!isAuthenticated) {
+      router.push("/login");
+      return;
+    }
+    addToCart(beat);
+  }, [addToCart, isAuthenticated, router]);
 
   const playBeat = useCallback(async (beat: Beat) => {
     const audio = audioRef.current;
@@ -547,6 +595,11 @@ export default function BeatMarketplace() {
       } else {
         audio.pause();
       }
+      return;
+    }
+
+    if (!beat.previewUrl) {
+      console.warn("No preview URL available for this beat");
       return;
     }
 
@@ -675,7 +728,7 @@ export default function BeatMarketplace() {
             </div>
 
             {/* ── NEW: Trending Beat Types header ── */}
-            <TrendingHeader search={search} onSearch={setSearch} isMobile={isMobile} />
+            <TrendingHeader search={search} onSearch={setSearch} isMobile={isMobile} beats={beats} filters={filters} onFilterChange={setFilters} />
 
           {/* ── Toolbar ── */}
           <div style={{ display: "flex", justifyContent: isMobile ? "space-between" : "flex-end", flexWrap: "wrap", marginTop: 18, marginBottom: 18, gap: 8 }}>
@@ -711,6 +764,7 @@ export default function BeatMarketplace() {
                     beat={beat}
                     index={i}
                     onPlay={playBeat}
+                    onPurchase={handlePurchase}
                     isActive={currentBeat?.id === beat.id}
                     isPlaying={isPlaying}
                   />
@@ -769,7 +823,7 @@ export default function BeatMarketplace() {
                         )}
                       </button>
                       <div onClick={(e) => e.stopPropagation()}>
-                        <PriceButton price={beat.price} />
+                        <PriceButton price={beat.price} beat={beat} onPurchase={handlePurchase} />
                       </div>
                     </div>
                   </div>
