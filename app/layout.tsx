@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import Header from "./Header";
 import Footer from "./Footer";
+import { CartSidebar } from "../components/CartSidebar";
 import { Agentation } from "agentation";
 
 const geistSans = Geist({
@@ -40,6 +41,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <Providers>
           <Header />
+          <CartSidebar />
           <main className="flex-1">{children}</main>
           <Footer />
         </Providers>

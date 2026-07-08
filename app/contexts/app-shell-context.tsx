@@ -48,32 +48,9 @@ const CART_STORAGE_KEY = "prabhmusick-cart";
 const WISHLIST_STORAGE_KEY = "prabhmusick-wishlist";
 const PURCHASES_STORAGE_KEY = "prabhmusick-purchases";
 
-const defaultPurchases: BeatItem[] = [
-  {
-    id: 101,
-    title: "Midnight Glow",
-    producer: "Ava Lane",
-    price: 4500,
-    cover: "https://images.unsplash.com/photo-1516280440614-37939bbacd81?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    id: 102,
-    title: "Neon Skyline",
-    producer: "Riley Fox",
-    price: 3200,
-    cover: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=800&q=80",
-  },
-];
-
-const defaultWishlist: BeatItem[] = [
-  {
-    id: 201,
-    title: "Golden Hour",
-    producer: "Noah Reed",
-    price: 2800,
-    cover: "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=800&q=80",
-  },
-];
+// Empty defaults - user data should come from backend, not hardcoded mocks
+const defaultPurchases: BeatItem[] = [];
+const defaultWishlist: BeatItem[] = [];
 
 function getStoredValue<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
@@ -137,12 +114,18 @@ export function AppShellProvider({ children }: { children: React.ReactNode }) {
       email: payload.email || "creator@prabhmusik.com",
       avatar: payload.avatar || "https://api.dicebear.com/7.x/thumbs/svg?seed=creator",
     });
+    // Clear user-specific data for new signup
+    setCart([]);
+    setWishlist([]);
+    setPurchasedBeats([]);
     setCartOpen(false);
   };
 
   const logout = () => {
     setUser(null);
     setCart([]);
+    setWishlist([]);
+    setPurchasedBeats([]);
     setCartOpen(false);
   };
 
