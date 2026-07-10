@@ -1,12 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { loadStripe } from "@stripe/stripe-js";
-import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { useAppShell } from "../contexts/app-shell-context";
-
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY || "pk_test_fake");
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -35,17 +31,11 @@ export default function CheckoutPage() {
     );
   }
 
-  return (
-    <Elements stripe={stripePromise}>
-      <CheckoutForm cart={cart} user={user} onCheckoutComplete={checkoutCart} />
-    </Elements>
-  );
+  return <CheckoutForm cart={cart} user={user} onCheckoutComplete={checkoutCart} />;
 }
 
 function CheckoutForm({ cart, user, onCheckoutComplete }: any) {
   const router = useRouter();
-  const stripe = useStripe();
-  const elements = useElements();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [email, setEmail] = useState(user?.email || "");
@@ -56,31 +46,13 @@ function CheckoutForm({ cart, user, onCheckoutComplete }: any) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!stripe || !elements) return;
 
     setLoading(true);
     setError("");
 
     try {
-      const cardElement = elements.getElement(CardElement);
-      if (!cardElement) throw new Error("Card element not found");
-
-      // Create payment method
-      const { error: pmError, paymentMethod } = await stripe.createPaymentMethod({
-        type: "card",
-        card: cardElement,
-        billing_details: { name, email },
-      });
-
-      if (pmError) {
-        setError(pmError.message || "Payment failed");
-        setLoading(false);
-        return;
-      }
-
-      // Create payment intent on backend
       const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5005";
-      const response = await fetch(`${API_BASE}/api/payments/create-payment-intent`, {
+      const response = await fetch(`${API_BASE}/api/payments/create-checkout-session`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -88,7 +60,6 @@ function CheckoutForm({ cart, user, onCheckoutComplete }: any) {
           currency: "INR",
           email,
           beats: cart.map((b: any) => ({ id: b.id, title: b.title, price: b.price })),
-          paymentMethodId: paymentMethod.id,
         }),
       });
 
@@ -98,31 +69,8 @@ function CheckoutForm({ cart, user, onCheckoutComplete }: any) {
         throw new Error(paymentData.error || "Payment processing failed");
       }
 
-      // Confirm payment
-      const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
-        elements,
-        confirmParams: {
-          return_url: `${window.location.origin}/profile?payment=success`,
-        },
-        redirect: "if_required",
-      });
-
-      if (confirmError) {
-        setError(confirmError.message || "Payment confirmation failed");
-        setLoading(false);
-        return;
-      }
-
-      if (paymentIntent?.status === "succeeded") {
-        onCheckoutComplete();
-        router.push("/profile?payment=success");
-      } else if (paymentIntent?.status === "requires_action") {
-        // Handle 3D Secure or other required actions
-        setError("Additional authentication required. Please complete the process.");
-        setLoading(false);
-      } else {
-        setError("Payment was not completed. Please try again.");
-      }
+      onCheckoutComplete();
+      window.location.href = paymentData.url;
     } catch (err: any) {
       setError(err.message || "An error occurred");
     } finally {
@@ -177,19 +125,8 @@ function CheckoutForm({ cart, user, onCheckoutComplete }: any) {
               {/* Payment Info */}
               <section style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: 20 }}>
                 <h2 style={{ color: "#fff", fontSize: 16, fontWeight: 700, margin: "0 0 16px" }}>Payment Details</h2>
-                <div style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: 12 }}>
-                  <CardElement
-                    options={{
-                      style: {
-                        base: {
-                          fontSize: "14px",
-                          color: "#fff",
-                          "::placeholder": { color: "rgba(255,255,255,0.4)" },
-                        },
-                        invalid: { color: "#ff4444" },
-                      },
-                    }}
-                  />
+                <div style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: 14, color: "rgba(255,255,255,0.8)", lineHeight: 1.5 }}>
+                  You will be redirected to Stripe Checkout where you can pay with cards, UPI, wallets, and other supported methods.
                 </div>
               </section>
 
@@ -201,7 +138,7 @@ function CheckoutForm({ cart, user, onCheckoutComplete }: any) {
 
               <button
                 type="submit"
-                disabled={loading || !stripe}
+                disabled={loading}
                 style={{
                   background: loading ? "rgba(212,130,10,0.5)" : "#d4820a",
                   color: "#000",
@@ -253,7 +190,7 @@ function CheckoutForm({ cart, user, onCheckoutComplete }: any) {
               </div>
 
               <div style={{ background: "rgba(212,130,10,0.1)", border: "1px solid rgba(212,130,10,0.2)", borderRadius: 8, padding: 10, fontSize: 12, color: "#fbbf24" }}>
-                💡 Test card: 4242 4242 4242 4242 (Exp: any future date)
+                💡 Stripe Checkout will show supported methods like cards, UPI, wallets, and more based on your region and Stripe account setup.
               </div>
             </div>
           </div>

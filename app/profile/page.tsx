@@ -340,7 +340,19 @@ export default function ProfilePage() {
   );
 }
 
-function Crate({ title, items, empty, ctaHref, ctaLabel }) {
+function Crate({
+  title,
+  items,
+  empty,
+  ctaHref,
+  ctaLabel,
+}: {
+  title: string;
+  items: Array<{ id: number | string; title: string }>;
+  empty: string;
+  ctaHref?: string;
+  ctaLabel?: string;
+}) {
   return (
     <div
       style={{
@@ -390,7 +402,7 @@ function Crate({ title, items, empty, ctaHref, ctaLabel }) {
         >
           <p style={{ color: MUTED, margin: "0 0 12px", fontSize: 14 }}>{empty}</p>
           <Link
-            href={ctaHref}
+            href={ctaHref || "/"}
             className="pp-btn"
             style={{
               color: AMBER,

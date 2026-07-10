@@ -1,5 +1,39 @@
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const db = require("../../config/db").db;
+const { buildCheckoutSessionParams } = require("./checkoutSession");
+
+/**
+ * Create a Stripe Checkout Session
+ * @route POST /api/payments/create-checkout-session
+ */
+exports.createCheckoutSession = async (req, res) => {
+  const { amount, currency = "INR", email, beats } = req.body;
+
+  if (!amount || !email || !beats) {
+    return res.status(400).json({ error: "Missing required fields" });
+  }
+
+  try {
+    const session = await stripe.checkout.sessions.create(
+      buildCheckoutSessionParams({
+        amount,
+        currency,
+        email,
+        beats,
+        successUrl: `${req.protocol}://${req.get("host")}/profile?payment=success`,
+        cancelUrl: `${req.protocol}://${req.get("host")}/checkout`,
+      })
+    );
+
+    res.json({
+      url: session.url,
+      sessionId: session.id,
+    });
+  } catch (error) {
+    console.error("Checkout Session Error:", error);
+    res.status(500).json({ error: error.message || "Failed to create checkout session" });
+  }
+};
 
 /**
  * Create a Stripe Payment Intent

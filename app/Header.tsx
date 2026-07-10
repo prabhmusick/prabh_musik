@@ -10,13 +10,14 @@ export default function Header() {
   const router = useRouter();
   const pathname = usePathname();
   const { isAuthenticated, user, cart, cartOpen, openCart, closeCart, logout } = useAppShell();
-  if (pathname?.startsWith("/admin")) return null;
   const [searchFocused, setSearchFocused] = useState(false);
   const [searchVal, setSearchVal] = useState("");
   const [loginHov, setLoginHov] = useState(false);
   const [signupHov, setSignupHov] = useState(false);
   const [logoutHov, setLogoutHov] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  if (pathname?.startsWith("/admin")) return null;
 
   const getActiveLink = () => {
     if (pathname === "/") return "Home";

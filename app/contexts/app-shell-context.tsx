@@ -72,27 +72,40 @@ function persistValue<T>(key: string, value: T | null) {
 }
 
 export function AppShellProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<UserProfile | null>(() => getStoredValue<UserProfile | null>(USER_STORAGE_KEY, null));
-  const [cart, setCart] = useState<BeatItem[]>(() => getStoredValue<BeatItem[]>(CART_STORAGE_KEY, []));
-  const [wishlist, setWishlist] = useState<BeatItem[]>(() => getStoredValue<BeatItem[]>(WISHLIST_STORAGE_KEY, defaultWishlist));
-  const [purchasedBeats, setPurchasedBeats] = useState<BeatItem[]>(() => getStoredValue<BeatItem[]>(PURCHASES_STORAGE_KEY, defaultPurchases));
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [cart, setCart] = useState<BeatItem[]>([]);
+  const [wishlist, setWishlist] = useState<BeatItem[]>(defaultWishlist);
+  const [purchasedBeats, setPurchasedBeats] = useState<BeatItem[]>(defaultPurchases);
   const [cartOpen, setCartOpen] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
+    setUser(getStoredValue<UserProfile | null>(USER_STORAGE_KEY, null));
+    setCart(getStoredValue<BeatItem[]>(CART_STORAGE_KEY, []));
+    setWishlist(getStoredValue<BeatItem[]>(WISHLIST_STORAGE_KEY, defaultWishlist));
+    setPurchasedBeats(getStoredValue<BeatItem[]>(PURCHASES_STORAGE_KEY, defaultPurchases));
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
     persistValue(USER_STORAGE_KEY, user);
-  }, [user]);
+  }, [hydrated, user]);
 
   useEffect(() => {
+    if (!hydrated) return;
     persistValue(CART_STORAGE_KEY, cart);
-  }, [cart]);
+  }, [hydrated, cart]);
 
   useEffect(() => {
+    if (!hydrated) return;
     persistValue(WISHLIST_STORAGE_KEY, wishlist);
-  }, [wishlist]);
+  }, [hydrated, wishlist]);
 
   useEffect(() => {
+    if (!hydrated) return;
     persistValue(PURCHASES_STORAGE_KEY, purchasedBeats);
-  }, [purchasedBeats]);
+  }, [hydrated, purchasedBeats]);
 
   const login = (payload: Partial<UserProfile> & { emailOrUsername?: string }) => {
     const fallbackName = payload.fullName || payload.username || payload.emailOrUsername?.split("@")[0] || "Producer";
