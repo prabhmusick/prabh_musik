@@ -18,6 +18,9 @@ const createBeat = async (req, res) => {
  */
 const getAllBeats = async (req, res) => {
   const beats = await service.getAllBeats();
+  console.log(
+    `Beats controller: fetched ${Array.isArray(beats) ? beats.length : 0} beats`,
+  );
   res.json({
     success: true,
     count: beats.length,

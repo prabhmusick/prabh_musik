@@ -2,7 +2,9 @@ const sqlite3 = require("sqlite3").verbose();
 const fs = require("fs");
 const path = require("path");
 
-const dbFile = process.env.DB_FILE || path.join(__dirname, "..", "..", "Database", "beats.db");
+const dbFile =
+  process.env.DB_FILE ||
+  path.join(__dirname, "..", "..", "Database", "beats.db");
 const schemaFile = path.join(__dirname, "..", "..", "Database", "schema.sql");
 const seedFile = path.join(__dirname, "..", "..", "Database", "seed.sql");
 
@@ -58,39 +60,45 @@ function init() {
       return;
     }
 
-    // Check if the credentials table exists (our Sprint 2 sentinel)
-    db.get(
-      "SELECT name FROM sqlite_master WHERE type='table' AND name='user_credentials'",
-      (err, row) => {
-        if (err) {
-          console.error("Error checking DB schema status:", err.message || err);
-          return;
-        }
-        if (!row) {
-          console.log("Sentinel table 'user_credentials' missing — performing clean initialization.");
-          applySchemaAndSeed();
-        } else {
-          console.log("Database file exists and is initialized with Sprint 2 schema.");
-          // Ensure revoked_reason column exists in user_sessions (Sprint 6 migration)
-          db.run("ALTER TABLE user_sessions ADD COLUMN revoked_reason TEXT;", (alterErr) => {
-            if (alterErr) {
-              if (alterErr.message.includes("duplicate column name")) {
-                console.log("Column 'revoked_reason' already exists in 'user_sessions'.");
-              } else {
-                console.error("Migration failed to add 'revoked_reason' to 'user_sessions':", alterErr.message);
-              }
-            } else {
-              console.log("Successfully migrated: Added column 'revoked_reason' to 'user_sessions'.");
-            }
-          });
-        }
-      }
+    // Database exists — DO NOT re-apply the full schema or seed on an existing file.
+    // Re-initializing an existing DB can destroy user data. Instead, run only
+    // non-destructive migrations where possible.
+    console.log(
+      "Database file exists — skipping destructive re-initialization.",
     );
+
+    // Ensure revoked_reason column exists in user_sessions (Sprint 6 migration).
+    // Use a safe conditional add to avoid errors if the column already exists.
+    db.get("PRAGMA table_info(user_sessions);", (pragmaErr, pragmaRow) => {
+      // We'll attempt to add the column; SQLite will error if it exists — handle gracefully.
+      db.run(
+        "ALTER TABLE user_sessions ADD COLUMN revoked_reason TEXT;",
+        (alterErr) => {
+          if (alterErr) {
+            if (
+              alterErr.message &&
+              alterErr.message.toLowerCase().includes("duplicate column")
+            ) {
+              console.log(
+                "Column 'revoked_reason' already exists in 'user_sessions'.",
+              );
+            } else {
+              console.log(
+                "Migration notice: could not add 'revoked_reason' (non-fatal):",
+                alterErr.message || alterErr,
+              );
+            }
+          } else {
+            console.log(
+              "Successfully migrated: Added column 'revoked_reason' to 'user_sessions'.",
+            );
+          }
+        },
+      );
+    });
   } catch (err) {
     console.error("Error during DB file check/read:", err.message || err);
   }
 }
 
 module.exports = { db, init };
-
-

@@ -1,4 +1,12 @@
-const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+const stripeKey = process.env.STRIPE_SECRET_KEY;
+let stripe = null;
+if (stripeKey) {
+  stripe = require("stripe")(stripeKey);
+} else {
+  console.warn(
+    "STRIPE_SECRET_KEY not set — Stripe features will be disabled in this environment.",
+  );
+}
 const db = require("../../config/db").db;
 const { buildCheckoutSessionParams } = require("./checkoutSession");
 
@@ -7,6 +15,11 @@ const { buildCheckoutSessionParams } = require("./checkoutSession");
  * @route POST /api/payments/create-checkout-session
  */
 exports.createCheckoutSession = async (req, res) => {
+  if (!stripe) {
+    return res
+      .status(503)
+      .json({ error: "Payments are not configured in this environment" });
+  }
   const { amount, currency = "INR", email, beats } = req.body;
 
   if (!amount || !email || !beats) {
@@ -22,7 +35,7 @@ exports.createCheckoutSession = async (req, res) => {
         beats,
         successUrl: `${req.protocol}://${req.get("host")}/profile?payment=success`,
         cancelUrl: `${req.protocol}://${req.get("host")}/checkout`,
-      })
+      }),
     );
 
     res.json({
@@ -31,7 +44,9 @@ exports.createCheckoutSession = async (req, res) => {
     });
   } catch (error) {
     console.error("Checkout Session Error:", error);
-    res.status(500).json({ error: error.message || "Failed to create checkout session" });
+    res
+      .status(500)
+      .json({ error: error.message || "Failed to create checkout session" });
   }
 };
 
@@ -40,6 +55,11 @@ exports.createCheckoutSession = async (req, res) => {
  * @route POST /api/payments/create-payment-intent
  */
 exports.createPaymentIntent = async (req, res) => {
+  if (!stripe) {
+    return res
+      .status(503)
+      .json({ error: "Payments are not configured in this environment" });
+  }
   const { amount, currency = "INR", email, beats, paymentMethodId } = req.body;
 
   if (!amount || !email || !beats) {
@@ -64,7 +84,9 @@ exports.createPaymentIntent = async (req, res) => {
     });
   } catch (error) {
     console.error("Payment Intent Error:", error);
-    res.status(500).json({ error: error.message || "Failed to create payment intent" });
+    res
+      .status(500)
+      .json({ error: error.message || "Failed to create payment intent" });
   }
 };
 
@@ -73,6 +95,11 @@ exports.createPaymentIntent = async (req, res) => {
  * @route POST /api/payments/payment-success
  */
 exports.paymentSuccess = async (req, res) => {
+  if (!stripe) {
+    return res
+      .status(503)
+      .json({ error: "Payments are not configured in this environment" });
+  }
   const { paymentIntentId, email, beats, userId } = req.body;
 
   if (!paymentIntentId || !email || !beats) {
@@ -121,7 +148,7 @@ exports.paymentSuccess = async (req, res) => {
         function (err) {
           if (err) reject(err);
           else resolve(this.lastID);
-        }
+        },
       );
     });
 
@@ -132,7 +159,9 @@ exports.paymentSuccess = async (req, res) => {
     });
   } catch (error) {
     console.error("Payment Success Error:", error);
-    res.status(500).json({ error: error.message || "Failed to process payment" });
+    res
+      .status(500)
+      .json({ error: error.message || "Failed to process payment" });
   }
 };
 
@@ -141,6 +170,11 @@ exports.paymentSuccess = async (req, res) => {
  * @route GET /api/payments/payment-status/:paymentIntentId
  */
 exports.getPaymentStatus = async (req, res) => {
+  if (!stripe) {
+    return res
+      .status(503)
+      .json({ error: "Payments are not configured in this environment" });
+  }
   const { paymentIntentId } = req.params;
 
   try {
@@ -153,6 +187,8 @@ exports.getPaymentStatus = async (req, res) => {
     });
   } catch (error) {
     console.error("Get Payment Status Error:", error);
-    res.status(500).json({ error: error.message || "Failed to retrieve payment status" });
+    res
+      .status(500)
+      .json({ error: error.message || "Failed to retrieve payment status" });
   }
 };

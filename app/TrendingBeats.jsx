@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { fetchBeats } from "@/lib/api/beats";
+import { getBeats } from "@/services/beat.service";
 import { useAppShell } from "./contexts/app-shell-context";
 
 // Color palettes for visual variety
@@ -38,8 +38,12 @@ function formatBeatForDisplay(beat, index) {
     ...palette,
     id: beat.id,
     genre: beat.genre || "MUSIC",
-    label: beat.beat_name,
-    img: beat.cover_image_url || beat.banner_image_url,
+    // Support both backend raw shape and mapped frontend shape
+    label: beat.title || beat.beat_name,
+    img:
+      (beat.assets && (beat.assets.coverImage || beat.assets.bannerImage)) ||
+      beat.cover_image_url ||
+      beat.banner_image_url,
   };
 }
 
@@ -70,7 +74,13 @@ function PlayIcon() {
 function ChevronIcon({ direction }) {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-      <path d={direction === "left" ? "M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" : "M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"} />
+      <path
+        d={
+          direction === "left"
+            ? "M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"
+            : "M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"
+        }
+      />
     </svg>
   );
 }
@@ -136,51 +146,70 @@ function BeatCard({ beat, index, onPurchase }) {
         {/* City glow effect for card 4 */}
         {beat.cityGlow && (
           <>
-            <div style={{
-              position: "absolute",
-              inset: 0,
-              background: "radial-gradient(ellipse at 30% 70%, #ff00ff44 0%, transparent 60%), radial-gradient(ellipse at 70% 40%, #00ffff33 0%, transparent 50%)",
-            }} />
-            <div style={{
-              position: "absolute",
-              bottom: 0,
-              left: 0,
-              right: 0,
-              height: "60%",
-              background: "linear-gradient(to top, #1a003088, transparent)",
-            }} />
-            {/* Fake city skyline */}
-            {[...Array(12)].map((_, i) => (
-              <div key={i} style={{
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                background:
+                  "radial-gradient(ellipse at 30% 70%, #ff00ff44 0%, transparent 60%), radial-gradient(ellipse at 70% 40%, #00ffff33 0%, transparent 50%)",
+              }}
+            />
+            <div
+              style={{
                 position: "absolute",
                 bottom: 0,
-                left: `${i * 8.5}%`,
-                width: `${5 + (i % 3) * 2}%`,
-                height: `${20 + (i % 5) * 15}%`,
-                background: i % 3 === 0 ? "#ff00ff55" : i % 3 === 1 ? "#0000aa66" : "#00008866",
-                borderTop: `1px solid ${i % 2 === 0 ? "#ff00ff88" : "#00ffff44"}`,
-              }} />
+                left: 0,
+                right: 0,
+                height: "60%",
+                background: "linear-gradient(to top, #1a003088, transparent)",
+              }}
+            />
+            {/* Fake city skyline */}
+            {[...Array(12)].map((_, i) => (
+              <div
+                key={i}
+                style={{
+                  position: "absolute",
+                  bottom: 0,
+                  left: `${i * 8.5}%`,
+                  width: `${5 + (i % 3) * 2}%`,
+                  height: `${20 + (i % 5) * 15}%`,
+                  background:
+                    i % 3 === 0
+                      ? "#ff00ff55"
+                      : i % 3 === 1
+                        ? "#0000aa66"
+                        : "#00008866",
+                  borderTop: `1px solid ${i % 2 === 0 ? "#ff00ff88" : "#00ffff44"}`,
+                }}
+              />
             ))}
           </>
         )}
 
         {/* Card 1 green tones */}
         {beat.id === 1 && (
-          <div style={{
-            position: "absolute",
-            inset: 0,
-            background: "radial-gradient(ellipse at 50% 30%, #00ff8822 0%, transparent 70%)",
-          }} />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background:
+                "radial-gradient(ellipse at 50% 30%, #00ff8822 0%, transparent 70%)",
+            }}
+          />
         )}
 
         {/* Card 3 B&W silhouette */}
         {beat.id === 3 && (
-          <div style={{
-            position: "absolute",
-            inset: 0,
-            background: "linear-gradient(180deg, #3a3a3a 0%, #1a1a1a 50%, #000 100%)",
-            opacity: 0.9,
-          }} />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background:
+                "linear-gradient(180deg, #3a3a3a 0%, #1a1a1a 50%, #000 100%)",
+              opacity: 0.9,
+            }}
+          />
         )}
 
         {/* Text overlay (POPPIN') */}
@@ -205,27 +234,31 @@ function BeatCard({ beat, index, onPurchase }) {
 
         {/* Small badge top-left for card 1 */}
         {beat.id === 1 && (
-          <div style={{
-            position: "absolute",
-            top: "10px",
-            left: "10px",
-            background: "#ff6600",
-            borderRadius: "50%",
-            width: "10px",
-            height: "10px",
-          }} />
+          <div
+            style={{
+              position: "absolute",
+              top: "10px",
+              left: "10px",
+              background: "#ff6600",
+              borderRadius: "50%",
+              width: "10px",
+              height: "10px",
+            }}
+          />
         )}
 
         {/* Number badge */}
         {beat.id === 1 && (
-          <div style={{
-            position: "absolute",
-            bottom: "10px",
-            right: "10px",
-            color: "rgba(255,255,255,0.5)",
-            fontSize: "11px",
-            fontFamily: "monospace",
-          }}>
+          <div
+            style={{
+              position: "absolute",
+              bottom: "10px",
+              right: "10px",
+              color: "rgba(255,255,255,0.5)",
+              fontSize: "11px",
+              fontFamily: "monospace",
+            }}
+          >
             07
           </div>
         )}
@@ -322,7 +355,8 @@ function BeatCard({ beat, index, onPurchase }) {
             alignItems: "center",
             justifyContent: "center",
             gap: "7px",
-            transition: "background 0.2s ease, border-color 0.2s ease, transform 0.15s ease",
+            transition:
+              "background 0.2s ease, border-color 0.2s ease, transform 0.15s ease",
             transform: cartHovered ? "translateY(-1px)" : "translateY(0)",
           }}
         >
@@ -353,7 +387,12 @@ export default function TrendingTypeBeats() {
       title: beat.label || beat.title || beat.beat_name || "Untitled",
       producer: beat.producer || beat.artist_name || "Unknown Artist",
       price: beat.price ?? null,
-      cover: beat.cover || beat.img || beat.cover_image_url || beat.banner_image_url || "",
+      cover:
+        beat.cover ||
+        beat.img ||
+        beat.cover_image_url ||
+        beat.banner_image_url ||
+        "",
       genre: beat.genre,
       bpm: beat.bpm,
       previewUrl: beat.previewUrl || beat.audio_url || "",
@@ -362,13 +401,15 @@ export default function TrendingTypeBeats() {
   };
 
   useEffect(() => {
-    async function getBeats() {
+    async function getBeatsFromApi() {
       try {
         setLoading(true);
         setError(null);
-        const data = await fetchBeats();
-        // Format beats for display with color palettes
-        const formattedBeats = data.slice(0, 4).map((beat, i) => formatBeatForDisplay(beat, i));
+        const data = await getBeats();
+        // getBeats returns mapped frontend Beat shape from services/beat.service
+        const formattedBeats = data
+          .slice(0, 4)
+          .map((beat, i) => formatBeatForDisplay(beat, i));
         setBeats(formattedBeats);
       } catch (err) {
         console.error("Error fetching beats:", err);
@@ -379,7 +420,7 @@ export default function TrendingTypeBeats() {
       }
     }
 
-    getBeats();
+    getBeatsFromApi();
   }, []);
 
   return (
@@ -507,19 +548,29 @@ export default function TrendingTypeBeats() {
         }}
       >
         {loading && (
-          <div style={{ textAlign: "center", padding: "60px 20px", color: "#fff" }}>
+          <div
+            style={{ textAlign: "center", padding: "60px 20px", color: "#fff" }}
+          >
             <p>Loading beats...</p>
           </div>
         )}
 
         {error && (
-          <div style={{ textAlign: "center", padding: "60px 20px", color: "#ff6b6b" }}>
+          <div
+            style={{
+              textAlign: "center",
+              padding: "60px 20px",
+              color: "#ff6b6b",
+            }}
+          >
             <p>Error: {error}</p>
           </div>
         )}
 
         {!loading && !error && beats.length === 0 && (
-          <div style={{ textAlign: "center", padding: "60px 20px", color: "#aaa" }}>
+          <div
+            style={{ textAlign: "center", padding: "60px 20px", color: "#aaa" }}
+          >
             <p>No beats available</p>
           </div>
         )}
@@ -560,32 +611,47 @@ export default function TrendingTypeBeats() {
                     maxWidth: "320px",
                   }}
                 >
-                  Say goodbye to interruptions and enjoy uninterrupted music streaming.
-                  With our ad-free platform, you'll have access to millions to songs
+                  Say goodbye to interruptions and enjoy uninterrupted music
+                  streaming. With our ad-free platform, you'll have access to
+                  millions to songs
                 </p>
               </div>
 
               {/* Nav arrows */}
-              <div className="trending-nav" style={{ display: "flex", gap: "10px", paddingTop: "8px" }}>
+              <div
+                className="trending-nav"
+                style={{ display: "flex", gap: "10px", paddingTop: "8px" }}
+              >
                 {["left", "right"].map((dir) => {
                   const isHov = dir === "left" ? leftHovered : rightHovered;
                   return (
                     <button
                       key={dir}
-                      onMouseEnter={() => dir === "left" ? setLeftHovered(true) : setRightHovered(true)}
-                      onMouseLeave={() => dir === "left" ? setLeftHovered(false) : setRightHovered(false)}
+                      onMouseEnter={() =>
+                        dir === "left"
+                          ? setLeftHovered(true)
+                          : setRightHovered(true)
+                      }
+                      onMouseLeave={() =>
+                        dir === "left"
+                          ? setLeftHovered(false)
+                          : setRightHovered(false)
+                      }
                       style={{
                         width: "36px",
                         height: "36px",
                         borderRadius: "50%",
                         border: "1.5px solid rgba(255,255,255,0.2)",
-                        background: isHov ? "rgba(255,255,255,0.12)" : "transparent",
+                        background: isHov
+                          ? "rgba(255,255,255,0.12)"
+                          : "transparent",
                         color: "#ffffff",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
                         cursor: "pointer",
-                        transition: "background 0.2s ease, transform 0.15s ease",
+                        transition:
+                          "background 0.2s ease, transform 0.15s ease",
                         transform: isHov ? "scale(1.08)" : "scale(1)",
                       }}
                     >
@@ -606,7 +672,12 @@ export default function TrendingTypeBeats() {
               }}
             >
               {beats.map((beat, i) => (
-                <BeatCard key={beat.id} beat={beat} index={i} onPurchase={handlePurchase} />
+                <BeatCard
+                  key={beat.id}
+                  beat={beat}
+                  index={i}
+                  onPurchase={handlePurchase}
+                />
               ))}
             </div>
           </>
