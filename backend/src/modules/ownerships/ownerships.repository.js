@@ -1,5 +1,6 @@
 const { db } = require("../../config/db");
 const crypto = require("crypto");
+const RepositoryError = require("../../errors/RepositoryError");
 
 const OWNERSHIP_COLUMNS = `
   o.id,
@@ -22,7 +23,7 @@ const OWNERSHIP_COLUMNS = `
   o.updated_at,
   u.name AS customer_name,
   u.email AS customer_email,
-  b.beat_name AS beat_title,
+  b.title AS beat_title,
   b.genre AS beat_genre,
   b.audio_key AS audio_key,
   b.cover_key AS cover_key
@@ -32,7 +33,7 @@ const run = (sql, params = []) => {
   return new Promise((resolve, reject) => {
     db.run(sql, params, function (err) {
       if (err) {
-        reject(err);
+        reject(new RepositoryError(`Database run error: ${err.message}`, err));
       } else {
         resolve({ id: this.lastID, changes: this.changes });
       }
@@ -44,7 +45,7 @@ const get = (sql, params = []) => {
   return new Promise((resolve, reject) => {
     db.get(sql, params, (err, row) => {
       if (err) {
-        reject(err);
+        reject(new RepositoryError(`Database get error: ${err.message}`, err));
       } else {
         resolve(row);
       }
@@ -56,7 +57,7 @@ const all = (sql, params = []) => {
   return new Promise((resolve, reject) => {
     db.all(sql, params, (err, rows) => {
       if (err) {
-        reject(err);
+        reject(new RepositoryError(`Database all error: ${err.message}`, err));
       } else {
         resolve(rows);
       }
@@ -383,7 +384,7 @@ const getLibraryByUser = async (userId, limit, offset, sortBy, sortOrder) => {
       o.expires_at AS expiresAt,
       o.status AS status,
       b.id AS beatId,
-      b.beat_name AS beatTitle,
+      b.title AS beatTitle,
       b.cover_key AS beatCoverKey,
       b.bpm AS beatBpm,
       b.genre AS beatGenre
@@ -412,6 +413,21 @@ const getLibraryByUser = async (userId, limit, offset, sortBy, sortOrder) => {
   }));
 };
 
+/**
+ * Fetches an ownership by public_id (joins users and beats)
+ */
+const getOwnershipByPublicId = async (publicId) => {
+  const sql = `
+    SELECT 
+      ${OWNERSHIP_COLUMNS}
+    FROM ownerships o
+    JOIN users u ON o.user_id = u.id
+    JOIN beats b ON o.beat_id = b.id
+    WHERE o.public_id = ?
+  `;
+  return get(sql, [publicId]);
+};
+
 module.exports = {
   insertOwnershipsTransaction,
   getOwnershipById,
@@ -427,5 +443,6 @@ module.exports = {
   incrementDownloadCount,
   updateExpiry,
   revokeOwnership,
-  getLibraryByUser
+  getLibraryByUser,
+  getOwnershipByPublicId
 };

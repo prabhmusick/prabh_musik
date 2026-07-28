@@ -1,137 +1,178 @@
-// const express = require("express");
-// const cors = require("cors");
-// const helmet = require("helmet");
-// const morgan = require("morgan");
-// const path = require("path");
-
-// // const beatsRouter = require("./routes/beats");
-// const beatsRouter = require("./modules/beats/legacy.beats.js");
-// // const usersRouter = require("./routes/users");
-// // const artistsRouter = require("./routes/artists");
-// // const beatsMetaRouter = require("./routes/beatsMeta");
-// // const purchasesRouter = require("./routes/purchases");
-// const uploadsRouter = require("./modules/beats/uploads/uploads.routes.js");
-// const db = require("./config/db");
-
-// const app = express();
-
-// app.use(express.json());
-// app.use(cors());
-// app.use(helmet());
-// app.use(morgan(process.env.LOG_FORMAT || "combined"));
-
-// // Serve frontend statically so app can be deployed from one server
-// // Expose runtime env for frontend to consume (API_BASE, UPLOAD_URL)
-// // app.get("/env.js", (req, res) => {
-// //   const portVal = process.env.PORT || 3000;
-// //   const apiBase = `http://localhost:${portVal}`;
-// //   const uploadUrl = `${apiBase}/beats/upload-audio`;
-// //   res.set("Content-Type", "application/javascript");
-// //   res.send(
-// //     `window.API_BASE = "${apiBase}"; window.UPLOAD_URL = "${uploadUrl}";`,
-// //   );
-// // });
-
-// // Adjusted relative path to go up two levels to look for sibling frontend directory
-// // app.use(express.static(path.join(__dirname, "..", "..", "frontend")));
-
-// // Initialize DB/schema
-// db.init();
-
-// // API routes for metadata
-// // app.use("/api/users", usersRouter);
-// // app.use("/api/artists", artistsRouter);
-// // app.use("/api/beats", beatsMetaRouter);
-// // app.use("/api/purchases", purchasesRouter);
-// app.use("/api/uploads", uploadsRouter);
-// app.use("/api/beats", beatsRouter);
-
-// // Basic error handler
-// app.use((err, req, res, next) => {
-//   console.error(err);
-//   res.status(500).json({ error: err.message || "Internal error" });
-// });
-
-// app.get("/", (req, res) => res.send("Server Running"));
-
-// // app.use("/beats", beatsRouter);
-// app.use("/api/beats", beatsRouter);
-
-// module.exports = app;
+/**
+ * @fileoverview Express Application Composition Root
+ * Configures core middleware, domain routers, and fallback handlers.
+ */
 
 const express = require("express");
+const cookieParser = require("cookie-parser");
+const usersRoutes = require("./modules/users/users.routes");
+const beatsRoutes = require("./modules/beats/beats.routes");
+const authRoutes = require("./modules/auth/auth.routes");
+const ordersRoutes = require("./modules/orders/orders.routes");
+const paymentsRoutes = require("./modules/payments/payments.routes");
+const ownershipsRoutes = require("./modules/ownerships/ownerships.routes");
+const downloadsRoutes = require("./modules/downloads/downloads.routes");
+const uploadsRoutes = require("./modules/uploads/uploads.routes");
+const monitoringRoutes = require("./modules/monitoring/monitoring.routes");
+const { storageProvider } = require("./storage/r2.provider");
+const tracer = require("./utils/tracer");
+const requestIdMiddleware = require("./middleware/requestId.middleware");
+const errorHandler = require("./middleware/error.middleware");
+
 const cors = require("cors");
 const helmet = require("helmet");
-const morgan = require("morgan");
-const cookieParser = require("cookie-parser");
-
-const db = require("./config/db");
-console.log("DB MODULE:", db);
-
-const beatsRouter = require("./modules/beats/beats.routes");
-const uploadsRouter = require("./modules/uploads/uploads.routes");
-const usersRouter = require("./modules/users/users.routes");
-const ordersRouter = require("./modules/orders/orders.routes");
-const ownershipsRouter = require("./modules/ownerships/ownerships.routes");
-const downloadsRouter = require("./modules/downloads/downloads.routes");
-const authRouter = require("./modules/auth/auth.routes");
-const paymentsRouter = require("./modules/payments/payments.routes");
-const ownershipsController = require("./modules/ownerships/ownerships.controller");
-
-const requestIdMiddleware = require("./middleware/requestId.middleware");
-const errorHandler = require("./middleware/error");
+const { db } = require("./config/db");
 
 const app = express();
 
-// Trust Proxy Configuration from Environment Variables (No hardcoding)
-const trustProxyVal = process.env.TRUST_PROXY;
-if (trustProxyVal) {
-  if (trustProxyVal === "true" || trustProxyVal === "false") {
-    app.set("trust proxy", trustProxyVal === "true");
-  } else if (!isNaN(Number(trustProxyVal))) {
-    app.set("trust proxy", Number(trustProxyVal));
-  } else {
-    app.set("trust proxy", trustProxyVal);
-  }
-}
+// Auto-Observability module method tracing instrumentations
+tracer.wrapModule(require("./modules/auth/auth.service"), "service", "AuthService");
+tracer.wrapModule(require("./modules/users/users.service"), "service", "UsersService");
+tracer.wrapModule(require("./modules/beats/beats.service"), "service", "BeatsService");
+tracer.wrapModule(require("./modules/orders/orders.service"), "service", "OrdersService");
+tracer.wrapModule(require("./modules/payments/payments.service"), "service", "PaymentsService");
+tracer.wrapModule(require("./modules/ownerships/ownerships.service"), "service", "OwnershipsService");
+tracer.wrapModule(require("./modules/downloads/downloads.service"), "service", "DownloadsService");
+tracer.wrapModule(require("./modules/uploads/uploads.service"), "service", "UploadsService");
 
-// Global correlation tracing at the very top of the stack
-app.use(requestIdMiddleware);
+tracer.wrapModule(require("./modules/auth/auth.repository"), "repository", "AuthRepository");
+tracer.wrapModule(require("./modules/users/users.repository"), "repository", "UsersRepository");
+tracer.wrapModule(require("./modules/beats/beats.repository"), "repository", "BeatsRepository");
+tracer.wrapModule(require("./modules/orders/orders.repository"), "repository", "OrdersRepository");
+tracer.wrapModule(require("./modules/ownerships/ownerships.repository"), "repository", "OwnershipsRepository");
+tracer.wrapModule(require("./modules/downloads/downloads.repository"), "repository", "DownloadsRepository");
+tracer.wrapModule(require("./modules/uploads/uploads.repository"), "repository", "UploadsRepository");
 
-// Standard JSON body limits to mitigate DoS payloads
-app.use(express.json({ limit: "10kb" }));
-app.use(cookieParser());
-app.use(cors());
+tracer.wrapModule(storageProvider, "storage", "StorageProvider");
+
+// 1. Enforce CORS and Security Headers
+app.use(helmet());
 app.use(
-  helmet({
-    crossOriginResourcePolicy: { policy: "cross-origin" }
+  cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      const allowedOrigins = (process.env.ALLOWED_ORIGINS || "").split(",").map((o) => o.trim());
+      if (allowedOrigins.includes(origin) || process.env.NODE_ENV !== "production") {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true
   })
 );
-app.use(morgan("dev"));
 
-db.init();
+// 2. Core Request Body Parsing Middleware
+app.use(
+  express.json({
+    limit: "1mb",
+    verify: (req, res, buf) => {
+      if (req.originalUrl && req.originalUrl.startsWith("/api/payments/webhook")) {
+        req.rawBody = buf;
+      }
+    }
+  })
+); // Enforce request size limits to protect against DoS
+app.use(cookieParser());
 
-app.get("/api/health", (req, res) => {
-  res.json({
+// 3. Request Correlation ID Middleware
+app.use(requestIdMiddleware);
+
+// 4. Health and Readiness Helpers & Endpoints
+const checkStorage = async () => {
+  try {
+    await storageProvider.objectExists("health-check");
+    return true;
+  } catch (err) {
+    if (err.name === "NotFound" || err.$metadata?.httpStatusCode === 404) {
+      return true;
+    }
+    return false;
+  }
+};
+
+app.get("/health", async (req, res) => {
+  const dbConnected = await new Promise((resolve) => {
+    db.get("SELECT 1", [], (err) => {
+      resolve(!err);
+    });
+  });
+
+  const storageConnected = await checkStorage().catch(() => false);
+  const stripeAvailable = !!(process.env.STRIPE_SECRET_KEY || "");
+
+  res.status(200).json({
     success: true,
-    status: "OK",
-    service: "Prabh Musik API",
+    status: "ok",
+    uptime: process.uptime(),
     version: "1.0.0",
-    timestamp: new Date().toISOString()
+    nodeVersion: process.version,
+    memoryUsage: process.memoryUsage(),
+    dependencies: {
+      database: dbConnected ? "connected" : "disconnected",
+      storage: storageConnected ? "connected" : "disconnected",
+      stripe: stripeAvailable ? "configured" : "unconfigured"
+    }
   });
 });
 
-app.use("/api/auth", authRouter);
-app.use("/api/uploads", uploadsRouter);
-app.use("/api/beats", beatsRouter);
-app.use("/api/users", usersRouter);
-app.use("/api/orders", ordersRouter);
-app.use("/api/ownerships", ownershipsRouter);
-app.use("/api/downloads", downloadsRouter);
-app.use("/api/payments", paymentsRouter);
-app.get("/api/me/library", ownershipsController.getLibraryByUser);
+app.get("/ready", async (req, res) => {
+  try {
+    // 1. Verify database connectivity
+    await new Promise((resolve, reject) => {
+      db.get("SELECT 1", [], (err) => {
+        if (err) reject(new Error("Database check failed: " + err.message));
+        else resolve();
+      });
+    });
 
-// Register standardized global error handling middleware as the last handler
+    // 2. Verify storage connectivity
+    const storageCheck = await checkStorage().catch(() => false);
+    if (!storageCheck) {
+      throw new Error("Storage check failed");
+    }
+
+    // 3. Verify Stripe key config
+    if (!process.env.STRIPE_SECRET_KEY) {
+      throw new Error("Stripe configuration missing");
+    }
+
+    res.status(200).json({
+      success: true,
+      status: "ready"
+    });
+  } catch (error) {
+    res.status(503).json({
+      success: false,
+      status: "not_ready",
+      message: error.message
+    });
+  }
+});
+
+// 5. Mount Domain Module Routers
+app.use("/api/users", usersRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/beats", beatsRoutes);
+app.use("/api/orders", ordersRoutes);
+app.use("/api/payments", paymentsRoutes);
+app.use("/api/ownerships", ownershipsRoutes);
+app.use("/api/downloads", downloadsRoutes);
+app.use("/api/uploads", uploadsRoutes);
+app.use("/api/monitoring", monitoringRoutes);
+
+// 5. Catch-All Middleware for Unmatched Routes (404 Not Found)
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    error: {
+      code: "NOT_FOUND",
+      message: "Route not found."
+    }
+  });
+});
+
+// 6. Global Error Handling Middleware (Must remain the LAST handler)
 app.use(errorHandler);
 
 module.exports = app;

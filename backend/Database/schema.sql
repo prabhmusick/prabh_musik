@@ -2,6 +2,8 @@
 -- SPRINT 2: AUTHENTICATION DATABASE LAYER
 -- ==========================================
 
+DROP TABLE IF EXISTS processed_webhook_events;
+DROP TABLE IF EXISTS uploads;
 DROP TABLE IF EXISTS download_logs;
 DROP TABLE IF EXISTS download_tokens;
 DROP TABLE IF EXISTS ownerships;
@@ -95,24 +97,24 @@ CREATE TABLE email_verification_tokens (
 
 CREATE TABLE beats (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    public_id TEXT UNIQUE NOT NULL,            -- public-facing UUID
-    beat_name TEXT NOT NULL,
-    slug TEXT UNIQUE NOT NULL,
-    beat_type TEXT,
-    price REAL DEFAULT 0,
+    public_id TEXT UNIQUE NOT NULL,            -- Pattern: bt_<ULID> (Exposed to frontend)
+    title TEXT NOT NULL,                        -- Renamed from beat_name
+    slug TEXT UNIQUE NOT NULL,                  -- SEO Url-safe representation (e.g. 'midnight-drive')
+    price_amount INTEGER NOT NULL DEFAULT 0,
+    currency_code TEXT NOT NULL DEFAULT 'INR', -- ISO-4217 Currency representation
     genre TEXT,
     bpm INTEGER,
+    musical_key TEXT,                          -- Catalog metadata (e.g. 'Cmin', 'Amaj')
     description TEXT,
-    audio_key TEXT NOT NULL,
-    cover_key TEXT,
-    banner_key TEXT,
-    duration INTEGER,
-    track_type TEXT,
-    mood TEXT,
-    selling_status TEXT DEFAULT 'available',
-    status TEXT DEFAULT 'draft',
+    audio_key TEXT NOT NULL,                   -- Pattern: audio/bt_<public_id>.mp3
+    cover_key TEXT,                            -- Pattern: covers/bt_<public_id>_<timestamp>.webp
+    banner_key TEXT,                           -- Pattern: banners/bt_<public_id>_<timestamp>.webp
+    duration INTEGER,                          -- Length in seconds
+    status TEXT NOT NULL DEFAULT 'draft',
+    created_by INTEGER NOT NULL,               -- Foreign key referencing users.id
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(created_by) REFERENCES users(id) ON DELETE RESTRICT
 );
 
 -- ==========================================
@@ -244,3 +246,45 @@ CREATE INDEX idx_download_tokens_val ON download_tokens(token);
 CREATE INDEX idx_download_tokens_owner ON download_tokens(ownership_id);
 CREATE INDEX idx_download_logs_ownership ON download_logs(ownership_id);
 CREATE INDEX idx_download_logs_date ON download_logs(downloaded_at);
+
+-- ==========================================
+-- SPRINT 10: UPLOADS METADATA LAYER
+-- ==========================================
+
+CREATE TABLE uploads (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    public_id TEXT UNIQUE NOT NULL,
+    storage_key TEXT UNIQUE NOT NULL,
+    asset_type TEXT NOT NULL CHECK(asset_type IN ('audio', 'preview', 'cover', 'banner', 'avatar', 'document')),
+    mime_type TEXT NOT NULL,
+    file_size INTEGER NOT NULL,
+    checksum TEXT NOT NULL,
+    duration REAL,                          -- for audio (in seconds)
+    image_width INTEGER,                    -- for images
+    image_height INTEGER,                   -- for images
+    uploaded_by INTEGER NOT NULL,
+    status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'deleted')),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(uploaded_by) REFERENCES users(id)
+);
+
+CREATE INDEX idx_uploads_public_id ON uploads(public_id);
+CREATE INDEX idx_uploads_storage_key ON uploads(storage_key);
+CREATE INDEX idx_uploads_status ON uploads(status);
+
+-- ==========================================
+-- SPRINT 12: WEBHOOK IDEMPOTENCY LAYER
+-- ==========================================
+
+CREATE TABLE processed_webhook_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_id TEXT UNIQUE NOT NULL,
+    event_type TEXT NOT NULL,
+    status TEXT NOT NULL CHECK(status IN ('RECEIVED', 'PROCESSING', 'PROCESSED', 'FAILED')),
+    received_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    processed_at DATETIME,
+    failure_reason TEXT
+);
+
+CREATE INDEX idx_processed_webhook_events_id ON processed_webhook_events(event_id);

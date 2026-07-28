@@ -5,7 +5,7 @@ const fs = require("fs");
 const consoleLogSpy = jest.spyOn(console, "log").mockImplementation(() => {});
 const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
 
-const testDbPath = path.join(__dirname, "..", "..", "..", "Database", "beats_test.db");
+const testDbPath = path.join(__dirname, "..", "..", "..", "Database", "auth_service_test.db");
 
 // Set up environment overrides before importing modules
 process.env.DB_FILE = testDbPath;
@@ -15,6 +15,14 @@ process.env.ACCESS_TOKEN_EXPIRY_SECONDS = "900";
 process.env.SESSION_EXPIRY_DAYS = "30";
 
 const { db } = require("../../config/db");
+console.log("JEST DB CONSTRUCTOR NAME:", db.constructor ? db.constructor.name : "undefined");
+const D1DatabaseMock = (new db.constructor()).constructor;
+console.log("JEST RESOLVED CLASS NAME:", D1DatabaseMock.name);
+["exec", "close", "serialize", "run", "get", "all"].forEach((method) => {
+  D1DatabaseMock.prototype[method] = function (...args) {
+    return this.sqliteDb[method](...args);
+  };
+});
 const authService = require("./auth.service");
 const usersRepository = require("../users/users.repository");
 const authRepository = require("./auth.repository");

@@ -3,6 +3,35 @@
  * Exports application configuration variables loaded from process.env with default fallback values.
  */
 
+const isProduction = process.env.NODE_ENV === "production";
+
+// Start validations for critical configuration
+const missingOrInsecure = [];
+
+const jwtAccess = process.env.JWT_ACCESS_SECRET;
+if (isProduction && (!jwtAccess || jwtAccess.includes("change_me") || jwtAccess.length < 32)) {
+  missingOrInsecure.push("JWT_ACCESS_SECRET (must be at least 32 characters and non-default in production)");
+}
+
+const jwtRefresh = process.env.JWT_REFRESH_SECRET;
+if (isProduction && (!jwtRefresh || jwtRefresh.includes("change_me") || jwtRefresh.length < 32)) {
+  missingOrInsecure.push("JWT_REFRESH_SECRET (must be at least 32 characters and non-default in production)");
+}
+
+const stripeSecret = process.env.STRIPE_SECRET_KEY;
+if (isProduction && !stripeSecret) {
+  missingOrInsecure.push("STRIPE_SECRET_KEY");
+}
+
+const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+if (isProduction && !stripeWebhookSecret) {
+  missingOrInsecure.push("STRIPE_WEBHOOK_SECRET");
+}
+
+if (missingOrInsecure.length > 0) {
+  throw new Error(`CRITICAL CONFIGURATION ERROR: Missing or insecure production variables:\n- ${missingOrInsecure.join("\n- ")}`);
+}
+
 const env = {
   /** @type {number} */
   PORT: parseInt(process.env.PORT || "5005", 10),
@@ -29,13 +58,19 @@ const env = {
   SESSION_EXPIRY_DAYS: parseInt(process.env.SESSION_EXPIRY_DAYS || "30", 10),
 
   /** @type {boolean} */
-  COOKIE_SECURE: process.env.COOKIE_SECURE === "true" || process.env.NODE_ENV === "production",
+  COOKIE_SECURE: process.env.COOKIE_SECURE === "true" || isProduction,
 
   /** @type {string|undefined} */
   COOKIE_DOMAIN: process.env.COOKIE_DOMAIN || undefined,
 
   /** @type {string} */
-  COOKIE_SAME_SITE: process.env.COOKIE_SAME_SITE || "lax"
+  COOKIE_SAME_SITE: process.env.COOKIE_SAME_SITE || "lax",
+
+  /** @type {string} */
+  STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY || "sk_test_mock_key",
+
+  /** @type {string} */
+  STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET || ""
 };
 
 module.exports = env;

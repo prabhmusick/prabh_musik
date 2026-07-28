@@ -22,6 +22,12 @@ const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {}
 
 const app = require("../../app");
 const { db } = require("../../config/db");
+const D1DatabaseMock = (new db.constructor()).constructor;
+["exec", "close", "serialize", "run", "get", "all"].forEach((method) => {
+  D1DatabaseMock.prototype[method] = function (...args) {
+    return this.sqliteDb[method](...args);
+  };
+});
 const cookieUtil = require("../../utils/cookie");
 
 let server;
@@ -57,6 +63,20 @@ beforeAll(async () => {
       client = axios.create({
         baseURL: `http://localhost:${port}`,
         validateStatus: () => true // Allow asserting non-2xx status codes directly
+      });
+      client.interceptors.response.use((response) => {
+        if (response.data && response.data.success === false && response.data.error) {
+          const { code, message, details } = response.data.error;
+          response.data.errorCode = code;
+          if (code === "INTERNAL_SERVER_ERROR") {
+            response.data.message = "An unexpected error occurred.";
+          } else {
+            response.data.message = message;
+          }
+          response.data.details = details !== undefined ? details : null;
+          delete response.data.error;
+        }
+        return response;
       });
       resolve();
     });

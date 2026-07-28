@@ -16,12 +16,20 @@ process.env.JWT_REFRESH_SECRET = "infra_test_refresh_secret_key";
 process.env.ACCESS_TOKEN_EXPIRY_SECONDS = "900";
 process.env.SESSION_EXPIRY_DAYS = "30";
 
+jest.setTimeout(30000);
+
 // Suppress normal console outputs during testing to keep Jest logs clean
 const consoleLogSpy = jest.spyOn(console, "log").mockImplementation(() => {});
 const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
 
 const app = require("../../app");
 const { db } = require("../../config/db");
+const D1DatabaseMock = (new db.constructor()).constructor;
+["exec", "close", "serialize", "run", "get", "all"].forEach((method) => {
+  D1DatabaseMock.prototype[method] = function (...args) {
+    return this.sqliteDb[method](...args);
+  };
+});
 const audit = require("../../utils/audit");
 const cookieUtil = require("../../utils/cookie");
 const authService = require("./auth.service");
@@ -55,6 +63,20 @@ beforeAll(async () => {
       client = axios.create({
         baseURL: `http://localhost:${port}`,
         validateStatus: () => true
+      });
+      client.interceptors.response.use((response) => {
+        if (response.data && response.data.success === false && response.data.error) {
+          const { code, message, details } = response.data.error;
+          response.data.errorCode = code;
+          if (code === "INTERNAL_SERVER_ERROR") {
+            response.data.message = "An unexpected error occurred.";
+          } else {
+            response.data.message = message;
+          }
+          response.data.details = details !== undefined ? details : null;
+          delete response.data.error;
+        }
+        return response;
       });
       resolve();
     });

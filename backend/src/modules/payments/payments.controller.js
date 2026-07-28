@@ -1,12 +1,11 @@
-const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
-const db = require("../../config/db").db;
-const { buildCheckoutSessionParams } = require("./checkoutSession");
+const paymentsService = require("./payments.service");
+const ordersService = require("../orders/orders.service");
 
 /**
  * Create a Stripe Checkout Session
  * @route POST /api/payments/create-checkout-session
  */
-exports.createCheckoutSession = async (req, res) => {
+const createCheckoutSession = async (req, res, next) => {
   const { amount, currency = "INR", email, beats } = req.body;
 
   if (!amount || !email || !beats) {
@@ -14,24 +13,21 @@ exports.createCheckoutSession = async (req, res) => {
   }
 
   try {
-    const session = await stripe.checkout.sessions.create(
-      buildCheckoutSessionParams({
-        amount,
-        currency,
-        email,
-        beats,
-        successUrl: `${req.protocol}://${req.get("host")}/profile?payment=success`,
-        cancelUrl: `${req.protocol}://${req.get("host")}/checkout`,
-      })
-    );
+    const session = await paymentsService.createCheckoutSession({
+      amount,
+      currency,
+      email,
+      beats,
+      successUrl: `${req.protocol}://${req.get("host")}/profile?payment=success`,
+      cancelUrl: `${req.protocol}://${req.get("host")}/checkout`
+    });
 
     res.json({
       url: session.url,
-      sessionId: session.id,
+      sessionId: session.sessionId
     });
   } catch (error) {
-    console.error("Checkout Session Error:", error);
-    res.status(500).json({ error: error.message || "Failed to create checkout session" });
+    next(error);
   }
 };
 
@@ -39,7 +35,7 @@ exports.createCheckoutSession = async (req, res) => {
  * Create a Stripe Payment Intent
  * @route POST /api/payments/create-payment-intent
  */
-exports.createPaymentIntent = async (req, res) => {
+const createPaymentIntent = async (req, res, next) => {
   const { amount, currency = "INR", email, beats, paymentMethodId } = req.body;
 
   if (!amount || !email || !beats) {
@@ -47,112 +43,52 @@ exports.createPaymentIntent = async (req, res) => {
   }
 
   try {
-    const paymentIntent = await stripe.paymentIntents.create({
+    const paymentIntent = await paymentsService.createPaymentIntent({
       amount,
-      currency: currency.toUpperCase(),
-      payment_method: paymentMethodId,
-      confirm: false,
-      metadata: {
-        email,
-        beats: JSON.stringify(beats),
-      },
+      currency,
+      email,
+      beats,
+      paymentMethodId
     });
 
     res.json({
-      clientSecret: paymentIntent.client_secret,
-      paymentIntentId: paymentIntent.id,
+      clientSecret: paymentIntent.clientSecret,
+      paymentIntentId: paymentIntent.paymentIntentId
     });
   } catch (error) {
-    console.error("Payment Intent Error:", error);
-    res.status(500).json({ error: error.message || "Failed to create payment intent" });
+    next(error);
   }
 };
 
 /**
- * Handle successful payment
+ * Handle successful payment (DEPRECATED)
  * @route POST /api/payments/payment-success
  */
-exports.paymentSuccess = async (req, res) => {
-  const { paymentIntentId, email, beats, userId } = req.body;
-
-  if (!paymentIntentId || !email || !beats) {
-    return res.status(400).json({ error: "Missing required fields" });
-  }
-
-  try {
-    // Verify payment with Stripe
-    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-
-    if (paymentIntent.status !== "succeeded") {
-      return res.status(400).json({ error: "Payment not completed" });
-    }
-
-    // Record order in database
-    const result = await new Promise((resolve, reject) => {
-      const orderData = {
-        email,
-        userId: userId || null,
-        beats: JSON.stringify(beats),
-        amount: paymentIntent.amount / 100, // Convert from paise to INR
-        currency: paymentIntent.currency.toUpperCase(),
-        paymentIntentId,
-        status: "completed",
-        createdAt: new Date().toISOString(),
-      };
-
-      // Insert into orders table (you may need to create this table)
-      const query = `
-        INSERT INTO orders (email, user_id, beats, amount, currency, payment_intent_id, status, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `;
-
-      db.run(
-        query,
-        [
-          orderData.email,
-          orderData.userId,
-          orderData.beats,
-          orderData.amount,
-          orderData.currency,
-          orderData.paymentIntentId,
-          orderData.status,
-          orderData.createdAt,
-        ],
-        function (err) {
-          if (err) reject(err);
-          else resolve(this.lastID);
-        }
-      );
-    });
-
-    res.json({
-      success: true,
-      orderId: result,
-      message: "Payment processed successfully",
-    });
-  } catch (error) {
-    console.error("Payment Success Error:", error);
-    res.status(500).json({ error: error.message || "Failed to process payment" });
-  }
+const paymentSuccess = async (req, res, next) => {
+  return res.status(410).json({
+    success: false,
+    message: "Payment confirmation is now handled exclusively by Stripe webhooks."
+  });
 };
 
 /**
  * Get payment status
  * @route GET /api/payments/payment-status/:paymentIntentId
  */
-exports.getPaymentStatus = async (req, res) => {
+const getPaymentStatus = async (req, res, next) => {
   const { paymentIntentId } = req.params;
 
   try {
-    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-
-    res.json({
-      status: paymentIntent.status,
-      amount: paymentIntent.amount / 100,
-      currency: paymentIntent.currency.toUpperCase(),
-    });
+    const status = await paymentsService.getPaymentStatus(paymentIntentId);
+    res.json(status);
   } catch (error) {
-    console.error("Get Payment Status Error:", error);
-    res.status(500).json({ error: error.message || "Failed to retrieve payment status" });
+    next(error);
   }
+};
+
+module.exports = {
+  createCheckoutSession,
+  createPaymentIntent,
+  paymentSuccess,
+  getPaymentStatus
 };

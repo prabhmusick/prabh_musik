@@ -1,11 +1,15 @@
 const { db } = require("../../config/db");
+const RepositoryError = require("../../errors/RepositoryError");
 
 // Promise wrappers
 const run = (sql, params = []) => {
   return new Promise((resolve, reject) => {
     db.run(sql, params, function (err) {
-      if (err) reject(err);
-      else resolve({ id: this.lastID, changes: this.changes });
+      if (err) {
+        reject(new RepositoryError(`Database run error: ${err.message}`, err));
+      } else {
+        resolve({ id: this.lastID, changes: this.changes });
+      }
     });
   });
 };
@@ -13,8 +17,11 @@ const run = (sql, params = []) => {
 const get = (sql, params = []) => {
   return new Promise((resolve, reject) => {
     db.get(sql, params, (err, row) => {
-      if (err) reject(err);
-      else resolve(row);
+      if (err) {
+        reject(new RepositoryError(`Database get error: ${err.message}`, err));
+      } else {
+        resolve(row);
+      }
     });
   });
 };
@@ -22,8 +29,11 @@ const get = (sql, params = []) => {
 const all = (sql, params = []) => {
   return new Promise((resolve, reject) => {
     db.all(sql, params, (err, rows) => {
-      if (err) reject(err);
-      else resolve(rows);
+      if (err) {
+        reject(new RepositoryError(`Database all error: ${err.message}`, err));
+      } else {
+        resolve(rows);
+      }
     });
   });
 };
@@ -155,6 +165,57 @@ const getDownloadCount = async (ownershipId) => {
   return row ? row.count : 0;
 };
 
+/**
+ * Gets download logs history list for a customer user.
+ */
+const getDownloadHistoryByUser = async (userId) => {
+  const sql = `
+    SELECT dl.id, dl.ownership_id, dl.ip_address, dl.user_agent, dl.status, dl.downloaded_at,
+           o.public_id AS ownership_public_id, b.title AS beat_title, b.public_id AS beat_public_id
+    FROM download_logs dl
+    JOIN ownerships o ON dl.ownership_id = o.id
+    JOIN beats b ON o.beat_id = b.id
+    WHERE o.user_id = ?
+    ORDER BY dl.downloaded_at DESC
+  `;
+  return all(sql, [userId]);
+};
+
+/**
+ * Gets all download history for Admin check.
+ */
+const getAllDownloadHistory = async () => {
+  const sql = `
+    SELECT dl.id, dl.ownership_id, dl.ip_address, dl.user_agent, dl.status, dl.downloaded_at,
+           o.public_id AS ownership_public_id, b.title AS beat_title, b.public_id AS beat_public_id,
+           u.email AS user_email, u.name AS user_name
+    FROM download_logs dl
+    JOIN ownerships o ON dl.ownership_id = o.id
+    JOIN beats b ON o.beat_id = b.id
+    JOIN users u ON o.user_id = u.id
+    ORDER BY dl.downloaded_at DESC
+  `;
+  return all(sql);
+};
+
+/**
+ * Gets download logs history specifically for the given ownership public ID for Admin check.
+ */
+const getDownloadHistoryByPublicId = async (ownershipPublicId) => {
+  const sql = `
+    SELECT dl.id, dl.ownership_id, dl.ip_address, dl.user_agent, dl.status, dl.downloaded_at,
+           o.public_id AS ownership_public_id, b.title AS beat_title, b.public_id AS beat_public_id,
+           u.email AS user_email, u.name AS user_name
+    FROM download_logs dl
+    JOIN ownerships o ON dl.ownership_id = o.id
+    JOIN beats b ON o.beat_id = b.id
+    JOIN users u ON o.user_id = u.id
+    WHERE o.public_id = ?
+    ORDER BY dl.downloaded_at DESC
+  `;
+  return all(sql, [ownershipPublicId]);
+};
+
 module.exports = {
   createDownloadToken,
   getActiveTokenByOwnership,
@@ -164,5 +225,8 @@ module.exports = {
   deleteExpiredTokens,
   createDownloadLog,
   getDownloadHistory,
-  getDownloadCount
+  getDownloadCount,
+  getDownloadHistoryByUser,
+  getAllDownloadHistory,
+  getDownloadHistoryByPublicId
 };

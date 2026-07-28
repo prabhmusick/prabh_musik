@@ -24,6 +24,12 @@ const loginRateLimiter = rateLimit({
   message: "Too many login attempts from this IP, please try again after 15 minutes."
 });
 
+const passwordResetRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 3,
+  message: "Too many password recovery attempts from this IP, please try again after 15 minutes."
+});
+
 // Email registration and authentication
 router.post("/signup", signupRateLimiter, validator.signup, catchAsync(controller.signup));
 router.post("/login", loginRateLimiter, validator.login, catchAsync(controller.login));
@@ -34,8 +40,8 @@ router.post("/refresh", validator.refreshToken, catchAsync(controller.refreshTok
 router.get("/me", authMiddleware, catchAsync(controller.getMe));
 
 // Account recovery settings
-router.post("/forgot-password", validator.forgotPassword, catchAsync(controller.forgotPassword));
-router.post("/reset-password", validator.resetPassword, catchAsync(controller.resetPassword));
+router.post("/forgot-password", passwordResetRateLimiter, validator.forgotPassword, catchAsync(controller.forgotPassword));
+router.post("/reset-password", passwordResetRateLimiter, validator.resetPassword, catchAsync(controller.resetPassword));
 
 // Account verification settings
 router.get("/verify-email", catchAsync(controller.verifyEmail));

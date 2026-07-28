@@ -1,0 +1,12 @@
+{
+    "$schema": "node_modules/wrangler/config-schema.json",
+    "name": "prabh-musik-api",
+    "compatibility_date": "2026-07-12",
+    "d1_databases": [
+        {
+            "binding": "DB",
+            "database_name": "prabh-musik",
+            "database_id": "c2e9d27f-d877-4627-a588-0456d062dde6"
+        }
+    ]
+}

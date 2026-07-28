@@ -1,12 +1,20 @@
 const express = require("express");
 const controller = require("./payments.controller");
-const catchAsync = require("../../utils/catchAsync");
+const webhookController = require("./webhook.controller");
+const { rateLimit } = require("../../middleware/rateLimit.middleware");
 
 const router = express.Router();
 
-router.post("/create-checkout-session", catchAsync(controller.createCheckoutSession));
-router.post("/create-payment-intent", catchAsync(controller.createPaymentIntent));
-router.post("/payment-success", catchAsync(controller.paymentSuccess));
-router.get("/payment-status/:paymentIntentId", catchAsync(controller.getPaymentStatus));
+const paymentRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10,
+  message: "Too many payment operations from this IP, please try again later."
+});
+
+router.post("/create-checkout-session", paymentRateLimiter, controller.createCheckoutSession);
+router.post("/create-payment-intent", paymentRateLimiter, controller.createPaymentIntent);
+router.post("/payment-success", paymentRateLimiter, controller.paymentSuccess);
+router.post("/webhook", webhookController.handleWebhook);
+router.get("/payment-status/:paymentIntentId", paymentRateLimiter, controller.getPaymentStatus);
 
 module.exports = router;

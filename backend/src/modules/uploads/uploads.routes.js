@@ -1,37 +1,90 @@
 const express = require("express");
 const multer = require("multer");
 const controller = require("./uploads.controller");
+const authMiddleware = require("../../middleware/auth.middleware");
+const { requireAdmin } = require("../../middleware/role.middleware");
+const { rateLimit } = require("../../middleware/rateLimit.middleware");
 const catchAsync = require("../../utils/catchAsync");
 
 const router = express.Router();
 
-// Configure multer to hold files in memory before forwarding to R2 storage
 const upload = multer({
-    storage: multer.memoryStorage(),
-    limits: {
-        fileSize: 25 * 1024 * 1024, // 25 MB size threshold limit
-    },
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 25 * 1024 * 1024 // 25MB
+  }
 });
 
-// Audio Upload Route: POST /api/uploads/upload-audio (multipart key: audio)
+// Authenticate and authorize administrators
+router.use(authMiddleware);
+router.use(requireAdmin);
+
+// Rate limiter for uploads
+const uploadRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 50,
+  message: "Too many upload requests, please try again later."
+});
+router.use(uploadRateLimiter);
+
+const AppError = require("../../errors/AppError");
+
+const handleUpload = (fieldName) => {
+  return (req, res, next) => {
+    upload.single(fieldName)(req, res, (err) => {
+      if (err) {
+        if (err instanceof multer.MulterError) {
+          if (err.code === "LIMIT_FILE_SIZE") {
+            if (fieldName === "audio") {
+              return next(new AppError("Audio file exceeds maximum 25MB limit", 400));
+            }
+            return next(new AppError("File size exceeds maximum permitted limit", 400));
+          }
+          return next(new AppError(`File upload error: ${err.message}`, 400));
+        }
+        return next(err);
+      }
+      if (req.headers["x-original-filename"] && req.file) {
+        req.file.originalname = req.headers["x-original-filename"];
+      }
+      next();
+    });
+  };
+};
+
+// Route configuration
 router.post(
-    "/upload-audio",
-    upload.single("audio"),
-    catchAsync(controller.uploadAudio)
+  "/audio",
+  handleUpload("audio"),
+  catchAsync(controller.uploadAudio)
 );
 
-// Image Upload Route: POST /api/uploads/upload-image (multipart key: image)
 router.post(
-    "/upload-image",
-    upload.single("image"),
-    catchAsync(controller.uploadImage)
+  "/image",
+  handleUpload("image"),
+  catchAsync(controller.uploadImage)
 );
 
-// Document Upload Route: POST /api/uploads/upload-document (multipart key: document)
 router.post(
-    "/upload-document",
-    upload.single("document"),
-    catchAsync(controller.uploadDocument)
+  "/banner",
+  handleUpload("banner"),
+  catchAsync(controller.uploadBanner)
+);
+
+router.patch(
+  "/:publicId",
+  handleUpload("file"),
+  catchAsync(controller.replaceAsset)
+);
+
+router.delete(
+  "/:publicId",
+  catchAsync(controller.deleteAsset)
+);
+
+router.get(
+  "/:publicId",
+  catchAsync(controller.getAssetMetadata)
 );
 
 module.exports = router;

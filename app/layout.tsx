@@ -3,8 +3,18 @@ import { Geist, Geist_Mono, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import Header from "./Header";
 import Footer from "./Footer";
-import { CartSidebar } from "../components/CartSidebar";
+
+
 import { Agentation } from "agentation";
+
+export default function Layout({ children }) {
+  return (
+    <>
+      {children}
+      {process.env.NODE_ENV === "development" && <Agentation />}
+    </>
+  );
+}
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -26,8 +36,6 @@ export const metadata: Metadata = {
   description: "PrabhMusik - Your Beats Hub",
 };
 
-import Providers from "./providers";
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -39,13 +47,9 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${playfair.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <Providers>
-          <Header />
-          <CartSidebar />
-          <main className="flex-1">{children}</main>
-          <Footer />
-        </Providers>
-        {process.env.NODE_ENV === "development" && <Agentation />}
+        <Header />
+        <main className="flex-1">{children}</main>
+        <Footer />
       </body>
     </html>
   );

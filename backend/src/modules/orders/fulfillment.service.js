@@ -2,6 +2,7 @@ const ordersRepository = require("./orders.repository");
 const ownershipsService = require("../ownerships/ownerships.service");
 const beatsService = require("../beats/beats.service");
 const AppError = require("../../errors/AppError");
+const logger = require("../../utils/logger");
 
 const FULFILLMENT_STATUS = {
   PENDING: "pending",
@@ -70,6 +71,12 @@ const processPaidOrder = async (order) => {
     throw new AppError("Order fulfillment already in progress", 409);
   }
 
+  logger.info({
+    event: "ORDER_FULFILLMENT_STARTED",
+    orderId: order.id,
+    customerId: order.customer ? order.customer.id : null
+  });
+
   // 3. Database Transaction boundaries orchestrated completely by persistence helper
   const transactionResult = await ordersRepository.executeFulfillmentTransaction(order.id, async (tx, context) => {
     // A. Concurrency state lock check
@@ -94,13 +101,23 @@ const processPaidOrder = async (order) => {
     };
   });
 
+  logger.info({
+    event: "ORDER_FULFILLMENT_COMPLETED",
+    orderId: order.id,
+    ownershipsCreated: transactionResult.ownershipsCreated
+  });
+
   // 4. Side Effects executed safely after successful transaction commit
   try {
     await sendPurchaseEmail(order);
     await generateDownloadAssets(order);
     await queueAnalytics(order);
   } catch (warningErr) {
-    console.warn("Fulfillment side effect warning:", warningErr.message || warningErr);
+    logger.warn({
+      event: "ORDER_FULFILLMENT_WARNING",
+      orderId: order.id,
+      message: warningErr.message || String(warningErr)
+    });
   }
 
   return {

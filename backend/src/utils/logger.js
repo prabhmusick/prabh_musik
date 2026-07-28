@@ -8,6 +8,31 @@ const { AsyncLocalStorage } = require("async_hooks");
 // Context store to propagate request identifiers across async call stacks
 const loggerContext = new AsyncLocalStorage();
 
+const sensitiveKeys = [
+  "password", "token", "jwt", "secret", "credential", 
+  "key", "authorization", "cookie", "stripe", "refresh"
+];
+
+const sanitize = (val) => {
+  if (val === null || val === undefined) return val;
+  if (Array.isArray(val)) {
+    return val.map(sanitize);
+  }
+  if (typeof val === "object") {
+    const cleaned = {};
+    for (const k of Object.keys(val)) {
+      const lowerKey = k.toLowerCase();
+      if (sensitiveKeys.some(sk => lowerKey.includes(sk))) {
+        cleaned[k] = "[REDACTED]";
+      } else {
+        cleaned[k] = sanitize(val[k]);
+      }
+    }
+    return cleaned;
+  }
+  return val;
+};
+
 /**
  * Normalizes log payloads to structured objects, merging context details.
  * @param {string} level - Log level string (info, warn, error).
@@ -21,26 +46,28 @@ const formatLog = (level, payload) => {
 
   const baseLog = {
     timestamp,
-    level
+    severity: level === "warn" ? "warning" : level,
+    service: "prabh-musik-backend"
   };
 
   if (requestId) {
     baseLog.requestId = requestId;
   }
 
+  let finalPayload = {};
   if (payload && typeof payload === "object") {
-    // Exclude timestamp and level from payload if they exist to prevent overriding
-    const { timestamp: pTs, level: pLvl, ...restPayload } = payload;
-    return {
-      ...baseLog,
-      ...restPayload
-    };
+    const { timestamp: pTs, severity: pSev, service: pSvc, level: pLvl, ...restPayload } = payload;
+    finalPayload = restPayload;
+  } else {
+    finalPayload = { message: String(payload) };
   }
 
-  return {
+  const structuredLog = {
     ...baseLog,
-    message: String(payload)
+    ...finalPayload
   };
+
+  return sanitize(structuredLog);
 };
 
 const logger = {

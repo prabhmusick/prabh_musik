@@ -73,3 +73,5 @@ backend/node_modules/
 # Environment
 backend/.env
 
+
+backend/coverage/

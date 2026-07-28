@@ -1,101 +1,55 @@
+/**
+ * @fileoverview Users Service Layer
+ * Coordinates business rules, validation formatting, and resource orchestration for users.
+ */
+
+const { ulid } = require("ulid");
 const repository = require("./users.repository");
-const validator = require("./users.validator");
-const AppError = require("../../errors/AppError");
-const bcrypt = require("bcrypt");
+const ConflictError = require("../../errors/ConflictError");
 
 /**
- * Fetches a single user record by ID or throws a 404 AppError
+ * Normalizes input details, applies defaults, generates public IDs, and persists the user record.
+ *
+ * @param {Object} userInput - Validated user profile parameters.
+ * @returns {Promise<Object>} The fully created user record.
+ * @throws {ConflictError} If the email address is already registered.
  */
-const getUser = async (id) => {
-  if (!id) {
-    throw new AppError("User ID is required", 400);
-  }
+const createUser = async (userInput) => {
+  // 1. Data Normalization & Sanitization
+  const normalizedEmail = userInput.email.trim().toLowerCase();
+  const trimmedName = userInput.name.trim();
+  const trimmedMobile = userInput.mobile ? userInput.mobile.trim() : null;
+  const trimmedAddress = userInput.address ? userInput.address.trim() : null;
 
-  const user = await repository.getUserById(id);
-  if (!user) {
-    throw new AppError("User not found", 404);
-  }
+  // 2. Generate Domain Identifiers
+  // Pattern: usr_<ULID> (e.g. usr_01H7B272Y2E52G9Z5Z5B9D8Y7Z)
+  const publicId = `usr_${ulid()}`;
 
-  return user;
-};
+  // 3. Assemble complete User payload with business policy defaults
+  const userPayload = {
+    public_id: publicId,
+    email: normalizedEmail,
+    name: trimmedName,
+    mobile: trimmedMobile,
+    avatar_key: userInput.avatar_key || null,
+    address: trimmedAddress,
+    role: userInput.role || "customer",
+    status: userInput.status || "active"
+  };
 
-/**
- * Creates a new user record.
- */
-const createUser = async (userData) => {
-  const validated = validator.validateCreateUser(userData);
-
-  // Check email conflict
-  const existingUser = await repository.getUserByEmail(validated.email);
-  if (existingUser) {
-    throw new AppError("Email already registered", 409);
-  }
-
-  // Hash password with bcrypt before persisting
-  validated.password = await bcrypt.hash(validated.password, 10);
-
-  const id = await repository.createUser(validated);
-  return repository.getUserById(id);
-};
-
-/**
- * Fetches all user records
- */
-const getAllUsers = async () => {
-  return repository.getAllUsers();
-};
-
-/**
- * Updates properties of a user record.
- */
-const updateUser = async (id, updates) => {
-  const existingUser = await getUser(id);
-  const cleanUpdates = validator.validateUpdateUser(updates);
-
-  // Check email conflict if email is changing
-  if (cleanUpdates.email && cleanUpdates.email !== existingUser.email) {
-    const emailConflict = await repository.getUserByEmail(cleanUpdates.email);
-    if (emailConflict) {
-      throw new AppError("Email already registered by another user", 409);
+  try {
+    // 4. Delegate to Repository for DB execution
+    return await repository.createUser(userPayload);
+  } catch (err) {
+    // 5. Translate database constraint failures into clear business conflicts
+    if (err.message && err.message.includes("users.email")) {
+      throw new ConflictError("Email already registered.");
     }
+    // Propagate system/operational exceptions unchanged
+    throw err;
   }
-
-  // Hash password if updated
-  if (cleanUpdates.password) {
-    cleanUpdates.password = await bcrypt.hash(cleanUpdates.password, 10);
-  }
-
-  if (Object.keys(cleanUpdates).length === 0) {
-    return existingUser;
-  }
-
-  const success = await repository.updateUser(id, cleanUpdates);
-  if (!success) {
-    throw new AppError("No changes were made or user update failed", 400);
-  }
-
-  return repository.getUserById(id);
-};
-
-/**
- * Updates status specifically.
- */
-const updateUserStatus = async (id, statusData) => {
-  await getUser(id); // Throws 404 if not found
-  const { status } = validator.validateStatusUpdate(statusData);
-
-  const success = await repository.updateUser(id, { status });
-  if (!success) {
-    throw new AppError("Status update failed", 400);
-  }
-
-  return repository.getUserById(id);
 };
 
 module.exports = {
-  createUser,
-  getUser,
-  getAllUsers,
-  updateUser,
-  updateUserStatus
+  createUser
 };

@@ -4,6 +4,8 @@
  */
 
 const ERROR_CODES = require("../config/errorCodes");
+const logger = require("../utils/logger");
+const metrics = require("../utils/metrics");
 
 /**
  * Abstract Rate Limit Store Base Class
@@ -86,6 +88,8 @@ const rateLimit = (options = {}) => {
       ip = ip.split(",")[0].trim();
     }
 
+    metrics.increment("rateLimitHits");
+
     try {
       const { current, resetTime } = await store.increment(ip, windowMs);
       const remaining = Math.max(0, max - current);
@@ -96,6 +100,19 @@ const rateLimit = (options = {}) => {
       res.setHeader("X-RateLimit-Remaining", remaining);
 
       if (current > max) {
+        metrics.increment("blockedRequests");
+        metrics.metricsState.suspiciousIps[ip] = (metrics.metricsState.suspiciousIps[ip] || 0) + 1;
+
+        logger.warn({
+          event: "RATE_LIMIT_BLOCKED",
+          ip,
+          url: req.originalUrl || req.url,
+          current,
+          max,
+          severity: "warning",
+          message: `Rate limit blocked IP: ${ip} on path ${req.url}`
+        });
+
         res.setHeader("Retry-After", retryAfterSeconds);
         return res.status(429).json({
           success: false,

@@ -3,6 +3,7 @@ const validator = require("./orders.validator");
 const usersRepository = require("../users/users.repository");
 const beatsRepository = require("../beats/beats.repository");
 const AppError = require("../../errors/AppError");
+const logger = require("../../utils/logger");
 
 /**
  * Formats a raw order and its items into a populated public payload
@@ -79,17 +80,17 @@ const createOrder = async (orderData) => {
       throw new AppError(`Beat not found: ID ${beatId}`, 404);
     }
     if (beat.status === "archived") {
-      throw new AppError(`Cannot purchase archived beat: "${beat.beat_name}"`, 400);
+      throw new AppError(`Cannot purchase archived beat: "${beat.title}"`, 400);
     }
-    if (beat.selling_status !== "available") {
-      throw new AppError(`Beat "${beat.beat_name}" is no longer available (selling status: ${beat.selling_status})`, 400);
+    if (beat.status !== "published") {
+      throw new AppError(`Beat "${beat.title}" is no longer available (status: ${beat.status})`, 400);
     }
 
-    calculatedTotal += beat.price;
+    calculatedTotal += beat.price_amount;
     items.push({
       beatId: beat.id,
-      beatTitle: beat.beat_name,
-      price: beat.price,
+      beatTitle: beat.title,
+      price: beat.price_amount,
       licenseType: "exclusive" // Defaulting to exclusive per requirements
     });
   }
@@ -108,11 +109,21 @@ const createOrder = async (orderData) => {
     }
   );
 
+  logger.info({
+    event: "ORDER_CREATED",
+    orderId,
+    customerId: validated.customerId,
+    totalAmount: calculatedTotal,
+    paymentMethod: validated.paymentMethod,
+    beatCount: items.length
+  });
+
   const order = await getOrder(orderId);
 
   // 4. Ownership triggering mock hook
   if (validated.status === "paid") {
     await createOwnerships(order);
+    return getOrder(orderId);
   }
 
   return order;
@@ -230,11 +241,66 @@ const deleteOrder = async (id) => {
   return true;
 };
 
+/**
+ * Confirms payment for beats, creating a paid order record and triggering downstream fulfillment
+ */
+const confirmPayment = async ({ email, userId, beatIds, paymentReference, paymentMethod }) => {
+  if (!paymentReference) {
+    throw new AppError("Payment reference is required for confirmation", 400);
+  }
+
+  // 1. Idempotency Check: check if order with this payment reference already exists
+  const existingOrder = await repository.getOrderByPaymentReference(paymentReference);
+  if (existingOrder) {
+    return getOrder(existingOrder.id);
+  }
+
+  // 2. Identify and verify customer exists
+  let customerId = userId;
+  if (!customerId) {
+    if (!email) {
+      throw new AppError("Either customerId or email must be provided to confirm payment", 400);
+    }
+    const user = await usersRepository.findUserByEmail(email.toLowerCase().trim());
+    if (!user) {
+      throw new AppError(`Customer with email ${email} not found`, 404);
+    }
+    customerId = user.id;
+  } else {
+    const user = await usersRepository.getUserById(customerId);
+    if (!user) {
+      throw new AppError(`Customer not found (ID: ${customerId})`, 404);
+    }
+  }
+
+  // 3. Create the paid order using the standard service order creation orchestration
+  const order = await createOrder({
+    customerId,
+    beatIds,
+    paymentMethod: paymentMethod || "credit_card",
+    status: "paid",
+    paymentReference,
+    transactionId: paymentReference,
+    gateway: "stripe"
+  });
+
+  logger.info({
+    event: "ORDER_PAYMENT_CONFIRMED",
+    orderId: order.id,
+    customerId,
+    paymentReference,
+    gateway: "stripe"
+  });
+
+  return order;
+};
+
 module.exports = {
   createOrder,
   getOrder,
   getAllOrders,
   updateOrder,
   updateOrderStatus,
-  deleteOrder
+  deleteOrder,
+  confirmPayment
 };
