@@ -5,6 +5,7 @@
 
 const { AsyncLocalStorage } = require("async_hooks");
 const path = require("path");
+const fs = require("fs");
 
 // 1. Thread-safe execution context for request-bound D1 bindings in serverless/workers environments
 const dbContextStore = new AsyncLocalStorage();
@@ -356,9 +357,75 @@ const dbProxy = new Proxy({}, {
 
 // 4. Initialisation interface (maintained for application bootstrap compatibility)
 function init() {
-  return new Promise((resolve) => {
-    // Local SQLite requires no schema execution here (handled via wrangler migrations)
-    resolve();
+  return new Promise((resolve, reject) => {
+    try {
+      const schemaFile = path.join(__dirname, "..", "..", "Database", "schema.sql");
+      const seedFile = path.join(__dirname, "..", "..", "Database", "seed.sql");
+
+      const exists = fs.existsSync(dbFile);
+      if (!exists) {
+        console.log("Initializing database schema...");
+        const schema = fs.readFileSync(schemaFile, "utf8");
+        sqliteDb.exec(schema, (err) => {
+          if (err) {
+            console.error("DB init error:", err);
+            return reject(err);
+          }
+          console.log("Database schema applied successfully.");
+          try {
+            if (fs.existsSync(seedFile)) {
+              const seed = fs.readFileSync(seedFile, "utf8");
+              if (seed && seed.trim()) {
+                sqliteDb.exec(seed, (err2) => {
+                  if (err2) {
+                    console.error("DB seed error:", err2.message || err2);
+                  } else {
+                    console.log("Database seeded successfully from seed.sql");
+                  }
+                  resolve();
+                });
+              } else {
+                resolve();
+              }
+            } else {
+              resolve();
+            }
+          } catch (e) {
+            console.error("Could not apply seed file:", e.message || e);
+            resolve();
+          }
+        });
+      } else {
+        console.log("Database file exists — skipping destructive re-initialization.");
+        // Ensure revoked_reason column exists in user_sessions (Sprint 6 migration).
+        sqliteDb.get("PRAGMA table_info(user_sessions);", (pragmaErr, pragmaRow) => {
+          sqliteDb.run(
+            "ALTER TABLE user_sessions ADD COLUMN revoked_reason TEXT;",
+            (alterErr) => {
+              if (alterErr) {
+                if (
+                  alterErr.message &&
+                  alterErr.message.toLowerCase().includes("duplicate column")
+                ) {
+                  console.log("Column 'revoked_reason' already exists in 'user_sessions'.");
+                } else {
+                  console.log(
+                    "Migration notice: could not add 'revoked_reason' (non-fatal):",
+                    alterErr.message || alterErr
+                  );
+                }
+              } else {
+                console.log("Successfully migrated: Added column 'revoked_reason' to 'user_sessions'.");
+              }
+              resolve();
+            }
+          );
+        });
+      }
+    } catch (err) {
+      console.error("Error during DB file check/read:", err.message || err);
+      resolve();
+    }
   });
 }
 

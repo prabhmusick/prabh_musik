@@ -1,6 +1,10 @@
 import axios from "axios";
 
-const baseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5005/api";
+const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5005";
+const normalizedApiHost = rawApiUrl
+  .replace(/\/api\/?$/, "")
+  .replace(/\/+$/, "");
+const baseURL = `${normalizedApiHost}/api`;
 
 const api = axios.create({
   baseURL,
@@ -19,7 +23,7 @@ if (process.env.NODE_ENV === "development") {
     },
     (error) => {
       return Promise.reject(error);
-    }
+    },
   );
 }
 
@@ -30,7 +34,7 @@ api.interceptors.response.use(
   },
   (error) => {
     return Promise.reject(error);
-  }
+  },
 );
 
 export default api;

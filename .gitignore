@@ -54,6 +54,7 @@ backend/node_modules/
 backend/Database/*.db
 backend/Database/*.sqlite
 backend/Database/*.sqlite3
+backend/.wrangler/
 
 # logs
 *.log

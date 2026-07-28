@@ -1,6 +1,7 @@
-import { Beat, BeatsResponse } from '../types/beat';
+import { Beat, BeatsResponse } from "../types/beat";
 
-const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5005').replace(/\/$/, '');
+const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5005";
+const API_BASE_URL = rawApiUrl.replace(/\/api\/?$/, "").replace(/\/+$/, "");
 
 /**
  * Fetch all beats from the backend
@@ -9,14 +10,16 @@ const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5005'
 export async function fetchBeats(): Promise<Beat[]> {
   try {
     const response = await fetch(`${API_BASE_URL}/api/beats/`, {
-      method: 'GET',
+      method: "GET",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch beats: ${response.status} ${response.statusText}`);
+      throw new Error(
+        `Failed to fetch beats: ${response.status} ${response.statusText}`,
+      );
     }
 
     const data: any = await response.json();
@@ -25,14 +28,14 @@ export async function fetchBeats(): Promise<Beat[]> {
     const items: Beat[] = Array.isArray(data?.items)
       ? data.items
       : Array.isArray(data?.data)
-      ? data.data
-      : Array.isArray(data)
-      ? data
-      : [];
+        ? data.data
+        : Array.isArray(data)
+          ? data
+          : [];
 
     return items;
   } catch (error) {
-    console.error('Error fetching beats:', error);
+    console.error("Error fetching beats:", error);
     return [];
   }
 }
@@ -45,14 +48,16 @@ export async function fetchBeats(): Promise<Beat[]> {
 export async function fetchBeatById(id: number): Promise<Beat> {
   try {
     const response = await fetch(`${API_BASE_URL}/api/beats/${id}/`, {
-      method: 'GET',
+      method: "GET",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch beat: ${response.status} ${response.statusText}`);
+      throw new Error(
+        `Failed to fetch beat: ${response.status} ${response.statusText}`,
+      );
     }
 
     const json: any = await response.json();
@@ -69,38 +74,42 @@ export async function fetchBeatById(id: number): Promise<Beat> {
  * @param filters - Filter parameters (genre, mood, etc.)
  * @returns Promise<Beat[]> - Filtered array of beats
  */
-export async function fetchBeatsWithFilters(filters: Record<string, string | number>): Promise<Beat[]> {
+export async function fetchBeatsWithFilters(
+  filters: Record<string, string | number>,
+): Promise<Beat[]> {
   try {
     const queryParams = new URLSearchParams();
-    
+
     Object.entries(filters).forEach(([key, value]) => {
       queryParams.append(key, String(value));
     });
 
     const url = `${API_BASE_URL}/api/beats/?${queryParams.toString()}`;
     const response = await fetch(url, {
-      method: 'GET',
+      method: "GET",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch beats: ${response.status} ${response.statusText}`);
+      throw new Error(
+        `Failed to fetch beats: ${response.status} ${response.statusText}`,
+      );
     }
 
     const data: any = await response.json();
     const items: Beat[] = Array.isArray(data?.items)
       ? data.items
       : Array.isArray(data?.data)
-      ? data.data
-      : Array.isArray(data)
-      ? data
-      : [];
+        ? data.data
+        : Array.isArray(data)
+          ? data
+          : [];
 
     return items;
   } catch (error) {
-    console.error('Error fetching beats with filters:', error);
+    console.error("Error fetching beats with filters:", error);
     throw error;
   }
 }
