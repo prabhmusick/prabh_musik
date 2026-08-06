@@ -500,10 +500,209 @@ const resendVerification = async (email) => {
 };
 
 /**
- * Authenticates user using Google OAuth assertions.
+ * Authenticates user using generic OAuth assertions.
+ *
+ * @param {Object} profile - Normalized OAuth Profile DTO.
+ * @param {Object} [clientContext={}] - Metadata context from request.
+ * @returns {Promise<Object>} Mapped user, tokens, and expiry duration.
  */
-const googleLogin = async (idToken) => {
-  throw new AppError("Not implemented", 501);
+const oauthLogin = async (profile, clientContext = {}) => {
+  // 1. Mandatory provider-agnostic validation
+  if (!profile.emailVerified) {
+    const err = new AppError(
+      `${profile.provider === "google" ? "Google" : profile.provider} email is not verified.`,
+      401
+    );
+    err.errorCode = "OAUTH_EMAIL_NOT_VERIFIED";
+    throw err;
+  }
+
+  // 2. Check for existing credential for the given provider
+  let credential = await authRepository.findCredentialByProvider(profile.provider, profile.providerId);
+  let user;
+
+  const sessionId = idUtil.generateSessionId();
+  const sessionExpiryDays = env.SESSION_EXPIRY_DAYS || 30;
+  const expiresAt = new Date(Date.now() + sessionExpiryDays * 24 * 60 * 60 * 1000).toISOString();
+  const lastLoginAt = new Date().toISOString();
+
+  if (credential) {
+    // Existing OAuth Credential User
+    user = await usersRepository.getUserById(credential.user_id);
+    if (!user || user.status === "deleted") {
+      throw new AppError("Invalid or suspended account.", 401);
+    }
+    if (user.status === "suspended") {
+      const err = new AppError("User account is suspended.", 401);
+      err.errorCode = ERROR_CODES.USER_SUSPENDED;
+      throw err;
+    }
+
+    const refreshToken = jwtUtil.generateRefreshToken({
+      sub: user.public_id,
+      sid: sessionId,
+      jti: idUtil.generateSessionId()
+    });
+    const refreshHash = tokenUtil.hashToken(refreshToken);
+
+    await executeTransaction(async (tx) => {
+      await authRepository.createSession(tx, {
+        id: sessionId,
+        user_id: user.id,
+        refresh_token_hash: refreshHash,
+        device_name: clientContext.deviceName || null,
+        ip: clientContext.ip || null,
+        user_agent: clientContext.userAgent || null,
+        expires_at: expiresAt
+      });
+
+      await usersRepository.updateLastLoginAt(tx, user.id, lastLoginAt);
+    });
+
+    const accessToken = jwtUtil.generateAccessToken({
+      sub: user.public_id,
+      role: user.role,
+      sid: sessionId
+    });
+
+    audit.userLoggedIn({
+      userId: user.public_id,
+      requestId: clientContext.requestId
+    });
+
+    return {
+      user: userMapper.toUserDto(user),
+      accessToken,
+      refreshToken,
+      expiresIn: env.ACCESS_TOKEN_EXPIRY_SECONDS
+    };
+  }
+
+  // Credential does not exist. Check if email matches existing account.
+  user = await usersRepository.findUserByEmail(profile.email);
+
+  if (user) {
+    // Existing email user - Link OAuth account
+    if (user.status === "deleted") {
+      throw new AppError("Invalid or suspended account.", 401);
+    }
+    if (user.status === "suspended") {
+      const err = new AppError("User account is suspended.", 401);
+      err.errorCode = ERROR_CODES.USER_SUSPENDED;
+      throw err;
+    }
+
+    const refreshToken = jwtUtil.generateRefreshToken({
+      sub: user.public_id,
+      sid: sessionId,
+      jti: idUtil.generateSessionId()
+    });
+    const refreshHash = tokenUtil.hashToken(refreshToken);
+
+    await executeTransaction(async (tx) => {
+      // Create OAuth credential
+      await authRepository.createCredential(tx, {
+        user_id: user.id,
+        provider: profile.provider,
+        provider_id: profile.providerId,
+        provider_email: profile.email,
+        password_hash: null
+      });
+
+      // Create session
+      await authRepository.createSession(tx, {
+        id: sessionId,
+        user_id: user.id,
+        refresh_token_hash: refreshHash,
+        device_name: clientContext.deviceName || null,
+        ip: clientContext.ip || null,
+        user_agent: clientContext.userAgent || null,
+        expires_at: expiresAt
+      });
+
+      await usersRepository.updateLastLoginAt(tx, user.id, lastLoginAt);
+    });
+
+    const accessToken = jwtUtil.generateAccessToken({
+      sub: user.public_id,
+      role: user.role,
+      sid: sessionId
+    });
+
+    audit.userLoggedIn({
+      userId: user.public_id,
+      requestId: clientContext.requestId
+    });
+
+    return {
+      user: userMapper.toUserDto(user),
+      accessToken,
+      refreshToken,
+      expiresIn: env.ACCESS_TOKEN_EXPIRY_SECONDS
+    };
+  }
+
+  // Brand new user - Register and sign in
+  const publicId = idUtil.generatePublicId();
+  const refreshToken = jwtUtil.generateRefreshToken({
+    sub: publicId,
+    sid: sessionId,
+    jti: idUtil.generateSessionId()
+  });
+  const refreshHash = tokenUtil.hashToken(refreshToken);
+
+  const displayName = profile.displayName || (profile.givenName && profile.familyName ? `${profile.givenName} ${profile.familyName}` : "OAuth User");
+
+  const newUserProfile = {
+    public_id: publicId,
+    name: displayName,
+    email: profile.email,
+    role: "customer",
+    status: "active"
+  };
+
+  await executeTransaction(async (tx) => {
+    // 1. Create user record
+    const userResult = await usersRepository.createUser(tx, newUserProfile);
+
+    // 2. Create credential record
+    await authRepository.createCredential(tx, {
+      user_id: userResult.id,
+      provider: profile.provider,
+      provider_id: profile.providerId,
+      provider_email: profile.email,
+      password_hash: null
+    });
+
+    // 3. Create session
+    await authRepository.createSession(tx, {
+      id: sessionId,
+      user_id: userResult.id,
+      refresh_token_hash: refreshHash,
+      device_name: clientContext.deviceName || null,
+      ip: clientContext.ip || null,
+      user_agent: clientContext.userAgent || null,
+      expires_at: expiresAt
+    });
+  });
+
+  const accessToken = jwtUtil.generateAccessToken({
+    sub: publicId,
+    role: "customer",
+    sid: sessionId
+  });
+
+  audit.userRegistered({
+    userId: publicId,
+    email: profile.email
+  });
+
+  return {
+    user: userMapper.toUserDto(newUserProfile),
+    accessToken,
+    refreshToken,
+    expiresIn: env.ACCESS_TOKEN_EXPIRY_SECONDS
+  };
 };
 
 /**
@@ -566,7 +765,7 @@ module.exports = {
   resetPassword,
   verifyEmail,
   resendVerification,
-  googleLogin,
+  oauthLogin,
   appleLogin,
   getMe
 };

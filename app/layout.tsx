@@ -3,18 +3,9 @@ import { Geist, Geist_Mono, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import Header from "./Header";
 import Footer from "./Footer";
-
-
+import Providers from "./providers";
 import { Agentation } from "agentation";
-
-export default function Layout({ children }) {
-  return (
-    <>
-      {children}
-      {process.env.NODE_ENV === "development" && <Agentation />}
-    </>
-  );
-}
+import Script from "next/script";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -47,9 +38,14 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${playfair.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <Header />
-        <main className="flex-1">{children}</main>
-        <Footer />
+        <Providers>
+          <Header />
+          <main className="flex-1">{children}</main>
+          <Footer />
+        </Providers>
+        {process.env.NODE_ENV === "development" && <Agentation />}
+        <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" />
+        <Script src="https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js" strategy="afterInteractive" />
       </body>
     </html>
   );

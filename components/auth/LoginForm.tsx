@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAppShell } from "@/app/contexts/app-shell-context";
+import { useOAuth } from "@/hooks/useOAuth";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -61,11 +62,12 @@ interface InputProps {
   showToggle?: boolean;
   visible?: boolean;
   onToggle?: () => void;
+  disabled?: boolean;
 }
 
 function Field({
   id, label, type = "text", value, placeholder, error,
-  autoComplete, onChange, showToggle, visible, onToggle,
+  autoComplete, onChange, showToggle, visible, onToggle, disabled,
 }: InputProps) {
   const inputType = showToggle ? (visible ? "text" : "password") : type;
   return (
@@ -84,6 +86,7 @@ function Field({
           aria-invalid={!!error}
           aria-describedby={error ? `${id}-err` : undefined}
           onChange={(e) => onChange(id, e.target.value)}
+          disabled={disabled}
           className={`auth-input ${error ? "error" : ""}`}
           style={showToggle ? { paddingRight: "40px" } : undefined}
         />
@@ -91,6 +94,7 @@ function Field({
           <button
             type="button"
             onClick={onToggle}
+            disabled={disabled}
             aria-label={visible ? "Hide password" : "Show password"}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
             style={{ background: "none", border: "none", cursor: "pointer" }}
@@ -106,7 +110,7 @@ function Field({
   );
 }
 
-// ─── Google / Facebook SVGs ───────────────────────────────────────────────────
+// ─── Social Icon SVGs ────────────────────────────────────────────────────────
 
 function GoogleIcon() {
   return (
@@ -115,6 +119,14 @@ function GoogleIcon() {
       <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
       <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
       <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+    </svg>
+  );
+}
+
+function AppleIcon() {
+  return (
+    <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24" style={{ width: "16px", height: "16px" }}>
+      <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 4.17c.66-.81 1.11-1.93.99-3.06-1 .04-2.22.67-2.94 1.51-.64.74-1.2 1.88-1.05 2.99 1.12.09 2.27-.58 3-1.44z" />
     </svg>
   );
 }
@@ -142,6 +154,7 @@ export default function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { login } = useAppShell();
+  const { loginWithGoogle, loginWithApple, loading: oauthLoading, loadingGoogle, loadingApple } = useOAuth();
 
   const handleChange = useCallback(
     (id: keyof FormFields, value: string) => {
@@ -169,20 +182,37 @@ export default function LoginForm() {
     setErrors({});
     setLoading(true);
     try {
-      await new Promise((r) => setTimeout(r, 800));
-      login({
-        emailOrUsername: fields.emailOrUsername,
-        fullName: fields.emailOrUsername.includes("@") ? fields.emailOrUsername.split("@")[0] : fields.emailOrUsername,
-        username: (fields.emailOrUsername.includes("@") ? fields.emailOrUsername.split("@")[0] : fields.emailOrUsername).replace(/\s+/g, "_"),
-        email: fields.emailOrUsername.includes("@") ? fields.emailOrUsername : "producer@prabhmusik.com",
-      });
+      await login(fields.emailOrUsername, fields.password);
       setSuccess(true);
-    } catch (err: unknown) {
-      setErrors({ form: err instanceof Error ? err.message : "Invalid credentials." });
+    } catch (err: any) {
+      const message = err.response?.data?.message || err.response?.data?.error?.message || "Invalid credentials.";
+      setErrors({ form: message });
     } finally {
       setLoading(false);
     }
   };
+
+  const handleGoogleLogin = async () => {
+    setErrors({});
+    try {
+      await loginWithGoogle();
+      setSuccess(true);
+    } catch (err: any) {
+      setErrors({ form: err.message || "Google Sign-In failed." });
+    }
+  };
+
+  const handleAppleLogin = async () => {
+    setErrors({});
+    try {
+      await loginWithApple();
+      setSuccess(true);
+    } catch (err: any) {
+      setErrors({ form: err.message || "Apple Sign-In failed." });
+    }
+  };
+
+  const isFormDisabled = loading || oauthLoading;
 
   // ── Success ──────────────────────────────────────────────────────────────
   if (success) {
@@ -227,13 +257,13 @@ export default function LoginForm() {
         {/* Username or Email */}
         <Field id="emailOrUsername" label="Email Address or Username" value={fields.emailOrUsername}
           placeholder="john@example.com or john_doe" error={errors.emailOrUsername}
-          autoComplete="username" onChange={handleChange} />
+          autoComplete="username" onChange={handleChange} disabled={isFormDisabled} />
 
         {/* Password */}
         <Field id="password" label="Password" type="password" value={fields.password}
           placeholder="••••••••••" error={errors.password}
           autoComplete="current-password" onChange={handleChange}
-          showToggle visible={showPw} onToggle={() => setShowPw((v) => !v)} />
+          showToggle visible={showPw} onToggle={() => setShowPw((v) => !v)} disabled={isFormDisabled} />
       </div>
 
       {/* Remember Me and Forgot Password */}
@@ -243,6 +273,7 @@ export default function LoginForm() {
             type="checkbox"
             checked={fields.rememberMe}
             onChange={(e) => handleCheck(e.target.checked)}
+            disabled={isFormDisabled}
             className="auth-checkbox"
           />
           <span style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.5)" }}>Remember me</span>
@@ -253,14 +284,14 @@ export default function LoginForm() {
       {/* Submit */}
       <button
         type="submit"
-        disabled={loading}
+        disabled={isFormDisabled}
         aria-busy={loading}
         className="auth-submit-btn"
       >
         {loading ? (
           <>
             <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24" style={{ width: "16px", height: "16px" }}>
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth={4} />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
             </svg>
             Logging In…
@@ -278,22 +309,55 @@ export default function LoginForm() {
       </div>
 
       {/* Social buttons */}
-      <div className="auth-social-grid">
+      <div className="auth-social-grid" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
         <button
           type="button"
-          onClick={() => {
-            // TODO: wire Google OAuth
-          }}
+          onClick={handleGoogleLogin}
+          disabled={isFormDisabled}
           className="auth-social-btn"
         >
-          <GoogleIcon />
-          Google
+          {loadingGoogle ? (
+            <>
+              <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24" style={{ width: "16px", height: "16px" }}>
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth={4} />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+              </svg>
+              Google
+            </>
+          ) : (
+            <>
+              <GoogleIcon />
+              Google
+            </>
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={handleAppleLogin}
+          disabled={isFormDisabled}
+          className="auth-social-btn"
+        >
+          {loadingApple ? (
+            <>
+              <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24" style={{ width: "16px", height: "16px" }}>
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth={4} />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+              </svg>
+              Apple
+            </>
+          ) : (
+            <>
+              <AppleIcon />
+              Apple
+            </>
+          )}
         </button>
         <button
           type="button"
           onClick={() => {
             // TODO: wire Facebook OAuth
           }}
+          disabled={isFormDisabled}
           className="auth-social-btn"
         >
           <FacebookIcon />

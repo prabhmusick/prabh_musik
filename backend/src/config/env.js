@@ -28,6 +28,16 @@ if (isProduction && !stripeWebhookSecret) {
   missingOrInsecure.push("STRIPE_WEBHOOK_SECRET");
 }
 
+const googleClientId = process.env.GOOGLE_CLIENT_ID;
+if (isProduction && !googleClientId) {
+  missingOrInsecure.push("GOOGLE_CLIENT_ID");
+}
+
+const appleAllowedAudiences = process.env.APPLE_ALLOWED_AUDIENCES;
+if (isProduction && (!appleAllowedAudiences || !appleAllowedAudiences.trim())) {
+  missingOrInsecure.push("APPLE_ALLOWED_AUDIENCES");
+}
+
 if (missingOrInsecure.length > 0) {
   throw new Error(`CRITICAL CONFIGURATION ERROR: Missing or insecure production variables:\n- ${missingOrInsecure.join("\n- ")}`);
 }
@@ -38,6 +48,15 @@ const env = {
 
   /** @type {string} */
   LOG_FORMAT: process.env.LOG_FORMAT || "dev",
+
+  /** @type {string} */
+  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || "",
+
+  /** @type {string[]} */
+  APPLE_ALLOWED_AUDIENCES: (process.env.APPLE_ALLOWED_AUDIENCES || "")
+    .split(",")
+    .map(aud => aud.trim())
+    .filter(Boolean),
 
   /** @type {string} */
   JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET || "prabh_musik_access_secret_key_change_me_in_prod",

@@ -1,5 +1,7 @@
 const service = require("./auth.service");
 const cookieUtil = require("../../utils/cookie");
+const googleVerifier = require("./google.verifier");
+const appleVerifier = require("./apple.verifier");
 
 /**
  * Handle user registration request.
@@ -181,18 +183,78 @@ const resendVerification = async (req, res) => {
   res.status(501).json({ success: false, message: "Not implemented" });
 };
 
-/**
- * Authentication login route via Google OAuth.
- */
 const googleLogin = async (req, res) => {
-  res.status(501).json({ success: false, message: "Not implemented" });
+  const { idToken } = req.body;
+  if (!idToken) {
+    return res.status(400).json({
+      success: false,
+      message: "Google ID Token is required."
+    });
+  }
+
+  let ip = req.headers["x-forwarded-for"] || req.ip || null;
+  if (ip && typeof ip === "string") {
+    ip = ip.split(",")[0].trim();
+  }
+
+  const clientContext = {
+    ip,
+    userAgent: req.headers["user-agent"] || null,
+    requestId: req.id
+  };
+
+  const profile = await googleVerifier.verifyGoogleIdToken(idToken);
+  const result = await service.oauthLogin(profile, clientContext);
+
+  // Delegate cookie generation entirely to the cookie utility
+  cookieUtil.setRefreshCookie(res, result.refreshToken);
+
+  return res.status(200).json({
+    success: true,
+    message: "Logged in with Google successfully.",
+    data: {
+      user: result.user,
+      accessToken: result.accessToken,
+      expiresIn: result.expiresIn
+    }
+  });
 };
 
-/**
- * Authentication login route via Apple Identity.
- */
 const appleLogin = async (req, res) => {
-  res.status(501).json({ success: false, message: "Not implemented" });
+  const { idToken, nonce } = req.body;
+  if (!idToken) {
+    return res.status(400).json({
+      success: false,
+      message: "Apple ID Token is required."
+    });
+  }
+
+  let ip = req.headers["x-forwarded-for"] || req.ip || null;
+  if (ip && typeof ip === "string") {
+    ip = ip.split(",")[0].trim();
+  }
+
+  const clientContext = {
+    ip,
+    userAgent: req.headers["user-agent"] || null,
+    requestId: req.id
+  };
+
+  const profile = await appleVerifier.verifyAppleIdToken(idToken, nonce || null);
+  const result = await service.oauthLogin(profile, clientContext);
+
+  // Delegate cookie generation entirely to the cookie utility
+  cookieUtil.setRefreshCookie(res, result.refreshToken);
+
+  return res.status(200).json({
+    success: true,
+    message: "Logged in with Apple successfully.",
+    data: {
+      user: result.user,
+      accessToken: result.accessToken,
+      expiresIn: result.expiresIn
+    }
+  });
 };
 
 module.exports = {

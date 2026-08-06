@@ -1,6 +1,10 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import api, { setAccessToken, clearAccessToken } from "../../lib/api";
+import { mapUserDto } from "../../lib/mappers/user.mapper";
+import { useCurrentUser } from "../../hooks/useCurrentUser";
 
 export interface BeatItem {
   id: number | string;
@@ -25,9 +29,11 @@ export interface UserProfile {
 interface AppShellContextValue {
   user: UserProfile | null;
   isAuthenticated: boolean;
-  login: (payload: Partial<UserProfile> & { emailOrUsername?: string }) => void;
-  signup: (payload: Partial<UserProfile> & { email?: string; fullName?: string; username?: string }) => void;
-  logout: () => void;
+  login: (emailOrUsername: string, password: string) => Promise<void>;
+  signup: (fullName: string, email: string, password: string) => Promise<void>;
+  loginWithGoogle: (idToken: string) => Promise<void>;
+  loginWithApple: (idToken: string, nonce?: string) => Promise<void>;
+  logout: () => Promise<void>;
   cart: BeatItem[];
   cartOpen: boolean;
   openCart: () => void;
@@ -43,12 +49,10 @@ interface AppShellContextValue {
 
 const AppShellContext = createContext<AppShellContextValue | undefined>(undefined);
 
-const USER_STORAGE_KEY = "prabhmusick-user";
 const CART_STORAGE_KEY = "prabhmusick-cart";
 const WISHLIST_STORAGE_KEY = "prabhmusick-wishlist";
 const PURCHASES_STORAGE_KEY = "prabhmusick-purchases";
 
-// Empty defaults - user data should come from backend, not hardcoded mocks
 const defaultPurchases: BeatItem[] = [];
 const defaultWishlist: BeatItem[] = [];
 
@@ -72,7 +76,10 @@ function persistValue<T>(key: string, value: T | null) {
 }
 
 export function AppShellProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<UserProfile | null>(null);
+  const queryClient = useQueryClient();
+  const { data: currentUser } = useCurrentUser();
+
+  const user = currentUser || null;
   const [cart, setCart] = useState<BeatItem[]>([]);
   const [wishlist, setWishlist] = useState<BeatItem[]>(defaultWishlist);
   const [purchasedBeats, setPurchasedBeats] = useState<BeatItem[]>(defaultPurchases);
@@ -80,17 +87,11 @@ export function AppShellProvider({ children }: { children: React.ReactNode }) {
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    setUser(getStoredValue<UserProfile | null>(USER_STORAGE_KEY, null));
     setCart(getStoredValue<BeatItem[]>(CART_STORAGE_KEY, []));
     setWishlist(getStoredValue<BeatItem[]>(WISHLIST_STORAGE_KEY, defaultWishlist));
     setPurchasedBeats(getStoredValue<BeatItem[]>(PURCHASES_STORAGE_KEY, defaultPurchases));
     setHydrated(true);
   }, []);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    persistValue(USER_STORAGE_KEY, user);
-  }, [hydrated, user]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -107,39 +108,90 @@ export function AppShellProvider({ children }: { children: React.ReactNode }) {
     persistValue(PURCHASES_STORAGE_KEY, purchasedBeats);
   }, [hydrated, purchasedBeats]);
 
-  const login = (payload: Partial<UserProfile> & { emailOrUsername?: string }) => {
-    const fallbackName = payload.fullName || payload.username || payload.emailOrUsername?.split("@")[0] || "Producer";
-    setUser({
-      id: payload.id || `${Date.now()}`,
-      fullName: fallbackName,
-      username: payload.username || fallbackName.toLowerCase().replace(/\s+/g, "_"),
-      email: payload.email || payload.emailOrUsername || "producer@prabhmusik.com",
-      avatar: payload.avatar || `https://api.dicebear.com/7.x/thumbs/svg?seed=${encodeURIComponent(fallbackName)}`,
+  // Event handler for background session expiration notifications
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      clearAccessToken();
+      queryClient.setQueryData(["currentUser"], null);
+
+      setCart([]);
+      setWishlist([]);
+      setPurchasedBeats([]);
+      setCartOpen(false);
+    };
+
+    window.addEventListener("auth-session-expired", handleSessionExpired);
+    return () => {
+      window.removeEventListener("auth-session-expired", handleSessionExpired);
+    };
+  }, [queryClient]);
+
+  const login = async (emailOrUsername: string, password: string) => {
+    const response = await api.post("/auth/login", {
+      email: emailOrUsername,
+      password: password,
     });
+
+    const { user: backendUser, accessToken } = response.data.data;
+    setAccessToken(accessToken);
+    const mapped = mapUserDto(backendUser);
+    queryClient.setQueryData(["currentUser"], mapped);
     setCartOpen(false);
   };
 
-  const signup = (payload: Partial<UserProfile> & { email?: string; fullName?: string; username?: string }) => {
-    setUser({
-      id: payload.id || `${Date.now()}`,
-      fullName: payload.fullName || "New Creator",
-      username: payload.username || "new_creator",
-      email: payload.email || "creator@prabhmusik.com",
-      avatar: payload.avatar || "https://api.dicebear.com/7.x/thumbs/svg?seed=creator",
+  const signup = async (fullName: string, email: string, password: string) => {
+    const response = await api.post("/auth/signup", {
+      name: fullName,
+      email,
+      password,
     });
-    // Clear user-specific data for new signup
+
+    const { user: backendUser, accessToken } = response.data.data;
+    setAccessToken(accessToken);
+    const mapped = mapUserDto(backendUser);
+    queryClient.setQueryData(["currentUser"], mapped);
+
+    // Reset user-specific lists for new accounts
     setCart([]);
     setWishlist([]);
     setPurchasedBeats([]);
     setCartOpen(false);
   };
 
-  const logout = () => {
-    setUser(null);
-    setCart([]);
-    setWishlist([]);
-    setPurchasedBeats([]);
+  const loginWithGoogle = async (idToken: string) => {
+    const response = await api.post("/auth/google", { idToken });
+
+    const { user: backendUser, accessToken } = response.data.data;
+    setAccessToken(accessToken);
+    const mapped = mapUserDto(backendUser);
+    queryClient.setQueryData(["currentUser"], mapped);
     setCartOpen(false);
+  };
+
+  const loginWithApple = async (idToken: string, nonce?: string) => {
+    const response = await api.post("/auth/apple", { idToken, nonce });
+
+    const { user: backendUser, accessToken } = response.data.data;
+    setAccessToken(accessToken);
+    const mapped = mapUserDto(backendUser);
+    queryClient.setQueryData(["currentUser"], mapped);
+    setCartOpen(false);
+  };
+
+  const logout = async () => {
+    try {
+      await api.post("/auth/logout");
+    } catch (e) {
+      // Ignore network errors to guarantee UI teardown proceeds
+    } finally {
+      clearAccessToken();
+      queryClient.setQueryData(["currentUser"], null);
+
+      setCart([]);
+      setWishlist([]);
+      setPurchasedBeats([]);
+      setCartOpen(false);
+    }
   };
 
   const addToCart = (beat: BeatItem) => {
@@ -178,6 +230,8 @@ export function AppShellProvider({ children }: { children: React.ReactNode }) {
       isAuthenticated: Boolean(user),
       login,
       signup,
+      loginWithGoogle,
+      loginWithApple,
       logout,
       cart,
       cartOpen,

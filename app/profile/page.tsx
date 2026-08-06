@@ -348,7 +348,7 @@ function Crate({
   ctaLabel,
 }: {
   title: string;
-  items: Array<{ id: number | string; title: string; price?: number }>;
+  items: Array<{ id: number | string; title: string; price?: number | null }>;
   empty: string;
   ctaHref?: string;
   ctaLabel?: string;
