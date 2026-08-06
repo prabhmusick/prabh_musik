@@ -18,14 +18,14 @@ if (isProduction && (!jwtRefresh || jwtRefresh.includes("change_me") || jwtRefre
   missingOrInsecure.push("JWT_REFRESH_SECRET (must be at least 32 characters and non-default in production)");
 }
 
-const stripeSecret = process.env.STRIPE_SECRET_KEY;
-if (isProduction && !stripeSecret) {
-  missingOrInsecure.push("STRIPE_SECRET_KEY");
+const razorpayKeyId = process.env.RAZORPAY_KEY_ID;
+if (isProduction && !razorpayKeyId) {
+  missingOrInsecure.push("RAZORPAY_KEY_ID");
 }
 
-const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-if (isProduction && !stripeWebhookSecret) {
-  missingOrInsecure.push("STRIPE_WEBHOOK_SECRET");
+const razorpayKeySecret = process.env.RAZORPAY_KEY_SECRET;
+if (isProduction && !razorpayKeySecret) {
+  missingOrInsecure.push("RAZORPAY_KEY_SECRET");
 }
 
 const googleClientId = process.env.GOOGLE_CLIENT_ID;
@@ -86,10 +86,10 @@ const env = {
   COOKIE_SAME_SITE: process.env.COOKIE_SAME_SITE || "lax",
 
   /** @type {string} */
-  STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY || "sk_test_mock_key",
+  RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID || "",
 
   /** @type {string} */
-  STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET || ""
+  RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET || ""
 };
 
 module.exports = env;

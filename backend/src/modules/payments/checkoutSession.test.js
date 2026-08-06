@@ -1,7 +1,7 @@
 const { buildCheckoutSessionParams } = require('./checkoutSession');
 
 describe('buildCheckoutSessionParams', () => {
-  it('includes Stripe-supported payment methods such as card and UPI', () => {
+  it('builds Razorpay order options for INR purchases', () => {
     const params = buildCheckoutSessionParams({
       amount: 1000,
       currency: 'INR',
@@ -11,9 +11,9 @@ describe('buildCheckoutSessionParams', () => {
       cancelUrl: 'http://localhost/checkout',
     });
 
-    expect(params.mode).toBe('payment');
-    expect(params.payment_method_types).toEqual(expect.arrayContaining(['card', 'upi']));
-    expect(params.customer_email).toBe('user@example.com');
-    expect(params.metadata).toMatchObject({ email: 'user@example.com' });
+    expect(params.amount).toBe(1000);
+    expect(params.currency).toBe('INR');
+    expect(params.receipt).toMatch(/^prabh-musik-/);
+    expect(params.notes).toMatchObject({ email: 'user@example.com' });
   });
 });

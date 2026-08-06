@@ -1,26 +1,15 @@
 function buildCheckoutSessionParams({ amount, currency, email, beats, successUrl, cancelUrl }) {
+  const receipt = `prabh-musik-${Date.now()}`;
+
   return {
-    mode: 'payment',
-    payment_method_types: ['card', 'upi'],
-    line_items: [
-      {
-        price_data: {
-          currency: currency.toUpperCase(),
-          product_data: {
-            name: 'Prabh Musik Beat Purchase',
-            description: beats?.length ? `${beats.length} beat(s)` : 'Beat purchase',
-          },
-          unit_amount: amount,
-        },
-        quantity: 1,
-      },
-    ],
-    customer_email: email,
-    success_url: successUrl,
-    cancel_url: cancelUrl,
-    metadata: {
+    amount: Math.max(1, Math.round(amount || 0)),
+    currency: (currency || 'INR').toUpperCase(),
+    receipt,
+    notes: {
       email,
       beats: JSON.stringify(beats || []),
+      successUrl,
+      cancelUrl,
     },
   };
 }

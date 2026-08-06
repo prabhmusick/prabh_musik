@@ -70,7 +70,38 @@ function CheckoutForm({ cart, user, onCheckoutComplete }: any) {
       }
 
       onCheckoutComplete();
-      window.location.href = paymentData.url;
+
+      if (typeof window !== "undefined" && paymentData.keyId) {
+        const script = document.createElement("script");
+        script.src = "https://checkout.razorpay.com/v1/checkout.js";
+        script.async = true;
+        script.onload = () => {
+          const Razorpay = (window as any).Razorpay;
+          const options = {
+            key: paymentData.keyId,
+            amount: paymentData.amount,
+            currency: paymentData.currency || "INR",
+            name: "Prabh Musik",
+            description: "Beat purchase",
+            order_id: paymentData.orderId,
+            handler: () => {
+              window.location.href = "/profile?payment=success";
+            },
+            prefill: {
+              email,
+              name,
+            },
+            theme: {
+              color: "#d4820a",
+            },
+          };
+          const rzp = new Razorpay(options);
+          rzp.open();
+        };
+        document.body.appendChild(script);
+      } else {
+        window.location.href = paymentData.url || "/profile?payment=success";
+      }
     } catch (err: any) {
       setError(err.message || "An error occurred");
     } finally {
@@ -126,7 +157,7 @@ function CheckoutForm({ cart, user, onCheckoutComplete }: any) {
               <section style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: 20 }}>
                 <h2 style={{ color: "#fff", fontSize: 16, fontWeight: 700, margin: "0 0 16px" }}>Payment Details</h2>
                 <div style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: 14, color: "rgba(255,255,255,0.8)", lineHeight: 1.5 }}>
-                  You will be redirected to Stripe Checkout where you can pay with cards, UPI, wallets, and other supported methods.
+                  You will be redirected to Razorpay where you can pay with cards, UPI, wallets, and other supported methods.
                 </div>
               </section>
 
@@ -190,7 +221,7 @@ function CheckoutForm({ cart, user, onCheckoutComplete }: any) {
               </div>
 
               <div style={{ background: "rgba(212,130,10,0.1)", border: "1px solid rgba(212,130,10,0.2)", borderRadius: 8, padding: 10, fontSize: 12, color: "#fbbf24" }}>
-                💡 Stripe Checkout will show supported methods like cards, UPI, wallets, and more based on your region and Stripe account setup.
+                💡 Razorpay will show supported methods like cards, UPI, wallets, and more based on your region and Razorpay account setup.
               </div>
             </div>
           </div>
