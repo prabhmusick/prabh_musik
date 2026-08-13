@@ -13,7 +13,7 @@ interface BeatUploadZoneProps {
   description: string;
   value?: string;
   onUploadComplete: (key: string, duration?: number) => void;
-  type: "image" | "audio" | "document";
+  type: "image" | "banner" | "audio" | "document";
 }
 
 export function BeatUploadZone({
@@ -74,7 +74,7 @@ export function BeatUploadZone({
   }
 
   const getIcon = () => {
-    if (type === "image") return <ImageIcon size={28} className="text-neutral-400" />
+    if (type === "image" || type === "banner") return <ImageIcon size={28} className="text-neutral-400" />
     if (type === "audio") return <Music size={28} className="text-neutral-400" />
     return <FileText size={28} className="text-neutral-400" />
   }

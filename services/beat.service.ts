@@ -13,12 +13,6 @@ const API_OBJECT_BASE = `${API_HOST}/api`;
  * Maps a backend beat record to the frontend typings shape
  */
 export function mapBackendToFrontend(beat: any): Beat {
-  const getUrl = (key: string | null): string => {
-    if (!key) return "";
-    if (key.startsWith("http://") || key.startsWith("https://")) return key;
-    return `${API_OBJECT_BASE}/beats/object/${encodeURIComponent(key)}`;
-  };
-
   const statusMap: Record<string, "DRAFT" | "AVAILABLE" | "SOLD"> = {
     draft: "DRAFT",
     published: "AVAILABLE",
@@ -27,26 +21,26 @@ export function mapBackendToFrontend(beat: any): Beat {
   const mappedStatus = statusMap[beat.status || "draft"] || "DRAFT";
 
   return {
-    id: String(beat.id),
+    id: String(beat.public_id || beat.id),
     artistId: "", // Artist is single/global and managed on backend
-    title: beat.beat_name || "",
+    title: beat.title || "",
     description: beat.description || "",
     genre: beat.genre || "",
     bpm: beat.bpm || 0,
-    key: "", // Separated from mood, keep empty since backend does not have musical_key column yet
-    mood: beat.mood || "",
-    type: beat.beat_type || "beat",
-    trackType: beat.track_type || "non-exclusive",
+    key: beat.musical_key || "",
+    mood: "",
+    type: "beat",
+    trackType: "non-exclusive",
     tags: [],
-    price: beat.price || 0,
+    price: beat.price_amount ? beat.price_amount / 100 : 0,
     status: mappedStatus,
     createdAt: beat.created_at || new Date().toISOString(),
     duration: beat.duration || 0,
     assets: {
-      coverImage: getUrl(beat.cover_key),
-      bannerImage: getUrl(beat.banner_key),
-      previewAudio: getUrl(beat.audio_key),
-      wavFile: getUrl(beat.audio_key), // Wav fallback map
+      coverImage: beat.cover_url || "",
+      bannerImage: beat.banner_url || "",
+      previewAudio: beat.audio_url || "",
+      wavFile: beat.audio_url || "", // Wav fallback map
       stemsFile: "",
     },
     analytics: {
@@ -65,15 +59,13 @@ export function mapBackendToFrontend(beat: any): Beat {
 export function mapFrontendToBackend(beat: any): any {
   const data: any = {};
 
-  if (beat.title !== undefined) data.beat_name = beat.title;
+  if (beat.title !== undefined) data.title = beat.title;
   if (beat.description !== undefined) data.description = beat.description;
   if (beat.genre !== undefined) data.genre = beat.genre;
   if (beat.bpm !== undefined) data.bpm = Number(beat.bpm);
   if (beat.duration !== undefined) data.duration = Number(beat.duration);
-  if (beat.mood !== undefined) data.mood = beat.mood;
-  if (beat.type !== undefined) data.beat_type = beat.type;
-  if (beat.trackType !== undefined) data.track_type = beat.trackType;
-  if (beat.price !== undefined) data.price = Number(beat.price);
+  if (beat.key !== undefined) data.musical_key = beat.key;
+  if (beat.price !== undefined) data.price_amount = Math.round(Number(beat.price) * 100);
 
   if (beat.status !== undefined) {
     const statusMapInverse: Record<string, string> = {
@@ -91,7 +83,12 @@ export function mapFrontendToBackend(beat: any): any {
       if (url.includes("/beats/object/")) {
         return url.split("/beats/object/").pop() || null;
       }
-      return url;
+      try {
+        const parsed = new URL(url);
+        return parsed.pathname.substring(1);
+      } catch {
+        return url;
+      }
     };
 
     if (beat.assets.coverImage !== undefined) {
@@ -160,7 +157,7 @@ export async function createBeat(data: any): Promise<Beat> {
  */
 export async function updateBeat(id: string, data: any): Promise<Beat> {
   const backendPayload = mapFrontendToBackend(data);
-  const response = await api.put(`/beats/${id}`, backendPayload);
+  const response = await api.patch(`/beats/${id}`, backendPayload);
   return mapBackendToFrontend(response.data.data);
 }
 

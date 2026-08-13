@@ -1,6 +1,7 @@
 const { ulid } = require("ulid");
 const crypto = require("crypto");
 const uploadsRepository = require("./uploads.repository");
+const usersRepository = require("../users/users.repository");
 const { storageProvider } = require("../../storage/r2.provider");
 const AppError = require("../../errors/AppError");
 const logger = require("../../utils/logger");
@@ -148,6 +149,24 @@ const uploadAsset = async (file, assetType, userId) => {
     assetType
   });
 
+  // Resolve the internal database integer user ID from their public UUID string or number
+  let internalUserId;
+  if (typeof userId === "number" || (typeof userId === "string" && /^\d+$/.test(userId))) {
+    internalUserId = Number(userId);
+    const user = await usersRepository.getUserById(internalUserId);
+    if (!user) {
+      throw new AppError("Uploading user profile not found", 401);
+    }
+  } else {
+    const user = await usersRepository.findUserByPublicId(userId);
+    if (!user) {
+      throw new AppError("Uploading user profile not found", 401);
+    }
+    internalUserId = user.id;
+  }
+
+  let uploadedStorageKey = null;
+
   try {
     // 1. Validations
     validateFile(file, assetType);
@@ -164,6 +183,7 @@ const uploadAsset = async (file, assetType, userId) => {
 
     // 4. Upload to Cloudflare R2
     await storageProvider.uploadObject(storageKey, file.buffer, file.mimetype);
+    uploadedStorageKey = storageKey;
 
     // 5. Extract metadata details
     let duration = null;
@@ -190,7 +210,7 @@ const uploadAsset = async (file, assetType, userId) => {
       duration,
       imageWidth,
       imageHeight,
-      uploadedBy: userId
+      uploadedBy: internalUserId
     });
 
     logger.info({
@@ -204,6 +224,16 @@ const uploadAsset = async (file, assetType, userId) => {
 
     return uploadRecord;
   } catch (err) {
+    if (uploadedStorageKey) {
+      // Compensate: Delete file from R2 to prevent orphaned storage objects
+      await storageProvider.deleteObject(uploadedStorageKey).catch((deleteErr) => {
+        logger.error({
+          event: "COMPENSATION_DELETE_FAILED",
+          key: uploadedStorageKey,
+          error: deleteErr.message
+        });
+      });
+    }
     logger.error({
       event: "UPLOAD_FAILED",
       userId,
@@ -229,6 +259,24 @@ const replaceAsset = async (publicId, file, userId) => {
     throw new AppError("Upload record not found or inactive", 404);
   }
 
+  // Resolve internal database integer ID or support numeric tests
+  let internalUserId;
+  if (typeof userId === "number" || (typeof userId === "string" && /^\d+$/.test(userId))) {
+    internalUserId = Number(userId);
+    const user = await usersRepository.getUserById(internalUserId);
+    if (!user) {
+      throw new AppError("Uploading user profile not found", 401);
+    }
+  } else {
+    const user = await usersRepository.findUserByPublicId(userId);
+    if (!user) {
+      throw new AppError("Uploading user profile not found", 401);
+    }
+    internalUserId = user.id;
+  }
+
+  let uploadedStorageKey = null;
+
   try {
     // 1. Validations
     validateFile(file, existing.asset_type);
@@ -245,6 +293,7 @@ const replaceAsset = async (publicId, file, userId) => {
 
     // 4. Atomic storage replacement: upload first!
     await storageProvider.uploadObject(newStorageKey, file.buffer, file.mimetype);
+    uploadedStorageKey = newStorageKey;
 
     // 5. Extraction
     let duration = null;
@@ -269,9 +318,19 @@ const replaceAsset = async (publicId, file, userId) => {
       imageWidth,
       imageHeight
     });
+    
+    if (!updatedRecord) {
+      throw new AppError("Failed to update asset metadata in database", 500);
+    }
 
     // 7. Delete the old object from storage
-    await storageProvider.deleteObject(existing.storage_key);
+    await storageProvider.deleteObject(existing.storage_key).catch((deleteErr) => {
+      logger.error({
+        event: "ORPHANED_OLD_FILE_CLEANUP_FAILED",
+        key: existing.storage_key,
+        error: deleteErr.message
+      });
+    });
 
     logger.info({
       event: "UPLOAD_REPLACED",
@@ -284,6 +343,16 @@ const replaceAsset = async (publicId, file, userId) => {
 
     return updatedRecord;
   } catch (err) {
+    if (uploadedStorageKey) {
+      // Compensate: Delete new file from R2 to prevent orphaned storage objects
+      await storageProvider.deleteObject(uploadedStorageKey).catch((deleteErr) => {
+        logger.error({
+          event: "COMPENSATION_DELETE_FAILED",
+          key: uploadedStorageKey,
+          error: deleteErr.message
+        });
+      });
+    }
     logger.error({
       event: "UPLOAD_FAILED",
       userId,

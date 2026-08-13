@@ -5,6 +5,7 @@
 
 const { ulid } = require("ulid");
 const repository = require("./beats.repository");
+const usersRepository = require("../users/users.repository");
 const AppError = require("../../errors/AppError");
 
 /**
@@ -131,6 +132,22 @@ const createBeat = async (beatInput, creatorUserId) => {
     throw new AppError("Creator user identification is required.", 400);
   }
 
+  // Resolve internal database integer ID from public UUID string or number
+  let internalUserId;
+  if (typeof creatorUserId === "number" || (typeof creatorUserId === "string" && /^\d+$/.test(creatorUserId))) {
+    internalUserId = Number(creatorUserId);
+    const user = await usersRepository.getUserById(internalUserId);
+    if (!user) {
+      throw new AppError("Creator user profile not found", 400);
+    }
+  } else {
+    const user = await usersRepository.findUserByPublicId(creatorUserId);
+    if (!user) {
+      throw new AppError("Creator user profile not found", 400);
+    }
+    internalUserId = user.id;
+  }
+
   // 1. Business Invariant Checks
   const title = typeof beatInput.title === "string" ? beatInput.title.trim() : "";
   if (!title) {
@@ -167,7 +184,7 @@ const createBeat = async (beatInput, creatorUserId) => {
     banner_key: beatInput.banner_key ? String(beatInput.banner_key).trim() : null,
     duration: beatInput.duration ? Number(beatInput.duration) : null,
     status: beatInput.status ? String(beatInput.status).toLowerCase().trim() : "draft",
-    created_by: creatorUserId
+    created_by: internalUserId
   };
 
   // 4. Persist via Repository

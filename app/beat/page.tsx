@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface Beat {
-  id: number;
+  id: string;
   title: string;
   producer: string;
   price: number | null;
@@ -31,7 +31,7 @@ async function fetchBeats(
     const pages = Math.ceil(total / perPage);
     const start = (page - 1) * perPage;
     const paginatedBeats = allBeats.slice(start, start + perPage).map((b) => ({
-      id: Number(b.id),
+      id: String(b.id),
       title: b.title,
       producer: "Unknown",
       price: b.price || null,

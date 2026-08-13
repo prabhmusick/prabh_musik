@@ -43,16 +43,65 @@ VALUES
 );
 
 -- Seed Beats (with generated public_id)
-INSERT INTO beats (id, public_id, beat_name, slug, genre, audio_key, status, price, duration, track_type)
-VALUES (
+INSERT INTO beats (id, public_id, title, slug, genre, audio_key, status, price_amount, duration, created_by)
+VALUES 
+(
     1,
-    'b4af6389-11c5-4d76-90dc-2a8d11624021',
+    'bt_01J4P8Z6VXZ9Y8VXZ9Y8VXZ9Y1',
     'The Mountain Storytelling',
     'the-mountain-storytelling',
     'Storytelling',
     '1780414576089-the_mountain-storytelling-audio-136105.mp3',
     'published',
-    149.99,
+    14900,
     180,
-    'exclusive'
+    1
+),
+(
+    2,
+    'bt_01J4P8Z6VXZ9Y8VXZ9Y8VXZ9Y2',
+    'Intensity',
+    'intensity-by-audio-club',
+    'Cinematic',
+    '1780413092408-intensity-by-audio-club-intensity-by-audio-club-343637.mp3',
+    'published',
+    19900,
+    210,
+    1
+),
+(
+    3,
+    'bt_01J4P8Z6VXZ9Y8VXZ9Y8VXZ9Y3',
+    'Funk & Breakbeat',
+    'funk-breakbeat',
+    'Funk',
+    '1781353812166-alexguz-funk-amp-breakbeat-541097.mp3',
+    'published',
+    9900,
+    150,
+    1
+),
+(
+    4,
+    'bt_01J4P8Z6VXZ9Y8VXZ9Y8VXZ9Y4',
+    'Water Afro Pop',
+    'water-afro-pop',
+    'Afrobeat',
+    '1781623228264-kontraa-water-afro-pop-music-445661.mp3',
+    'published',
+    12900,
+    165,
+    1
+),
+(
+    5,
+    'bt_01J4P8Z6VXZ9Y8VXZ9Y8VXZ9Y5',
+    'Nai Dabde',
+    'nai-dabde',
+    'Punjabi',
+    '1781676259297-Nai_Dabde_-_DjPunjab.mp3',
+    'published',
+    14900,
+    220,
+    1
 );
