@@ -262,7 +262,7 @@ export function BeatForm({ initialValues, onSubmit, isSubmitting, error }: BeatF
             description="JPG or PNG. Preferred 1200x400px."
             value={assets.bannerImage}
             onUploadComplete={(key) => handleAssetChange("bannerImage", key)}
-            type="image"
+            type="banner"
           />
           <BeatUploadZone
             label="Preview Audio File"
