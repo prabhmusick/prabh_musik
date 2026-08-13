@@ -131,14 +131,6 @@ function AppleIcon() {
   );
 }
 
-function FacebookIcon() {
-  return (
-    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="#1877F2" style={{ width: "16px", height: "16px" }}>
-      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-    </svg>
-  );
-}
-
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function LoginForm() {
@@ -309,12 +301,19 @@ export default function LoginForm() {
       </div>
 
       {/* Social buttons */}
-      <div className="auth-social-grid" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
+      <div className="auth-social-grid" style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
         <button
           type="button"
           onClick={handleGoogleLogin}
           disabled={isFormDisabled}
           className="auth-social-btn"
+          style={{
+            opacity: loadingGoogle ? 0.96 : 1,
+            transform: loadingGoogle ? "scale(0.99)" : "scale(1)",
+            transition: "all 0.2s ease",
+            minHeight: "44px",
+          }}
+          aria-live="polite"
         >
           {loadingGoogle ? (
             <>
@@ -322,7 +321,7 @@ export default function LoginForm() {
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth={4} />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
               </svg>
-              Google
+              Connecting…
             </>
           ) : (
             <>
@@ -336,6 +335,7 @@ export default function LoginForm() {
           onClick={handleAppleLogin}
           disabled={isFormDisabled}
           className="auth-social-btn"
+          style={{ minHeight: "44px" }}
         >
           {loadingApple ? (
             <>
@@ -351,17 +351,6 @@ export default function LoginForm() {
               Apple
             </>
           )}
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            // TODO: wire Facebook OAuth
-          }}
-          disabled={isFormDisabled}
-          className="auth-social-btn"
-        >
-          <FacebookIcon />
-          Facebook
         </button>
       </div>
     </form>

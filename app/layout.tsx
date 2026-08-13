@@ -4,6 +4,7 @@ import "./globals.css";
 import Header from "./Header";
 import Footer from "./Footer";
 import Providers from "./providers";
+import { CartSidebar } from "../components/CartSidebar";
 import { Agentation } from "agentation";
 import Script from "next/script";
 
@@ -42,6 +43,7 @@ export default function RootLayout({
           <Header />
           <main className="flex-1">{children}</main>
           <Footer />
+          <CartSidebar />
         </Providers>
         {process.env.NODE_ENV === "development" && <Agentation />}
         <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" />
