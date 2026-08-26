@@ -38,6 +38,27 @@ export const clearAccessToken = () => {
   isRefreshing = false;
 };
 
+export const getApiErrorMessage = (error: unknown, fallback = "Request failed.") => {
+  const candidate =
+    typeof error === "object" && error !== null && "response" in error
+      ? ((error as { response?: { data?: { error?: unknown; message?: unknown } } }).response?.data?.error ??
+        (error as { response?: { data?: { message?: unknown } } }).response?.data?.message)
+      : undefined;
+  const message =
+    candidate ??
+    (typeof error === "object" && error !== null && "message" in error
+      ? (error as { message?: unknown }).message
+      : undefined);
+
+  if (typeof message === "string" && message.trim()) {
+    return message;
+  }
+  if (message && typeof message === "object" && "message" in message && typeof message.message === "string") {
+    return message.message;
+  }
+  return fallback;
+};
+
 // Processes the queued requests waiting for a new token
 const processQueue = (error: any, token: string | null = null) => {
   failedQueue.forEach((prom) => {

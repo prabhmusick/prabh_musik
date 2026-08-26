@@ -1,11 +1,138 @@
 /**
  * @fileoverview Database Client Wrapper (Cloudflare D1 Adapter)
- * Resolves request-bound D1 bindings in production and emulates the D1 API locally using sqlite3.
+ * Resolves request-bound D1 bindings, supports Cloudflare's D1 API for the
+ * Express deployment, and emulates the D1 API locally using sqlite3.
  */
 
 const { AsyncLocalStorage } = require("async_hooks");
 const path = require("path");
 const fs = require("fs");
+
+const cloudflareD1Config = {
+  accountId: process.env.CLOUDFLARE_ACCOUNT_ID,
+  databaseId: process.env.CLOUDFLARE_D1_DATABASE_ID,
+  apiToken: process.env.CLOUDFLARE_API_TOKEN
+};
+
+const isCloudflareD1 = process.env.DB_MODE === "cloudflare";
+
+class CloudflareD1PreparedStatement {
+  constructor(database, sql, params = []) {
+    this.database = database;
+    this.sql = sql;
+    this.params = params;
+  }
+
+  bind(...params) {
+    return new CloudflareD1PreparedStatement(this.database, this.sql, params);
+  }
+
+  all() {
+    return this.database.query(this.sql, this.params);
+  }
+
+  async first(column) {
+    const response = await this.all();
+    const row = response.results[0] || null;
+    return column && row ? row[column] ?? null : row;
+  }
+
+  async run() {
+    const response = await this.all();
+    return {
+      success: response.success,
+      meta: response.meta || {}
+    };
+  }
+}
+
+class CloudflareD1Database {
+  constructor(config) {
+    this.config = config;
+    this.endpoint = `https://api.cloudflare.com/client/v4/accounts/${config.accountId}/d1/database/${config.databaseId}/query`;
+  }
+
+  prepare(sql) {
+    return new CloudflareD1PreparedStatement(this, sql);
+  }
+
+  async query(sql, params = []) {
+    const response = await fetch(this.endpoint, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${this.config.apiToken}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ sql, params })
+    });
+
+    const payload = await response.json();
+    if (!response.ok || !payload.success) {
+      const message = payload.errors?.map((error) => error.message).join(", ") || response.statusText;
+      throw new Error(`Cloudflare D1 query failed: ${message}`);
+    }
+
+    const result = payload.result?.[0] || {};
+    return {
+      success: true,
+      results: result.results || [],
+      meta: result.meta || {}
+    };
+  }
+
+  // Express-era repositories use these callbacks for transaction boundaries.
+  // D1 requests are individually committed; batch() should be used for strict
+  // atomicity when a multi-statement operation needs it.
+  serialize(callback) {
+    callback();
+  }
+
+  run(sql, params, callback) {
+    const normalizedSql = sql.trim().toUpperCase();
+    if (/^(BEGIN|COMMIT|ROLLBACK)/.test(normalizedSql)) {
+      return process.nextTick(() => callback?.call({ lastID: null, changes: 0 }, null));
+    }
+
+    this.prepare(sql).bind(...(params || [])).run()
+      .then((result) => callback?.call({
+        lastID: result.meta.last_row_id ?? null,
+        changes: result.meta.changes ?? 0
+      }, null))
+      .catch((error) => callback?.(error));
+  }
+
+  get(sql, params, callback) {
+    this.prepare(sql).bind(...(params || [])).first()
+      .then((row) => callback?.(null, row))
+      .catch((error) => callback?.(error, null));
+  }
+
+  all(sql, params, callback) {
+    this.prepare(sql).bind(...(params || [])).all()
+      .then((result) => callback?.(null, result.results))
+      .catch((error) => callback?.(error, []));
+  }
+
+  async batch(statements) {
+    const queries = statements.map((statement) => ({
+      sql: statement.sql,
+      params: statement.params
+    }));
+    const response = await fetch(this.endpoint, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${this.config.apiToken}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ batch: queries })
+    });
+    const payload = await response.json();
+    if (!response.ok || !payload.success) {
+      throw new Error("Cloudflare D1 batch failed");
+    }
+    return payload.result || [];
+  }
+}
 
 // 1. Thread-safe execution context for request-bound D1 bindings in serverless/workers environments
 const dbContextStore = new AsyncLocalStorage();
@@ -163,12 +290,25 @@ class D1DatabaseMock {
 // 2. Initialize the Local Development Driver Instance
 const sqlite3 = require("sqlite3").verbose();
 const dbFile = process.env.DB_FILE || path.join(__dirname, "..", "..", "Database", "beats.db");
-const sqliteDb = new sqlite3.Database(dbFile);
+if (isCloudflareD1) {
+  const missing = Object.entries(cloudflareD1Config)
+    .filter(([, value]) => !value)
+    .map(([name]) => name);
+  if (missing.length > 0) {
+    throw new Error(`DB_MODE=cloudflare requires: ${missing.join(", ")}`);
+  }
+}
+
+const sqliteDb = isCloudflareD1 ? null : new sqlite3.Database(dbFile);
 
 // Enable SQLite foreign keys on connection startup
-sqliteDb.run("PRAGMA foreign_keys = ON;");
+if (sqliteDb) {
+  sqliteDb.run("PRAGMA foreign_keys = ON;");
+}
 
-const localD1Instance = new D1DatabaseMock(sqliteDb);
+const localD1Instance = isCloudflareD1
+  ? new CloudflareD1Database(cloudflareD1Config)
+  : new D1DatabaseMock(sqliteDb);
 
 const logger = require("../utils/logger");
 const metrics = require("../utils/metrics");
@@ -242,6 +382,20 @@ const dbProxy = new Proxy({}, {
           const isBegin = sqlUpper.startsWith("BEGIN");
           const isCommit = sqlUpper.startsWith("COMMIT");
           const isRollback = sqlUpper.startsWith("ROLLBACK");
+
+          // Cloudflare D1 rejects SQL transaction statements. D1 automatically
+          // commits each query; leave the legacy transaction callback flow
+          // intact without sending BEGIN/COMMIT/ROLLBACK over the network.
+          if (isCloudflareD1 && (isBegin || isCommit || isRollback)) {
+            if (isBegin) activeTransactionDepth++;
+            if (isCommit || isRollback) activeTransactionDepth = Math.max(0, activeTransactionDepth - 1);
+            if (actualCallback) {
+              process.nextTick(() => {
+                actualCallback.call({ lastID: null, changes: 0 }, null);
+              });
+            }
+            return;
+          }
 
           if (isBegin) {
             activeTransactionDepth++;
@@ -357,6 +511,10 @@ const dbProxy = new Proxy({}, {
 
 // 4. Initialisation interface (maintained for application bootstrap compatibility)
 function init() {
+  if (isCloudflareD1) {
+    return Promise.resolve();
+  }
+
   return new Promise((resolve, reject) => {
     try {
       const schemaFile = path.join(__dirname, "..", "..", "Database", "schema.sql");

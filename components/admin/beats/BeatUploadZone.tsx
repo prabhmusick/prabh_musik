@@ -1,11 +1,12 @@
 "use client"
 
 import * as React from "react"
-import { Upload, Check, Loader2, FileText, Image as ImageIcon, Music } from "lucide-react"
+import { Check, Loader2, FileText, Image as ImageIcon, Music } from "lucide-react"
 import { Button } from "../../ui/button"
 import { cn } from "../../../lib/utils"
 
 import { uploadFile } from "../../../services/upload.service"
+import { getApiErrorMessage } from "../../../lib/api"
 
 interface BeatUploadZoneProps {
   label: string;
@@ -64,8 +65,7 @@ export function BeatUploadZone({
     } catch (err: any) {
       setIsUploading(false)
       console.error("Upload error:", err)
-      const errorMsg = err?.response?.data?.error || err?.response?.data?.message || err?.message || "Unknown error"
-      setUploadError(errorMsg)
+      setUploadError(getApiErrorMessage(err, "Unable to upload file."))
     }
   }
 
