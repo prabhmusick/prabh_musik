@@ -13,12 +13,30 @@ const buildRazorpayAuth = () => ({
 });
 
 const handlePaymentError = (error) => {
-  console.error("Razorpay API Error:", error?.response?.data || error);
-  return new AppError("Razorpay API operation failed", 500);
+  const razorData = error?.response?.data || error;
+  console.error("Razorpay API Error:", razorData);
+
+  // If Razorpay provided a description, surface it for easier debugging
+  const description = razorData?.error?.description || razorData?.message || null;
+  const message = description
+    ? `Razorpay API operation failed: ${description}`
+    : "Razorpay API operation failed";
+
+  return new AppError(message, 500);
+};
+
+const ensureRazorpayConfigured = () => {
+  if (!razorpayKeyId || !razorpayKeySecret) {
+    throw new AppError(
+      "Razorpay keys not configured. Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in the environment",
+      500
+    );
+  }
 };
 
 const createCheckoutSession = async ({ amount, currency = "INR", email, beats, successUrl, cancelUrl }) => {
   try {
+    ensureRazorpayConfigured();
     const orderPayload = buildCheckoutSessionParams({
       amount,
       currency,
@@ -55,6 +73,7 @@ const createCheckoutSession = async ({ amount, currency = "INR", email, beats, s
 
 const createPaymentIntent = async ({ amount, currency = "INR", email, beats, paymentMethodId }) => {
   try {
+    ensureRazorpayConfigured();
     const orderPayload = buildCheckoutSessionParams({
       amount,
       currency,
@@ -88,6 +107,7 @@ const createPaymentIntent = async ({ amount, currency = "INR", email, beats, pay
 
 const getPaymentStatus = async (paymentIntentId) => {
   try {
+    ensureRazorpayConfigured();
     const response = await axios.get(`${razorpayBaseUrl}/orders/${paymentIntentId}`, {
       auth: buildRazorpayAuth(),
     });
@@ -103,6 +123,7 @@ const getPaymentStatus = async (paymentIntentId) => {
 
 const verifyPaymentIntent = async (paymentIntentId) => {
   try {
+    ensureRazorpayConfigured();
     const response = await axios.get(`${razorpayBaseUrl}/orders/${paymentIntentId}`, {
       auth: buildRazorpayAuth(),
     });
