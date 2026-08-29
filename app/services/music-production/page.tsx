@@ -1156,7 +1156,7 @@ export default function MusicProductionPage() {
               </p>
               <div className="contact-details">
                 {[
-                  { icon: "📍", label: "Studio", val: "Sector 17, Chandigarh" },
+                  { icon: "📍", label: "Studio", val: "sri ganganagar rajasthan" },
                   { icon: "📧", label: "Email", val: "hello@resonance.studio" },
                   { icon: "📞", label: "Phone", val: "+91 98765 43210" },
                 ].map((c, i) => (
