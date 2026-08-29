@@ -79,8 +79,15 @@ const resolvePublicUrl = (key) => {
   if (key.startsWith("http://") || key.startsWith("https://")) {
     return key;
   }
-  const baseUrl = process.env.R2_PUBLIC_URL || "https://media.prabhmusik.com";
-  return `${baseUrl.replace(/\/$/, "")}/${key.replace(/^\//, "")}`;
+  const r2Url = process.env.R2_PUBLIC_URL;
+  if (r2Url) {
+    return `${r2Url.replace(/\/$/, "")}/${key.replace(/^\//, "")}`;
+  }
+
+  // If R2 is not configured, return a backend-hosted media proxy URL so clients
+  // can fetch audio through the application (avoids DNS/CORS issues in prod/dev).
+  const backendPublic = process.env.BACKEND_PUBLIC_URL || `http://localhost:${process.env.PORT || 5005}`;
+  return `${backendPublic.replace(/\/$/, "")}/api/media?key=${encodeURIComponent(key)}`;
 };
 
 /**

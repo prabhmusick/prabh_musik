@@ -53,3 +53,14 @@ const createUser = async (userInput) => {
 module.exports = {
   createUser
 };
+
+
+/**
+ * Returns all user profiles for admin listing.
+ */
+const listUsers = async () => {
+  return await repository.getAllUsers();
+};
+
+// Attach listUsers to exports
+module.exports.listUsers = listUsers;

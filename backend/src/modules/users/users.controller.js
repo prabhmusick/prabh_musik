@@ -74,6 +74,21 @@ const createUser = async (req, res, next) => {
   }
 };
 
-module.exports = {
-  createUser
+/**
+ * Lists all user profiles (admin-facing).
+ */
+const listUsers = async (req, res, next) => {
+  try {
+    const users = await service.listUsers();
+    res.status(200).json({ success: true, data: users });
+  } catch (err) {
+    next(err);
+  }
 };
+
+module.exports = {
+  createUser,
+  listUsers
+};
+
+

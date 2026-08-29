@@ -13,18 +13,24 @@ const createCheckoutSession = async (req, res, next) => {
   }
 
   try {
+    const frontendBase = process.env.FRONTEND_URL || `${req.protocol}://${req.get("host")}`;
     const session = await paymentsService.createCheckoutSession({
       amount,
       currency,
       email,
       beats,
-      successUrl: `${req.protocol}://${req.get("host")}/profile?payment=success`,
-      cancelUrl: `${req.protocol}://${req.get("host")}/checkout`
+      successUrl: `${frontendBase}/profile?payment=success`,
+      cancelUrl: `${frontendBase}/checkout`
     });
 
+    // Return the full session payload so the frontend can open the Razorpay widget
     res.json({
       url: session.url,
-      sessionId: session.sessionId
+      sessionId: session.sessionId,
+      orderId: session.orderId,
+      amount: session.amount,
+      currency: session.currency,
+      keyId: session.keyId
     });
   } catch (error) {
     next(error);

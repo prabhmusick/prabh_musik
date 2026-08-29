@@ -1,12 +1,22 @@
 {
-    "$schema": "node_modules/wrangler/config-schema.json",
-    "name": "prabh-musik-api",
-    "compatibility_date": "2026-07-12",
-    "d1_databases": [
-        {
-            "binding": "DB",
-            "database_name": "prabh-musik",
-            "database_id": "c2e9d27f-d877-4627-a588-0456d062dde6"
-        }
-    ]
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "prabh-musik-api",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-07-12",
+  "compatibility_flags": ["nodejs_compat"],
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "prabh-musik",
+      "database_id": "c2e9d27f-d877-4627-a588-0456d062dde6",
+    },
+  ],
+
+  "r2_buckets": [
+    {
+      "binding": "R2_BUCKET",
+      "bucket_name": "beat",
+    },
+  ],
 }

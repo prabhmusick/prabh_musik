@@ -66,11 +66,10 @@ function CheckoutForm({ cart, user, onCheckoutComplete }: any) {
       const paymentData = await response.json();
 
       if (!response.ok) {
-        throw new Error(paymentData.error || "Payment processing failed");
+        throw new Error(paymentData?.error?.message || paymentData?.error || "Payment processing failed");
       }
 
-      onCheckoutComplete();
-
+      // Only mark checkout complete after payment success. Do not clear cart before opening Razorpay.
       if (typeof window !== "undefined" && paymentData.keyId) {
         const script = document.createElement("script");
         script.src = "https://checkout.razorpay.com/v1/checkout.js";
@@ -84,8 +83,21 @@ function CheckoutForm({ cart, user, onCheckoutComplete }: any) {
             name: "Prabh Musik",
             description: "Beat purchase",
             order_id: paymentData.orderId,
-            handler: () => {
+            handler: (response: any) => {
+              // Successful payment handler from Razorpay
+              try {
+                onCheckoutComplete();
+              } catch (e) {
+                // ignore errors from checkout completion side-effects
+              }
+              // Redirect to profile after marking purchase
               window.location.href = "/profile?payment=success";
+            },
+            // Optional: handle payment failures to show message without redirect
+            modal: {
+              ondismiss: () => {
+                // user dismissed the widget; keep cart intact
+              }
             },
             prefill: {
               email,
@@ -100,6 +112,7 @@ function CheckoutForm({ cart, user, onCheckoutComplete }: any) {
         };
         document.body.appendChild(script);
       } else {
+        // Fallback redirect flow (no client-side Razorpay key provided)
         window.location.href = paymentData.url || "/profile?payment=success";
       }
     } catch (err: any) {
@@ -110,52 +123,26 @@ function CheckoutForm({ cart, user, onCheckoutComplete }: any) {
   };
 
   return (
-    <div style={{ minHeight: "70vh", padding: "24px 20px 48px", background: "linear-gradient(180deg,#0b0d12 0%,#12141a 100%)" }}>
-      <div style={{ maxWidth: 900, margin: "0 auto" }}>
-        <div style={{ display: "grid", gap: 24, gridTemplateColumns: "1fr 380px" }}>
+    <div className="checkout-page">
+      <div className="checkout-wrapper">
+        <div className="checkout-grid">
           {/* Left: Checkout Form */}
           <div>
-            <h1 style={{ color: "#fff", marginBottom: 24 }}>Checkout</h1>
+            <h1 className="checkout-h1">Checkout</h1>
 
-            <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            <form onSubmit={handleSubmit} className="checkout-form">
               {/* Contact Info */}
-              <section style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: 20 }}>
-                <h2 style={{ color: "#fff", fontSize: 16, fontWeight: 700, margin: "0 0 16px" }}>Contact Information</h2>
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  <input
-                    type="email"
-                    placeholder="Email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    style={{
-                      background: "rgba(255,255,255,0.05)",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                      color: "#fff",
-                      padding: "10px 12px",
-                      borderRadius: 8,
-                      fontFamily: "Inter, sans-serif",
-                    }}
-                  />
-                  <input
-                    type="text"
-                    placeholder="Full Name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    style={{
-                      background: "rgba(255,255,255,0.05)",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                      color: "#fff",
-                      padding: "10px 12px",
-                      borderRadius: 8,
-                      fontFamily: "Inter, sans-serif",
-                    }}
-                  />
+              <section className="card">
+                <h2 className="section-title">Contact Information</h2>
+                <div className="form-row">
+                  <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className="checkout-input" />
+                  <input type="text" placeholder="Full Name" value={name} onChange={(e) => setName(e.target.value)} className="checkout-input" />
                 </div>
               </section>
 
               {/* Payment Info */}
-              <section style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: 20 }}>
-                <h2 style={{ color: "#fff", fontSize: 16, fontWeight: 700, margin: "0 0 16px" }}>Payment Details</h2>
+              <section className="card">
+                <h2 className="section-title">Payment Details</h2>
                 <div style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: 14, color: "rgba(255,255,255,0.8)", lineHeight: 1.5 }}>
                   You will be redirected to Razorpay where you can pay with cards, UPI, wallets, and other supported methods.
                 </div>
@@ -167,34 +154,41 @@ function CheckoutForm({ cart, user, onCheckoutComplete }: any) {
                 </div>
               )}
 
-              <button
-                type="submit"
-                disabled={loading}
-                style={{
-                  background: loading ? "rgba(212,130,10,0.5)" : "#d4820a",
-                  color: "#000",
-                  border: "none",
-                  padding: "12px 16px",
-                  borderRadius: 8,
-                  fontWeight: 700,
-                  fontSize: 16,
-                  cursor: loading ? "not-allowed" : "pointer",
-                  opacity: loading ? 0.6 : 1,
-                }}
-              >
+              {/* Mobile inline order summary shown above the Pay button */}
+              <div className="order-summary-mobile card">
+                <h3 style={{ color: "#fff", fontSize: 14, margin: 0, marginBottom: 8 }}>Order Summary</h3>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {cart.map((item: any) => (
+                    <div key={item.id} className="cart-item" style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      <img src={item.cover} alt={item.title} />
+                      <div style={{ flex: 1 }}>
+                        <div className="title">{item.title}</div>
+                        <div className="meta">{item.producer || "Unknown"}</div>
+                      </div>
+                      <div style={{ color: "#fbbf24", fontWeight: 700 }}>₹{item.price?.toLocaleString("en-IN")}</div>
+                    </div>
+                  ))}
+                  <div style={{ display: "flex", justifyContent: "space-between", color: "rgba(255,255,255,0.65)", fontSize: 13 }}>
+                    <span>Subtotal</span>
+                    <span>₹{total.toLocaleString("en-IN")}</span>
+                  </div>
+                </div>
+              </div>
+
+              <button type="submit" disabled={loading} className="checkout-pay-button" style={{ opacity: loading ? 0.6 : 1 }}>
                 {loading ? "Processing..." : `Pay ₹${total.toLocaleString("en-IN")}`}
               </button>
             </form>
           </div>
 
           {/* Right: Order Summary */}
-          <div style={{ position: "sticky", top: 100, height: "fit-content" }}>
-            <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
+          <div className="order-summary-wrapper">
+            <div className="order-summary-inner card">
               <h2 style={{ color: "#fff", fontSize: 16, fontWeight: 700, margin: 0 }}>Order Summary</h2>
 
               <div style={{ display: "flex", flexDirection: "column", gap: 12, maxHeight: 300, overflowY: "auto" }}>
                 {cart.map((item: any) => (
-                  <div key={item.id} style={{ display: "flex", gap: 12, borderBottom: "1px solid rgba(255,255,255,0.08)", paddingBottom: 12 }}>
+                  <div key={item.id} className="cart-item" style={{ display: "flex", gap: 12, borderBottom: "1px solid rgba(255,255,255,0.08)", paddingBottom: 12 }}>
                     <img src={item.cover} alt={item.title} style={{ width: 48, height: 48, borderRadius: 6, objectFit: "cover" }} />
                     <div style={{ flex: 1 }}>
                       <div style={{ color: "#fff", fontWeight: 600, fontSize: 13 }}>{item.title}</div>

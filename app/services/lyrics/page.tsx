@@ -1022,8 +1022,8 @@ export default function LyricsPage() {
               </p>
               <div className="contact-details">
                 {[
-                  { icon: "📍", label: "Studio", val: "Sector 17, Chandigarh" },
-                  { icon: "📧", label: "Email", val: "lyrics@resonance.studio" },
+                  { icon: "📍", label: "Studio", val: "sri ganganagar rajasthan" },
+                  { icon: "📧", label: "Email", val: "support@prabhmusik.com" },
                   { icon: "⏱", label: "Turnaround", val: "3–7 business days" },
                 ].map((c, i) => (
                   <div key={i} className="contact-item">

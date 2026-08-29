@@ -11,4 +11,7 @@ const router = express.Router();
 // POST /api/users - Creates a new user profile record
 router.post("/", controller.createUser);
 
+// GET /api/users - List user profiles (admin)
+router.get("/", controller.listUsers);
+
 module.exports = router;

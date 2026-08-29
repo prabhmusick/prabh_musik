@@ -14,6 +14,7 @@ const ownershipsRoutes = require("./modules/ownerships/ownerships.routes");
 const downloadsRoutes = require("./modules/downloads/downloads.routes");
 const uploadsRoutes = require("./modules/uploads/uploads.routes");
 const monitoringRoutes = require("./modules/monitoring/monitoring.routes");
+const mediaRoutes = require("./modules/media/media.routes");
 const { storageProvider } = require("./storage/r2.provider");
 const tracer = require("./utils/tracer");
 const requestIdMiddleware = require("./middleware/requestId.middleware");
@@ -160,6 +161,7 @@ app.use("/api/ownerships", ownershipsRoutes);
 app.use("/api/downloads", downloadsRoutes);
 app.use("/api/uploads", uploadsRoutes);
 app.use("/api/monitoring", monitoringRoutes);
+app.use("/api/media", mediaRoutes);
 
 // 5. Catch-All Middleware for Unmatched Routes (404 Not Found)
 app.use((req, res) => {
