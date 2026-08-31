@@ -24,7 +24,7 @@ const ALLOWED_ADMIN_SORT_ORDERS = ["ASC", "DESC"];
 const ALLOWED_STATUS_TRANSITIONS = {
   draft: ["draft", "published", "archived"],
   published: ["published", "archived"],
-  archived: ["archived", "draft"]
+  archived: ["archived", "draft"],
 };
 
 /**
@@ -52,7 +52,10 @@ const formatSlug = (text) => {
 const generateUniqueSlug = async (title) => {
   const baseSlug = formatSlug(title);
   if (!baseSlug) {
-    throw new AppError("Could not generate a valid URL slug from the title provided.", 400);
+    throw new AppError(
+      "Could not generate a valid URL slug from the title provided.",
+      400,
+    );
   }
 
   let slug = baseSlug;
@@ -84,9 +87,15 @@ const resolvePublicUrl = (key) => {
     return `${r2Url.replace(/\/$/, "")}/${key.replace(/^\//, "")}`;
   }
 
-  // If R2 is not configured, return a backend-hosted media proxy URL so clients
-  // can fetch audio through the application (avoids DNS/CORS issues in prod/dev).
-  const backendPublic = process.env.BACKEND_PUBLIC_URL || `http://localhost:${process.env.PORT || 5005}`;
+  // If R2 is not configured, try to resolve a public backend URL.
+  // Preference order:
+  // 1. BACKEND_PUBLIC_URL (explicit backend service URL)
+  // 2. APP_URL (app-level public URL, may be frontend or shared domain)
+  // 3. fallback to localhost with PORT
+  const backendPublic =
+    process.env.BACKEND_PUBLIC_URL ||
+    process.env.APP_URL ||
+    `http://localhost:${process.env.PORT || 5005}`;
   return `${backendPublic.replace(/\/$/, "")}/api/media?key=${encodeURIComponent(key)}`;
 };
 
@@ -111,15 +120,21 @@ const toPublicBeatDto = (beatEntity) => {
     currency_code: beatEntity.currency_code || "INR",
     formatted_price: formattedPrice,
     genre: beatEntity.genre || null,
-    bpm: beatEntity.bpm !== null && beatEntity.bpm !== undefined ? Number(beatEntity.bpm) : null,
+    bpm:
+      beatEntity.bpm !== null && beatEntity.bpm !== undefined
+        ? Number(beatEntity.bpm)
+        : null,
     musical_key: beatEntity.musical_key || null,
     description: beatEntity.description || null,
     audio_url: resolvePublicUrl(beatEntity.audio_key),
     cover_url: resolvePublicUrl(beatEntity.cover_key),
     banner_url: resolvePublicUrl(beatEntity.banner_key),
-    duration: beatEntity.duration !== null && beatEntity.duration !== undefined ? Number(beatEntity.duration) : null,
+    duration:
+      beatEntity.duration !== null && beatEntity.duration !== undefined
+        ? Number(beatEntity.duration)
+        : null,
     status: beatEntity.status,
-    created_at: beatEntity.created_at
+    created_at: beatEntity.created_at,
   };
 };
 
@@ -141,7 +156,10 @@ const createBeat = async (beatInput, creatorUserId) => {
 
   // Resolve internal database integer ID from public UUID string or number
   let internalUserId;
-  if (typeof creatorUserId === "number" || (typeof creatorUserId === "string" && /^\d+$/.test(creatorUserId))) {
+  if (
+    typeof creatorUserId === "number" ||
+    (typeof creatorUserId === "string" && /^\d+$/.test(creatorUserId))
+  ) {
     internalUserId = Number(creatorUserId);
     const user = await usersRepository.getUserById(internalUserId);
     if (!user) {
@@ -156,17 +174,20 @@ const createBeat = async (beatInput, creatorUserId) => {
   }
 
   // 1. Business Invariant Checks
-  const title = typeof beatInput.title === "string" ? beatInput.title.trim() : "";
+  const title =
+    typeof beatInput.title === "string" ? beatInput.title.trim() : "";
   if (!title) {
     throw new AppError("Beat title is required.", 400);
   }
 
-  const audioKey = typeof beatInput.audio_key === "string" ? beatInput.audio_key.trim() : "";
+  const audioKey =
+    typeof beatInput.audio_key === "string" ? beatInput.audio_key.trim() : "";
   if (!audioKey) {
     throw new AppError("Audio storage key is required.", 400);
   }
 
-  const priceAmount = beatInput.price_amount !== undefined ? Number(beatInput.price_amount) : 0;
+  const priceAmount =
+    beatInput.price_amount !== undefined ? Number(beatInput.price_amount) : 0;
   if (isNaN(priceAmount) || priceAmount < 0) {
     throw new AppError("Price amount must be a non-negative integer.", 400);
   }
@@ -184,14 +205,22 @@ const createBeat = async (beatInput, creatorUserId) => {
     currency_code: (beatInput.currency_code || "INR").toUpperCase().trim(),
     genre: beatInput.genre ? String(beatInput.genre).trim() : null,
     bpm: beatInput.bpm ? Number(beatInput.bpm) : null,
-    musical_key: beatInput.musical_key ? String(beatInput.musical_key).trim() : null,
-    description: beatInput.description ? String(beatInput.description).trim() : null,
+    musical_key: beatInput.musical_key
+      ? String(beatInput.musical_key).trim()
+      : null,
+    description: beatInput.description
+      ? String(beatInput.description).trim()
+      : null,
     audio_key: audioKey,
     cover_key: beatInput.cover_key ? String(beatInput.cover_key).trim() : null,
-    banner_key: beatInput.banner_key ? String(beatInput.banner_key).trim() : null,
+    banner_key: beatInput.banner_key
+      ? String(beatInput.banner_key).trim()
+      : null,
     duration: beatInput.duration ? Number(beatInput.duration) : null,
-    status: beatInput.status ? String(beatInput.status).toLowerCase().trim() : "draft",
-    created_by: internalUserId
+    status: beatInput.status
+      ? String(beatInput.status).toLowerCase().trim()
+      : "draft",
+    created_by: internalUserId,
   };
 
   // 4. Persist via Repository
@@ -268,7 +297,7 @@ const listPublicBeats = async (options = {}) => {
     offset: Math.floor(offset),
     sortBy: options.sortBy,
     sortOrder: options.sortOrder,
-    status: "published"
+    status: "published",
   };
 
   const entities = await repository.listBeats(repositoryOptions);
@@ -301,11 +330,16 @@ const listAdminBeats = async (options = {}) => {
   // Validate sortBy parameter against strict whitelist
   const sortBy = options.sortBy || "created_at";
   if (!ALLOWED_ADMIN_SORT_FIELDS.includes(sortBy)) {
-    throw new AppError("Invalid sortBy field. Allowed fields: created_at, title, price_amount.", 400);
+    throw new AppError(
+      "Invalid sortBy field. Allowed fields: created_at, title, price_amount.",
+      400,
+    );
   }
 
   // Validate sortOrder parameter against strict whitelist
-  const sortOrder = options.sortOrder ? String(options.sortOrder).toUpperCase() : "DESC";
+  const sortOrder = options.sortOrder
+    ? String(options.sortOrder).toUpperCase()
+    : "DESC";
   if (!ALLOWED_ADMIN_SORT_ORDERS.includes(sortOrder)) {
     throw new AppError("Invalid sortOrder. Allowed values: ASC, DESC.", 400);
   }
@@ -317,7 +351,7 @@ const listAdminBeats = async (options = {}) => {
     limit: Math.floor(limit),
     offset: Math.floor(offset),
     sortBy,
-    sortOrder
+    sortOrder,
   };
 
   const entities = await repository.listBeats(repositoryOptions);
@@ -342,7 +376,11 @@ const updateBeat = async (publicId, updatesPayload, adminUserId) => {
   if (!publicId || typeof publicId !== "string" || !publicId.trim()) {
     throw new AppError("Public ID is required.", 400);
   }
-  if (!updatesPayload || typeof updatesPayload !== "object" || Array.isArray(updatesPayload)) {
+  if (
+    !updatesPayload ||
+    typeof updatesPayload !== "object" ||
+    Array.isArray(updatesPayload)
+  ) {
     throw new AppError("Update payload is required.", 400);
   }
   if (!adminUserId) {
@@ -353,7 +391,10 @@ const updateBeat = async (publicId, updatesPayload, adminUserId) => {
   const immutableFields = ["id", "public_id", "created_by", "created_at"];
   for (const field of immutableFields) {
     if (updatesPayload[field] !== undefined) {
-      throw new AppError(`Field '${field}' is immutable and cannot be updated.`, 400);
+      throw new AppError(
+        `Field '${field}' is immutable and cannot be updated.`,
+        400,
+      );
     }
   }
 
@@ -388,7 +429,9 @@ const updateBeat = async (publicId, updatesPayload, adminUserId) => {
   }
 
   if (updatesPayload.currency_code !== undefined) {
-    const currencyCode = String(updatesPayload.currency_code).trim().toUpperCase();
+    const currencyCode = String(updatesPayload.currency_code)
+      .trim()
+      .toUpperCase();
     if (!currencyCode) {
       throw new AppError("Currency code cannot be empty.", 400);
     }
@@ -396,7 +439,9 @@ const updateBeat = async (publicId, updatesPayload, adminUserId) => {
   }
 
   if (updatesPayload.genre !== undefined) {
-    sanitizedPayload.genre = updatesPayload.genre ? String(updatesPayload.genre).trim() : null;
+    sanitizedPayload.genre = updatesPayload.genre
+      ? String(updatesPayload.genre).trim()
+      : null;
   }
 
   if (updatesPayload.bpm !== undefined) {
@@ -412,11 +457,15 @@ const updateBeat = async (publicId, updatesPayload, adminUserId) => {
   }
 
   if (updatesPayload.musical_key !== undefined) {
-    sanitizedPayload.musical_key = updatesPayload.musical_key ? String(updatesPayload.musical_key).trim() : null;
+    sanitizedPayload.musical_key = updatesPayload.musical_key
+      ? String(updatesPayload.musical_key).trim()
+      : null;
   }
 
   if (updatesPayload.description !== undefined) {
-    sanitizedPayload.description = updatesPayload.description ? String(updatesPayload.description).trim() : null;
+    sanitizedPayload.description = updatesPayload.description
+      ? String(updatesPayload.description).trim()
+      : null;
   }
 
   if (updatesPayload.audio_key !== undefined) {
@@ -428,11 +477,15 @@ const updateBeat = async (publicId, updatesPayload, adminUserId) => {
   }
 
   if (updatesPayload.cover_key !== undefined) {
-    sanitizedPayload.cover_key = updatesPayload.cover_key ? String(updatesPayload.cover_key).trim() : null;
+    sanitizedPayload.cover_key = updatesPayload.cover_key
+      ? String(updatesPayload.cover_key).trim()
+      : null;
   }
 
   if (updatesPayload.banner_key !== undefined) {
-    sanitizedPayload.banner_key = updatesPayload.banner_key ? String(updatesPayload.banner_key).trim() : null;
+    sanitizedPayload.banner_key = updatesPayload.banner_key
+      ? String(updatesPayload.banner_key).trim()
+      : null;
   }
 
   if (updatesPayload.duration !== undefined) {
@@ -450,7 +503,10 @@ const updateBeat = async (publicId, updatesPayload, adminUserId) => {
   if (updatesPayload.status !== undefined) {
     const statusVal = String(updatesPayload.status).toLowerCase().trim();
     if (!["draft", "published", "archived"].includes(statusVal)) {
-      throw new AppError("Invalid status value. Must be draft, published, or archived.", 400);
+      throw new AppError(
+        "Invalid status value. Must be draft, published, or archived.",
+        400,
+      );
     }
     sanitizedPayload.status = statusVal;
   }
@@ -461,7 +517,10 @@ const updateBeat = async (publicId, updatesPayload, adminUserId) => {
   }
 
   // 6. Execute update via Repository
-  const updatedEntity = await repository.updateBeat(publicId.trim(), sanitizedPayload);
+  const updatedEntity = await repository.updateBeat(
+    publicId.trim(),
+    sanitizedPayload,
+  );
   if (!updatedEntity) {
     throw new AppError("Beat not found.", 404);
   }
@@ -493,7 +552,10 @@ const updateStatus = async (publicId, status, adminUserId) => {
   const targetStatus = status.toLowerCase().trim();
   const validStatuses = ["draft", "published", "archived"];
   if (!validStatuses.includes(targetStatus)) {
-    throw new AppError("Invalid status value. Must be draft, published, or archived.", 400);
+    throw new AppError(
+      "Invalid status value. Must be draft, published, or archived.",
+      400,
+    );
   }
 
   // 1. Fetch existing beat record
@@ -507,7 +569,10 @@ const updateStatus = async (publicId, status, adminUserId) => {
   // 2. Enforce state machine transition matrix
   const allowedNextStates = ALLOWED_STATUS_TRANSITIONS[currentStatus] || [];
   if (!allowedNextStates.includes(targetStatus)) {
-    throw new AppError(`Cannot change status from '${currentStatus}' to '${targetStatus}'.`, 400);
+    throw new AppError(
+      `Cannot change status from '${currentStatus}' to '${targetStatus}'.`,
+      400,
+    );
   }
 
   // If status is unchanged, return current state directly
@@ -516,7 +581,10 @@ const updateStatus = async (publicId, status, adminUserId) => {
   }
 
   // 3. Execute status update via Repository
-  const updatedEntity = await repository.updateStatus(publicId.trim(), targetStatus);
+  const updatedEntity = await repository.updateStatus(
+    publicId.trim(),
+    targetStatus,
+  );
   if (!updatedEntity) {
     throw new AppError("Beat not found.", 404);
   }
@@ -563,5 +631,5 @@ module.exports = {
   listAdminBeats,
   updateBeat,
   updateStatus,
-  handleOrderFulfillment
+  handleOrderFulfillment,
 };
