@@ -27,22 +27,82 @@ const { db } = require("./config/db");
 const app = express();
 
 // Auto-Observability module method tracing instrumentations
-tracer.wrapModule(require("./modules/auth/auth.service"), "service", "AuthService");
-tracer.wrapModule(require("./modules/users/users.service"), "service", "UsersService");
-tracer.wrapModule(require("./modules/beats/beats.service"), "service", "BeatsService");
-tracer.wrapModule(require("./modules/orders/orders.service"), "service", "OrdersService");
-tracer.wrapModule(require("./modules/payments/payments.service"), "service", "PaymentsService");
-tracer.wrapModule(require("./modules/ownerships/ownerships.service"), "service", "OwnershipsService");
-tracer.wrapModule(require("./modules/downloads/downloads.service"), "service", "DownloadsService");
-tracer.wrapModule(require("./modules/uploads/uploads.service"), "service", "UploadsService");
+tracer.wrapModule(
+  require("./modules/auth/auth.service"),
+  "service",
+  "AuthService",
+);
+tracer.wrapModule(
+  require("./modules/users/users.service"),
+  "service",
+  "UsersService",
+);
+tracer.wrapModule(
+  require("./modules/beats/beats.service"),
+  "service",
+  "BeatsService",
+);
+tracer.wrapModule(
+  require("./modules/orders/orders.service"),
+  "service",
+  "OrdersService",
+);
+tracer.wrapModule(
+  require("./modules/payments/payments.service"),
+  "service",
+  "PaymentsService",
+);
+tracer.wrapModule(
+  require("./modules/ownerships/ownerships.service"),
+  "service",
+  "OwnershipsService",
+);
+tracer.wrapModule(
+  require("./modules/downloads/downloads.service"),
+  "service",
+  "DownloadsService",
+);
+tracer.wrapModule(
+  require("./modules/uploads/uploads.service"),
+  "service",
+  "UploadsService",
+);
 
-tracer.wrapModule(require("./modules/auth/auth.repository"), "repository", "AuthRepository");
-tracer.wrapModule(require("./modules/users/users.repository"), "repository", "UsersRepository");
-tracer.wrapModule(require("./modules/beats/beats.repository"), "repository", "BeatsRepository");
-tracer.wrapModule(require("./modules/orders/orders.repository"), "repository", "OrdersRepository");
-tracer.wrapModule(require("./modules/ownerships/ownerships.repository"), "repository", "OwnershipsRepository");
-tracer.wrapModule(require("./modules/downloads/downloads.repository"), "repository", "DownloadsRepository");
-tracer.wrapModule(require("./modules/uploads/uploads.repository"), "repository", "UploadsRepository");
+tracer.wrapModule(
+  require("./modules/auth/auth.repository"),
+  "repository",
+  "AuthRepository",
+);
+tracer.wrapModule(
+  require("./modules/users/users.repository"),
+  "repository",
+  "UsersRepository",
+);
+tracer.wrapModule(
+  require("./modules/beats/beats.repository"),
+  "repository",
+  "BeatsRepository",
+);
+tracer.wrapModule(
+  require("./modules/orders/orders.repository"),
+  "repository",
+  "OrdersRepository",
+);
+tracer.wrapModule(
+  require("./modules/ownerships/ownerships.repository"),
+  "repository",
+  "OwnershipsRepository",
+);
+tracer.wrapModule(
+  require("./modules/downloads/downloads.repository"),
+  "repository",
+  "DownloadsRepository",
+);
+tracer.wrapModule(
+  require("./modules/uploads/uploads.repository"),
+  "repository",
+  "UploadsRepository",
+);
 
 tracer.wrapModule(storageProvider, "storage", "StorageProvider");
 
@@ -52,15 +112,44 @@ app.use(
   cors({
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);
-      const allowedOrigins = (process.env.ALLOWED_ORIGINS || "").split(",").map((o) => o.trim());
-      if (allowedOrigins.includes(origin) || process.env.NODE_ENV !== "production") {
+
+      // Normalize incoming origin and allowed origins (strip trailing slash)
+      const normalize = (u) =>
+        typeof u === "string" ? u.replace(/\/+$/, "") : u;
+      const requestOrigin = normalize(origin);
+
+      const envOrigins = (process.env.ALLOWED_ORIGINS || "")
+        .split(",")
+        .map((o) => normalize(o.trim()))
+        .filter(Boolean);
+
+      const appUrl = normalize((process.env.APP_URL || "").trim());
+      const backendPublic = normalize(
+        (process.env.BACKEND_PUBLIC_URL || "").trim(),
+      );
+      const fallbackOrigins = [appUrl, backendPublic].filter(Boolean);
+
+      const allowedOrigins = Array.from(
+        new Set([...envOrigins, ...fallbackOrigins]),
+      );
+
+      if (
+        allowedOrigins.includes(requestOrigin) ||
+        process.env.NODE_ENV !== "production"
+      ) {
         callback(null, true);
       } else {
+        // Emit a concise debug line so Render logs show why a request was rejected by CORS
+        console.error("CORS rejection", {
+          requestOrigin,
+          allowedOrigins,
+          nodeEnv: process.env.NODE_ENV || "",
+        });
         callback(new Error("Not allowed by CORS"));
       }
     },
-    credentials: true
-  })
+    credentials: true,
+  }),
 );
 
 // 2. Core Request Body Parsing Middleware
@@ -68,11 +157,14 @@ app.use(
   express.json({
     limit: "1mb",
     verify: (req, res, buf) => {
-      if (req.originalUrl && req.originalUrl.startsWith("/api/payments/webhook")) {
+      if (
+        req.originalUrl &&
+        req.originalUrl.startsWith("/api/payments/webhook")
+      ) {
         req.rawBody = buf;
       }
-    }
-  })
+    },
+  }),
 ); // Enforce request size limits to protect against DoS
 app.use(cookieParser());
 
@@ -112,8 +204,8 @@ app.get("/health", async (req, res) => {
     dependencies: {
       database: dbConnected ? "connected" : "disconnected",
       storage: storageConnected ? "connected" : "disconnected",
-      stripe: stripeAvailable ? "configured" : "unconfigured"
-    }
+      stripe: stripeAvailable ? "configured" : "unconfigured",
+    },
   });
 });
 
@@ -140,13 +232,13 @@ app.get("/ready", async (req, res) => {
 
     res.status(200).json({
       success: true,
-      status: "ready"
+      status: "ready",
     });
   } catch (error) {
     res.status(503).json({
       success: false,
       status: "not_ready",
-      message: error.message
+      message: error.message,
     });
   }
 });
@@ -169,8 +261,8 @@ app.use((req, res) => {
     success: false,
     error: {
       code: "NOT_FOUND",
-      message: "Route not found."
-    }
+      message: "Route not found.",
+    },
   });
 });
 
