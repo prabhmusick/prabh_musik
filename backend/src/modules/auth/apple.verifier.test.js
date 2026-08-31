@@ -44,7 +44,7 @@ describe("Apple ID Token Verification Unit Tests", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    env.APPLE_ALLOWED_AUDIENCES = ["com.prabhmusik.app", "com.prabhmusik.service"];
+    // APPLE_ALLOWED_AUDIENCES removed — verifier will use default empty list
     
     // Default axios get behavior
     axios.get.mockResolvedValue({ data: { keys: mockKeys } });

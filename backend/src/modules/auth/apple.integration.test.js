@@ -119,7 +119,7 @@ const testDbPath = path.join(__dirname, "..", "..", "..", "Database", "beats_app
 process.env.DB_FILE = testDbPath;
 process.env.JWT_ACCESS_SECRET = "integration_test_access_secret_key";
 process.env.JWT_REFRESH_SECRET = "integration_test_refresh_secret_key";
-process.env.APPLE_ALLOWED_AUDIENCES = "com.prabhmusik.app,com.prabhmusik.service";
+// Removed APPLE_ALLOWED_AUDIENCES for Apple sign-in feature removal
 process.env.ACCESS_TOKEN_EXPIRY_SECONDS = "900";
 process.env.SESSION_EXPIRY_DAYS = "30";
 

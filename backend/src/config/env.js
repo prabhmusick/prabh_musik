@@ -33,10 +33,9 @@ if (isProduction && !googleClientId) {
   missingOrInsecure.push("GOOGLE_CLIENT_ID");
 }
 
-const appleAllowedAudiences = process.env.APPLE_ALLOWED_AUDIENCES;
-if (isProduction && (!appleAllowedAudiences || !appleAllowedAudiences.trim())) {
-  missingOrInsecure.push("APPLE_ALLOWED_AUDIENCES");
-}
+// Apple sign-in configuration removed. Keep optional var for compatibility but
+// do not enforce it in production.
+const appleAllowedAudiences = process.env.APPLE_ALLOWED_AUDIENCES || "";
 
 if (missingOrInsecure.length > 0) {
   throw new Error(`CRITICAL CONFIGURATION ERROR: Missing or insecure production variables:\n- ${missingOrInsecure.join("\n- ")}`);
@@ -53,7 +52,7 @@ const env = {
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || "",
 
   /** @type {string[]} */
-  APPLE_ALLOWED_AUDIENCES: (process.env.APPLE_ALLOWED_AUDIENCES || "")
+  APPLE_ALLOWED_AUDIENCES: (appleAllowedAudiences || "")
     .split(",")
     .map(aud => aud.trim())
     .filter(Boolean),

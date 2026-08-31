@@ -1,17 +1,13 @@
-/**
- * @fileoverview Application Entry Point
- * Bootstraps environment variables and starts the HTTP server socket.
- */
-
 require("dotenv").config();
+
 const app = require("./app");
 const env = require("./config/env");
 
 const PORT = process.env.PORT || env.PORT || 5012;
 
-const server = app.listen(PORT, () => {
+const server = app.listen(PORT, "0.0.0.0", () => {
   console.log("Server started successfully.");
-  console.log(`Listening on http://localhost:${PORT}`);
+  console.log(`Listening on port ${PORT}`);
 });
 
 server.on("error", (error) => {

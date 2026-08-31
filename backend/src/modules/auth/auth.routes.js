@@ -49,6 +49,5 @@ router.post("/resend-verification", catchAsync(controller.resendVerification));
 
 // Federated Identity OAuth Providers
 router.post("/google", catchAsync(controller.googleLogin));
-router.post("/apple", catchAsync(controller.appleLogin));
 
 module.exports = router;

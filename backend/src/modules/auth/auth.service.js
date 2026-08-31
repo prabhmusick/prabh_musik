@@ -705,12 +705,7 @@ const oauthLogin = async (profile, clientContext = {}) => {
   };
 };
 
-/**
- * Authenticates user using Apple Identity assertions.
- */
-const appleLogin = async (idToken) => {
-  throw new AppError("Not implemented", 501);
-};
+// Apple sign-in support removed from service.
 
 /**
  * Resolves currently authenticated user context from token.
@@ -766,6 +761,5 @@ module.exports = {
   verifyEmail,
   resendVerification,
   oauthLogin,
-  appleLogin,
   getMe
 };
