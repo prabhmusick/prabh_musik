@@ -52,10 +52,31 @@ app.use(
   cors({
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);
-      const allowedOrigins = (process.env.ALLOWED_ORIGINS || "").split(",").map((o) => o.trim());
-      if (allowedOrigins.includes(origin) || process.env.NODE_ENV !== "production") {
+
+      // Normalize incoming origin and allowed origins (strip trailing slash)
+      const normalize = (u) => (typeof u === "string" ? u.replace(/\/+$/, "") : u);
+      const requestOrigin = normalize(origin);
+
+      const envOrigins = (process.env.ALLOWED_ORIGINS || "")
+        .split(",")
+        .map((o) => normalize(o.trim()))
+        .filter(Boolean);
+
+      const appUrl = normalize((process.env.APP_URL || "").trim());
+      const backendPublic = normalize((process.env.BACKEND_PUBLIC_URL || "").trim());
+      const fallbackOrigins = [appUrl, backendPublic].filter(Boolean);
+
+      const allowedOrigins = Array.from(new Set([...envOrigins, ...fallbackOrigins]));
+
+      if (allowedOrigins.includes(requestOrigin) || process.env.NODE_ENV !== "production") {
         callback(null, true);
       } else {
+        // Emit a concise debug line so Render logs show why a request was rejected by CORS
+        console.error("CORS rejection", {
+          requestOrigin,
+          allowedOrigins,
+          nodeEnv: process.env.NODE_ENV || "",
+        });
         callback(new Error("Not allowed by CORS"));
       }
     },

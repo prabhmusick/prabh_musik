@@ -84,9 +84,12 @@ const resolvePublicUrl = (key) => {
     return `${r2Url.replace(/\/$/, "")}/${key.replace(/^\//, "")}`;
   }
 
-  // If R2 is not configured, return a backend-hosted media proxy URL so clients
-  // can fetch audio through the application (avoids DNS/CORS issues in prod/dev).
-  const backendPublic = process.env.BACKEND_PUBLIC_URL || `http://localhost:${process.env.PORT || 5005}`;
+  // If R2 is not configured, try to resolve a public backend URL.
+  // Preference order:
+  // 1. BACKEND_PUBLIC_URL (explicit backend service URL)
+  // 2. APP_URL (app-level public URL, may be frontend or shared domain)
+  // 3. fallback to localhost with PORT
+  const backendPublic = process.env.BACKEND_PUBLIC_URL || process.env.APP_URL || `http://localhost:${process.env.PORT || 5005}`;
   return `${backendPublic.replace(/\/$/, "")}/api/media?key=${encodeURIComponent(key)}`;
 };
 
