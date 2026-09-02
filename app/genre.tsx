@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 interface Genre {
   id: number;
@@ -303,10 +304,12 @@ function GenreCardSVG({ id }: { id: number }) {
 
 function GenreCard({ genre, index }: { genre: Genre; index: number }) {
   const [hovered, setHovered] = useState(false);
+  const router = useRouter();
 
   return (
     <div
       className="genre-card"
+      onClick={() => router.push("/beat")}
       style={{
         display: "flex",
         flexDirection: "column",
@@ -316,6 +319,7 @@ function GenreCard({ genre, index }: { genre: Genre; index: number }) {
         flex: "0 1 calc((100% - 60px) / 4)",
         minWidth: "280px",
         maxWidth: "320px",
+        cursor: "pointer",
       }}
     >
       <div
@@ -355,6 +359,7 @@ function GenreCard({ genre, index }: { genre: Genre; index: number }) {
 }
 
 export default function PopularGenres() {
+  const router = useRouter();
   const [exploreHov, setExploreHov] = useState(false);
 
   return (
@@ -481,6 +486,7 @@ export default function PopularGenres() {
 
           <button
             className="explore-btn"
+            onClick={() => router.push("/beat")}
             onMouseEnter={() => setExploreHov(true)}
             onMouseLeave={() => setExploreHov(false)}
             style={{

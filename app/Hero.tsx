@@ -1,7 +1,9 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function HeroSection() {
+  const router = useRouter();
   const [hovered, setHovered] = useState(false);
   const [fontsLoaded, setFontsLoaded] = useState(false);
 
@@ -205,6 +207,7 @@ export default function HeroSection() {
 
           {/* ── CTA Button ── */}
           <button
+            onClick={() => router.push("/beat")}
             onMouseEnter={() => setHovered(true)}
             onMouseLeave={() => setHovered(false)}
             style={{

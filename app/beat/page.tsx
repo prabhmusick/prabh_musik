@@ -1165,6 +1165,7 @@ export default function BeatMarketplace() {
   const [duration, setDuration] = useState(0);
   const [isLooping, setIsLooping] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
+  const [isDraggingSeek, setIsDraggingSeek] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [filters, setFilters] = useState<FilterState>({
     genre: null,
@@ -1200,8 +1201,14 @@ export default function BeatMarketplace() {
     audio.preload = "metadata";
     audio.loop = isLooping;
 
-    const onTimeUpdate = () => setCurrentTime(audio.currentTime || 0);
-    const onLoaded = () => setDuration(audio.duration || 0);
+    const onTimeUpdate = () => {
+      const next = Number(audio.currentTime);
+      setCurrentTime(Number.isFinite(next) ? next : 0);
+    };
+    const onLoaded = () => {
+      const next = Number(audio.duration);
+      setDuration(Number.isFinite(next) && next > 0 ? next : 0);
+    };
     const onPlay = () => setIsPlaying(true);
     const onPause = () => setIsPlaying(false);
 
@@ -1352,21 +1359,49 @@ export default function BeatMarketplace() {
   };
 
   const formatTime = (secs: number) => {
-    const safe = Math.max(0, Math.floor(secs));
+    const numeric = Number(secs);
+    if (!Number.isFinite(numeric) || numeric < 0) return "0:00";
+    const safe = Math.max(0, Math.floor(numeric));
     const m = Math.floor(safe / 60);
     const s = safe % 60;
     return `${m}:${String(s).padStart(2, "0")}`;
   };
 
-  const progressRatio = duration > 0 ? currentTime / duration : 0;
+  const progressRatio = Number.isFinite(duration) && duration > 0 ? currentTime / duration : 0;
   const seekByRatio = (ratio: number) => {
     const audio = audioRef.current;
-    if (!audio || duration <= 0) return;
+    if (!audio || !Number.isFinite(duration) || duration <= 0) return;
     const clampedRatio = Math.max(0, Math.min(1, ratio));
     const next = clampedRatio * duration;
-    audio.currentTime = next;
-    setCurrentTime(next);
+    audio.currentTime = Number.isFinite(next) ? next : 0;
+    setCurrentTime(Number.isFinite(next) ? next : 0);
   };
+  const handleWaveformSeek = useCallback((clientX: number) => {
+    const waveform = document.getElementById("beat-waveform-seek");
+    if (!waveform || !Number.isFinite(duration) || duration <= 0) return;
+    const rect = waveform.getBoundingClientRect();
+    const ratio = (clientX - rect.left) / rect.width;
+    seekByRatio(ratio);
+  }, [duration, seekByRatio]);
+
+  useEffect(() => {
+    if (!isDraggingSeek) return;
+
+    const onPointerMove = (event: PointerEvent) => {
+      handleWaveformSeek(event.clientX);
+    };
+
+    const onPointerUp = () => setIsDraggingSeek(false);
+
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp);
+
+    return () => {
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerUp);
+    };
+  }, [handleWaveformSeek, isDraggingSeek]);
+
   const waveformBars = Array.from({ length: 210 }, (_, i) => {
     const wave =
       Math.sin(i * 0.21) + Math.sin(i * 0.09 + 1.3) + Math.sin(i * 0.045 + 2.2);
@@ -1885,9 +1920,13 @@ export default function BeatMarketplace() {
                 </span>
 
                 <div
+                  id="beat-waveform-seek"
+                  onPointerDown={(e) => {
+                    setIsDraggingSeek(true);
+                    handleWaveformSeek(e.clientX);
+                  }}
                   onClick={(e) => {
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    seekByRatio((e.clientX - rect.left) / rect.width);
+                    handleWaveformSeek(e.clientX);
                   }}
                   style={{
                     height: 32,
@@ -1897,6 +1936,7 @@ export default function BeatMarketplace() {
                     gap: 2,
                     cursor: "pointer",
                     overflow: "hidden",
+                    touchAction: "none",
                   }}
                 >
                   {waveformBars.map((barHeight, i) => {
@@ -2033,31 +2073,6 @@ export default function BeatMarketplace() {
                   }}
                 >
                   <button
-                    onClick={() => setIsLiked((v) => !v)}
-                    style={{
-                      border: "none",
-                      background: "transparent",
-                      color: isLiked ? "#ffffff" : "rgba(255,255,255,0.8)",
-                      cursor: "pointer",
-                      padding: 4,
-                    }}
-                    aria-label="Toggle favourite"
-                  >
-                    <svg
-                      width="24"
-                      height="24"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-                    </svg>
-                  </button>
-
-                  <button
                     onClick={() => playAdjacent(-1)}
                     style={{
                       border: "none",
@@ -2136,32 +2151,6 @@ export default function BeatMarketplace() {
                     </svg>
                   </button>
 
-                  <button
-                    style={{
-                      border: "none",
-                      background: "transparent",
-                      color: "rgba(255,255,255,0.85)",
-                      cursor: "pointer",
-                      padding: 4,
-                    }}
-                    aria-label="Queue"
-                  >
-                    <svg
-                      width="22"
-                      height="22"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <line x1="4" y1="6" x2="20" y2="6" />
-                      <line x1="4" y1="12" x2="14" y2="12" />
-                      <line x1="4" y1="18" x2="14" y2="18" />
-                      <circle cx="18" cy="18" r="2" />
-                    </svg>
-                  </button>
                 </div>
 
                 <div
@@ -2176,19 +2165,6 @@ export default function BeatMarketplace() {
                   }}
                 >
                   <button
-                    style={{
-                      border: "none",
-                      background: "transparent",
-                      color: "rgba(255,255,255,0.9)",
-                      fontSize: 13,
-                      fontWeight: 600,
-                      cursor: "pointer",
-                    }}
-                  >
-                    ✪ Edit
-                  </button>
-
-                  <button
                     onClick={() => setIsLooping((v) => !v)}
                     style={{
                       border: "none",
@@ -2202,31 +2178,6 @@ export default function BeatMarketplace() {
                     ↻ Loop
                   </button>
 
-                  <button
-                    style={{
-                      border: "none",
-                      background: "transparent",
-                      color: "rgba(255,255,255,0.9)",
-                      fontSize: 13,
-                      fontWeight: 600,
-                      cursor: "pointer",
-                    }}
-                  >
-                    ♬ Lyrics
-                  </button>
-
-                  <button
-                    style={{
-                      border: "none",
-                      background: "transparent",
-                      color: "rgba(255,255,255,0.92)",
-                      fontSize: 18,
-                      cursor: "pointer",
-                    }}
-                    aria-label="Volume"
-                  >
-                    🔉
-                  </button>
 
                   <button
                     style={{
@@ -2243,6 +2194,7 @@ export default function BeatMarketplace() {
                   </button>
 
                   <button
+                    onClick={() => handlePurchase(currentBeat)}
                     style={{
                       border: "none",
                       background: "#0f6bff",
