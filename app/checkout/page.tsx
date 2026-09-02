@@ -109,12 +109,30 @@ function CheckoutForm({ cart, user, onCheckoutComplete }: any) {
     setError("");
 
     try {
-      const API_BASE =
-        process.env.NEXT_PUBLIC_API_URL ||
-        process.env.BACKEND_PUBLIC_URL ||
-        "http://localhost:5005";
+      const resolveApiBase = () => {
+        const configured =
+          process.env.NEXT_PUBLIC_API_URL || process.env.BACKEND_PUBLIC_URL;
+
+        if (configured && configured.trim()) {
+          return configured
+            .trim()
+            .replace(/\/api\/?$/, "")
+            .replace(/\/+$/, "");
+        }
+
+        if (
+          typeof window !== "undefined" &&
+          !["localhost", "127.0.0.1"].includes(window.location.hostname)
+        ) {
+          return "";
+        }
+
+        return "http://localhost:5005";
+      };
+
+      const API_BASE = resolveApiBase();
       const response = await fetch(
-        `${API_BASE}/api/payments/create-checkout-session`,
+        `${API_BASE ? `${API_BASE}/api` : "/api"}/payments/create-checkout-session`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

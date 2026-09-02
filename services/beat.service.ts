@@ -1,12 +1,29 @@
 import api from "../lib/api";
 import { Beat } from "../types/admin";
 
-const rawApiUrl =
-  process.env.NEXT_PUBLIC_API_URL ||
-  process.env.BACKEND_PUBLIC_URL ||
-  "http://localhost:5005";
-const API_HOST = rawApiUrl.replace(/\/api\/?$/, "").replace(/\/+$/, "");
-const API_OBJECT_BASE = `${API_HOST}/api`;
+const resolveApiBase = () => {
+  const configured =
+    process.env.NEXT_PUBLIC_API_URL || process.env.BACKEND_PUBLIC_URL;
+
+  if (configured && configured.trim()) {
+    return configured
+      .trim()
+      .replace(/\/api\/?$/, "")
+      .replace(/\/+$/, "");
+  }
+
+  if (
+    typeof window !== "undefined" &&
+    !["localhost", "127.0.0.1"].includes(window.location.hostname)
+  ) {
+    return "";
+  }
+
+  return "http://localhost:5005";
+};
+
+const API_HOST = resolveApiBase();
+const API_OBJECT_BASE = API_HOST ? `${API_HOST}/api` : "/api";
 
 // ============================================================================
 // DTO Mappers: Bridges Backend Column names and Frontend TypeScript typings

@@ -1,13 +1,28 @@
 import axios from "axios";
 
-const rawApiUrl =
-  process.env.NEXT_PUBLIC_API_URL ||
-  process.env.BACKEND_PUBLIC_URL ||
-  "http://localhost:5005";
-const normalizedApiHost = rawApiUrl
-  .replace(/\/api\/?$/, "")
-  .replace(/\/+$/, "");
-const baseURL = `${normalizedApiHost}/api`;
+const resolveApiBase = () => {
+  const configured =
+    process.env.NEXT_PUBLIC_API_URL || process.env.BACKEND_PUBLIC_URL;
+
+  if (configured && configured.trim()) {
+    return configured
+      .trim()
+      .replace(/\/api\/?$/, "")
+      .replace(/\/+$/, "");
+  }
+
+  if (
+    typeof window !== "undefined" &&
+    !["localhost", "127.0.0.1"].includes(window.location.hostname)
+  ) {
+    return "";
+  }
+
+  return "http://localhost:5005";
+};
+
+const normalizedApiHost = resolveApiBase();
+const baseURL = normalizedApiHost ? `${normalizedApiHost}/api` : "/api";
 
 const api = axios.create({
   baseURL,

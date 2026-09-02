@@ -1,10 +1,28 @@
 import { Beat, BeatsResponse } from "../types/beat";
 
-const rawApiUrl =
-  process.env.NEXT_PUBLIC_API_URL ||
-  process.env.BACKEND_PUBLIC_URL ||
-  "http://localhost:5005";
-const API_BASE_URL = rawApiUrl.replace(/\/api\/?$/, "").replace(/\/+$/, "");
+const resolveApiBase = () => {
+  const configured =
+    process.env.NEXT_PUBLIC_API_URL || process.env.BACKEND_PUBLIC_URL;
+
+  if (configured && configured.trim()) {
+    return configured
+      .trim()
+      .replace(/\/api\/?$/, "")
+      .replace(/\/+$/, "");
+  }
+
+  if (
+    typeof window !== "undefined" &&
+    !["localhost", "127.0.0.1"].includes(window.location.hostname)
+  ) {
+    return "";
+  }
+
+  return "http://localhost:5005";
+};
+
+const rawApiUrl = resolveApiBase();
+const API_BASE_URL = rawApiUrl ? `${rawApiUrl}/api` : "/api";
 
 /**
  * Fetch all beats from the backend
