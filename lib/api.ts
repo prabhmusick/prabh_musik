@@ -1,6 +1,9 @@
 import axios from "axios";
 
-const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5005";
+const rawApiUrl =
+  process.env.NEXT_PUBLIC_API_URL ||
+  process.env.BACKEND_PUBLIC_URL ||
+  "http://localhost:5005";
 const normalizedApiHost = rawApiUrl
   .replace(/\/api\/?$/, "")
   .replace(/\/+$/, "");
@@ -18,7 +21,10 @@ const api = axios.create({
 // In-memory access token storage
 let accessToken: string | null = null;
 let isRefreshing = false;
-let failedQueue: { resolve: (token: string) => void; reject: (err: any) => void }[] = [];
+let failedQueue: {
+  resolve: (token: string) => void;
+  reject: (err: any) => void;
+}[] = [];
 let isLoggedOut = false; // Tracks if logout was triggered during active refresh
 
 export const getAccessToken = () => accessToken;
@@ -38,11 +44,19 @@ export const clearAccessToken = () => {
   isRefreshing = false;
 };
 
-export const getApiErrorMessage = (error: unknown, fallback = "Request failed.") => {
+export const getApiErrorMessage = (
+  error: unknown,
+  fallback = "Request failed.",
+) => {
   const candidate =
     typeof error === "object" && error !== null && "response" in error
-      ? ((error as { response?: { data?: { error?: unknown; message?: unknown } } }).response?.data?.error ??
-        (error as { response?: { data?: { message?: unknown } } }).response?.data?.message)
+      ? ((
+          error as {
+            response?: { data?: { error?: unknown; message?: unknown } };
+          }
+        ).response?.data?.error ??
+        (error as { response?: { data?: { message?: unknown } } }).response
+          ?.data?.message)
       : undefined;
   const message =
     candidate ??
@@ -53,7 +67,12 @@ export const getApiErrorMessage = (error: unknown, fallback = "Request failed.")
   if (typeof message === "string" && message.trim()) {
     return message;
   }
-  if (message && typeof message === "object" && "message" in message && typeof message.message === "string") {
+  if (
+    message &&
+    typeof message === "object" &&
+    "message" in message &&
+    typeof message.message === "string"
+  ) {
     return message.message;
   }
   return fallback;
@@ -98,7 +117,7 @@ api.interceptors.request.use(
   },
   (error) => {
     return Promise.reject(error);
-  }
+  },
 );
 
 // Response interceptor for token rotation and retry logic
@@ -136,7 +155,9 @@ api.interceptors.response.use(
         // Race condition check: did logout occur during refresh?
         if (isLoggedOut) {
           isRefreshing = false;
-          const logoutError = new Error("Session expired due to logout during refresh.");
+          const logoutError = new Error(
+            "Session expired due to logout during refresh.",
+          );
           processQueue(logoutError, null);
           return Promise.reject(logoutError);
         }
@@ -162,7 +183,7 @@ api.interceptors.response.use(
     }
 
     return Promise.reject(error);
-  }
+  },
 );
 
 export default api;

@@ -1,6 +1,9 @@
 import { Beat, BeatsResponse } from "../types/beat";
 
-const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5005";
+const rawApiUrl =
+  process.env.NEXT_PUBLIC_API_URL ||
+  process.env.BACKEND_PUBLIC_URL ||
+  "http://localhost:5005";
 const API_BASE_URL = rawApiUrl.replace(/\/api\/?$/, "").replace(/\/+$/, "");
 
 /**

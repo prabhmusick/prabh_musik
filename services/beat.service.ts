@@ -1,7 +1,10 @@
 import api from "../lib/api";
 import { Beat } from "../types/admin";
 
-const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5005";
+const rawApiUrl =
+  process.env.NEXT_PUBLIC_API_URL ||
+  process.env.BACKEND_PUBLIC_URL ||
+  "http://localhost:5005";
 const API_HOST = rawApiUrl.replace(/\/api\/?$/, "").replace(/\/+$/, "");
 const API_OBJECT_BASE = `${API_HOST}/api`;
 
@@ -65,7 +68,8 @@ export function mapFrontendToBackend(beat: any): any {
   if (beat.bpm !== undefined) data.bpm = Number(beat.bpm);
   if (beat.duration !== undefined) data.duration = Number(beat.duration);
   if (beat.key !== undefined) data.musical_key = beat.key;
-  if (beat.price !== undefined) data.price_amount = Math.round(Number(beat.price) * 100);
+  if (beat.price !== undefined)
+    data.price_amount = Math.round(Number(beat.price) * 100);
 
   if (beat.status !== undefined) {
     const statusMapInverse: Record<string, string> = {
