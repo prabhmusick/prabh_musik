@@ -168,7 +168,7 @@ export default function HeroSection() {
               letterSpacing: "0.01em",
             }}
           >
-            Industry<br />Ready beats for<br />Artists
+            Industry<br />Ready beats for<br />Artist!
           </h1>
 
           {/* ── Subhead ── */}
