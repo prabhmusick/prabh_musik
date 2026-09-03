@@ -1,5 +1,6 @@
 "use client";
 import { useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 
 interface Artist {
   id: number;
@@ -321,6 +322,7 @@ export default function ArtistsWorkedWith() {
 
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <button
+              onClick={() => router.push("/beat")}
               onMouseEnter={() => setViewAllHov(true)}
               onMouseLeave={() => setViewAllHov(false)}
               style={{

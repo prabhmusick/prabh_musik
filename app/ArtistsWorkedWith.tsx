@@ -1,5 +1,6 @@
 "use client";
 import { useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 
 interface Artist {
   id: number;
@@ -273,6 +274,7 @@ function ArtistCard({ artist, index }: { artist: Artist; index: number }) {
 }
 
 export default function ArtistsWorkedWith() {
+  const router = useRouter();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [viewAllHov, setViewAllHov] = useState(false);
 
@@ -395,6 +397,7 @@ export default function ArtistsWorkedWith() {
 
           <div className="artists-header-buttons" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <button
+              onClick={() => router.push("/beat")}
               onMouseEnter={() => setViewAllHov(true)}
               onMouseLeave={() => setViewAllHov(false)}
               style={{
