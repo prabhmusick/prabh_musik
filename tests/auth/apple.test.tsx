@@ -25,12 +25,14 @@ function TestComponent({
 }
 
 describe("Apple Frontend Integration - AppleProvider", () => {
+  const originalEnvEnabled = process.env.NEXT_PUBLIC_APPLE_SIGN_IN_ENABLED;
   const originalEnvClient = process.env.NEXT_PUBLIC_APPLE_CLIENT_ID;
   const originalEnvRedirect = process.env.NEXT_PUBLIC_APPLE_REDIRECT_URI;
 
   beforeEach(() => {
     vi.useFakeTimers();
     vi.restoreAllMocks();
+    process.env.NEXT_PUBLIC_APPLE_SIGN_IN_ENABLED = "true";
     process.env.NEXT_PUBLIC_APPLE_CLIENT_ID = "mock-services-id";
     process.env.NEXT_PUBLIC_APPLE_REDIRECT_URI = "https://mock-redirect.com";
 
@@ -49,8 +51,31 @@ describe("Apple Frontend Integration - AppleProvider", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.useRealTimers();
+    process.env.NEXT_PUBLIC_APPLE_SIGN_IN_ENABLED = originalEnvEnabled;
     process.env.NEXT_PUBLIC_APPLE_CLIENT_ID = originalEnvClient;
     process.env.NEXT_PUBLIC_APPLE_REDIRECT_URI = originalEnvRedirect;
+  });
+
+  it("✓ Feature Flag Disabled - Should skip SDK init and fail credential request gracefully", async () => {
+    process.env.NEXT_PUBLIC_APPLE_SIGN_IN_ENABLED = "false";
+
+    const onCredential = vi.fn();
+    const onError = vi.fn();
+
+    render(
+      <AppleProvider>
+        <TestComponent onCredential={onCredential} onError={onError} />
+      </AppleProvider>
+    );
+
+    const button = screen.getByTestId("request-btn");
+    await act(async () => {
+      button.click();
+    });
+
+    expect(onError).toHaveBeenCalled();
+    expect(onError.mock.calls[0][0].message).toContain("currently disabled");
+    expect(window.AppleID.auth.init).not.toHaveBeenCalled();
   });
 
   it("✓ Environment Validation - Should fail if client configuration is missing", async () => {

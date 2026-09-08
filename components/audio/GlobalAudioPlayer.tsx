@@ -21,6 +21,7 @@ export function GlobalAudioPlayer() {
 
   const { isAuthenticated, addToCart } = useAppShell();
   const router = useRouter();
+  const waveformRef = React.useRef<HTMLDivElement>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [isDraggingSeek, setIsDraggingSeek] = useState(false);
 
@@ -43,33 +44,36 @@ export function GlobalAudioPlayer() {
   const progressRatio = Number.isFinite(duration) && duration > 0 ? currentTime / duration : 0;
 
   const handleWaveformSeek = useCallback(
-    (clientX: number) => {
-      const waveform = document.getElementById("beat-waveform-seek");
+    (clientX: number, targetElement?: HTMLElement | null) => {
+      const waveform = targetElement || waveformRef.current || document.getElementById("beat-waveform-seek");
       if (!waveform || !Number.isFinite(duration) || duration <= 0) return;
       const rect = waveform.getBoundingClientRect();
-      const ratio = (clientX - rect.left) / rect.width;
-      seekByRatio(ratio);
+      if (rect.width <= 0) return;
+      const rawRatio = (clientX - rect.left) / rect.width;
+      const clampedRatio = Math.max(0, Math.min(1, rawRatio));
+      seekByRatio(clampedRatio);
     },
     [duration, seekByRatio]
   );
 
-  useEffect(() => {
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return; // Only handle primary pointer click / touch
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setIsDraggingSeek(true);
+    handleWaveformSeek(e.clientX, e.currentTarget);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!isDraggingSeek) return;
+    handleWaveformSeek(e.clientX, e.currentTarget);
+  };
 
-    const onPointerMove = (event: PointerEvent) => {
-      handleWaveformSeek(event.clientX);
-    };
-
-    const onPointerUp = () => setIsDraggingSeek(false);
-
-    window.addEventListener("pointermove", onPointerMove);
-    window.addEventListener("pointerup", onPointerUp);
-
-    return () => {
-      window.removeEventListener("pointermove", onPointerMove);
-      window.removeEventListener("pointerup", onPointerUp);
-    };
-  }, [handleWaveformSeek, isDraggingSeek]);
+  const handlePointerUpOrCancel = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+    setIsDraggingSeek(false);
+  };
 
   const waveformBars = Array.from({ length: 210 }, (_, i) => {
     const wave =
@@ -177,13 +181,11 @@ export function GlobalAudioPlayer() {
 
           <div
             id="beat-waveform-seek"
-            onPointerDown={(e) => {
-              setIsDraggingSeek(true);
-              handleWaveformSeek(e.clientX);
-            }}
-            onClick={(e) => {
-              handleWaveformSeek(e.clientX);
-            }}
+            ref={waveformRef}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUpOrCancel}
+            onPointerCancel={handlePointerUpOrCancel}
             style={{
               height: 32,
               display: "flex",

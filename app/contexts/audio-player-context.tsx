@@ -10,6 +10,7 @@ export interface Beat {
   cover: string;
   genre: string;
   bpm: number;
+  duration?: number;
   previewUrl: string;
   plays: number;
 }
@@ -49,15 +50,18 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       const next = Number(audio.currentTime);
       setCurrentTime(Number.isFinite(next) ? next : 0);
     };
-    const onLoaded = () => {
+    const syncDuration = () => {
       const next = Number(audio.duration);
-      setDuration(Number.isFinite(next) && next > 0 ? next : 0);
+      if (Number.isFinite(next) && next > 0) {
+        setDuration(next);
+      }
     };
     const onPlay = () => setIsPlaying(true);
     const onPause = () => setIsPlaying(false);
 
     audio.addEventListener("timeupdate", onTimeUpdate);
-    audio.addEventListener("loadedmetadata", onLoaded);
+    audio.addEventListener("loadedmetadata", syncDuration);
+    audio.addEventListener("durationchange", syncDuration);
     audio.addEventListener("play", onPlay);
     audio.addEventListener("pause", onPause);
 
@@ -66,7 +70,8 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     return () => {
       audio.pause();
       audio.removeEventListener("timeupdate", onTimeUpdate);
-      audio.removeEventListener("loadedmetadata", onLoaded);
+      audio.removeEventListener("loadedmetadata", syncDuration);
+      audio.removeEventListener("durationchange", syncDuration);
       audio.removeEventListener("play", onPlay);
       audio.removeEventListener("pause", onPause);
       audioRef.current = null;
@@ -106,7 +111,10 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       audio.currentTime = 0;
       setCurrentBeat(beat);
       setCurrentTime(0);
-      setDuration(0);
+
+      const initialDuration = Number(beat.duration);
+      setDuration(Number.isFinite(initialDuration) && initialDuration > 0 ? initialDuration : 0);
+
       await audio.play().catch(() => {});
     },
     [currentBeat?.id]

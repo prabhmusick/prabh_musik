@@ -28,7 +28,7 @@ class StorageProvider {
   async createPublicPreviewUrl(key) {
     throw new Error("createPublicPreviewUrl() must be implemented.");
   }
-  async getDownloadStream(key) {
+  async getDownloadStream(key, options) {
     throw new Error("getDownloadStream() must be implemented.");
   }
   async generatePresignedDownloadUrl(key, expiresInSeconds) {
@@ -109,15 +109,23 @@ class CloudflareR2Provider extends StorageProvider {
     return getSignedUrl(r2, command, { expiresIn: 86400 });
   }
 
-  async getDownloadStream(key) {
-    const command = new GetObjectCommand({
+  async getDownloadStream(key, options = {}) {
+    const params = {
       Bucket: process.env.R2_BUCKET,
       Key: cleanKey(key)
-    });
+    };
+    if (options.range) {
+      params.Range = options.range;
+    }
+    const command = new GetObjectCommand(params);
     const response = await r2.send(command);
     return {
       stream: response.Body,
-      mimeType: response.ContentType || "audio/mpeg"
+      mimeType: response.ContentType || "audio/mpeg",
+      contentLength: response.ContentLength,
+      contentRange: response.ContentRange,
+      eTag: response.ETag,
+      statusCode: response.$metadata?.httpStatusCode || (options.range ? 206 : 200)
     };
   }
 
