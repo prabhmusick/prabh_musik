@@ -972,13 +972,40 @@ export default function MusicProductionPage() {
   const [form, setForm] = useState({ name: "", email: "", type: "", details: "" });
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+  const [showModal, setShowModal] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
     setForm({ ...form, [e.target.name]: e.target.value });
 
   const handleSend = () => {
-    setSending(true);
-    setTimeout(() => { setSending(false); setSent(true); setTimeout(() => setSent(false), 3500); }, 1400);
+    // open user's mail client with prefilled message to support@prabhmusik.com
+    try {
+      const subject = encodeURIComponent(`Project enquiry: ${form.type || "General"}`);
+      const bodyLines = [
+        `Name: ${form.name}`,
+        `Email: ${form.email}`,
+        `Project Type: ${form.type}`,
+        "",
+        `Details:\n${form.details}`,
+      ];
+      const body = encodeURIComponent(bodyLines.join("\n"));
+      const gmail = `https://mail.google.com/mail/?view=cm&fs=1&to=support@prabhmusik.com&su=${subject}&body=${body}`;
+      const mailto = `mailto:support@prabhmusik.com?subject=${subject}&body=${body}`;
+      // Try to open Gmail compose in a new tab. If popup blocked or user prefers native client,
+      // fallback to mailto which will prompt the OS handler.
+      const win = window.open(gmail, "_blank");
+      if (!win) {
+        // popup blocked, fall back to mailto
+        window.location.href = mailto;
+      }
+      // provide UX feedback
+      setSending(true);
+      setTimeout(() => { setSending(false); setSent(true); setTimeout(() => setSent(false), 3500); }, 800);
+    } catch (err) {
+      // fallback to simulated send
+      setSending(true);
+      setTimeout(() => { setSending(false); setSent(true); setTimeout(() => setSent(false), 3500); }, 1400);
+    }
   };
 
   const tracks = [
@@ -1207,10 +1234,41 @@ export default function MusicProductionPage() {
               >
                 {sent ? "✓  Message Received" : sending ? "Sending…" : "Send Message →"}
               </button>
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setShowModal(true)}
+                  style={{ marginTop: 12, background: 'transparent', border: 'none', color: 'var(--orange)', cursor: 'pointer' }}
+                >
+                  Open in Email Composer
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </section>
+
+      {showModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+          <div style={{ background: '#0a0a0a', padding: 24, borderRadius: 8, width: 'min(720px, 96%)' }}>
+            <h3 style={{ marginTop: 0, color: '#fff' }}>Contact Support</h3>
+            <p style={{ color: '#ccc' }}>We'll open your mail client (Gmail preferred) with the message prefilled. Confirm to proceed.</p>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 18 }}>
+              <button onClick={() => setShowModal(false)} style={{ padding: '10px 16px', background: 'transparent', border: '1px solid #333', color: '#fff' }}>Cancel</button>
+              <button onClick={() => {
+                const subject = encodeURIComponent(`Project enquiry: ${form.type || 'General'}`);
+                const body = encodeURIComponent(`Name: ${form.name || ''}%0AEmail: ${form.email || ''}%0AProject Type: ${form.type || ''}%0A%0ADetails:%0A${form.details || ''}`);
+                const gmail = `https://mail.google.com/mail/?view=cm&fs=1&to=support@prabhmusik.com&su=${subject}&body=${body}`;
+                const win = window.open(gmail, '_blank');
+                if (!win) {
+                  window.location.href = `mailto:support@prabhmusik.com?subject=${subject}&body=${body}`;
+                }
+                setShowModal(false);
+              }} style={{ padding: '10px 16px', background: '#d4a017', border: 'none', color: '#080808' }}>Open Composer</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* FOOTER */}
       

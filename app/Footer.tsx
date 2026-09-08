@@ -48,15 +48,26 @@ const socialLinks = [
 const navColumns = [
   {
     label: "Product",
-    links: ["Features", "Pricing", "Integrations", "Changelog"],
+    links: [
+      { label: "Features", href: "/beat" },
+      { label: "Pricing", href: "/services" },
+    ],
   },
   {
     label: "Resources",
-    links: ["Documentation", "Tutorials", "Blog", "Support"],
+    links: [
+      { label: "Documentation", href: "/services" },
+      { label: "Tutorials", href: "/beat" },
+      { label: "Support", href: "/services" },
+    ],
   },
   {
     label: "Company",
-    links: ["About", "Careers", "Contact", "Partners"],
+    links: [
+      { label: "About", href: "/about" },
+      { label: "Beats", href: "/beat" },
+      { label: "Contact", href: "/services" },
+    ],
   },
 ];
 
@@ -196,7 +207,7 @@ const GraphyFooter: React.FC = () => {
               margin: "0 0 20px 0",
             }}
           >
-            Graphy empowers teams to transform raw data into clear, compelling
+            PrabhMusik empowers teams to transform raw data into clear, compelling
             visuals — making insights easier to share, understand, and act on.
           </p>
           <div className="footer-social">
@@ -233,7 +244,7 @@ const GraphyFooter: React.FC = () => {
               }}
             >
               {col.links.map((link) => (
-                <NavLink key={link} label={link} />
+                <NavLink key={link.label} label={link.label} href={link.href} />
               ))}
             </ul>
           </div>
@@ -243,13 +254,9 @@ const GraphyFooter: React.FC = () => {
       {/* Bottom bar */}
       <div className="footer-bottom">
         <span style={{ fontSize: 12, color: "#3a3530" }}>
-          © 2025 PrabhMusik. All rights reserved.
+          © 2026 PrabhMusik. All rights reserved.
         </span>
-        <div className="footer-legal-links">
-          <LegalLink label="Privacy Policy" />
-          <LegalLink label="Terms of Service" />
-          <LegalLink label="Cookies Settings" />
-        </div>
+        
       </div>
     </footer>
   );
