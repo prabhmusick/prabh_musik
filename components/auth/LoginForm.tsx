@@ -146,7 +146,7 @@ export default function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { login } = useAppShell();
-  const { loginWithGoogle, loginWithApple, loading: oauthLoading, loadingGoogle, loadingApple } = useOAuth();
+  const { loginWithGoogle, loginWithApple, isAppleEnabled, loading: oauthLoading, loadingGoogle, loadingApple } = useOAuth();
 
   const handleChange = useCallback(
     (id: keyof FormFields, value: string) => {
@@ -301,7 +301,7 @@ export default function LoginForm() {
       </div>
 
       {/* Social buttons */}
-      <div className="auth-social-grid" style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
+      <div className="auth-social-grid" style={{ gridTemplateColumns: isAppleEnabled ? "repeat(2, minmax(0, 1fr))" : "repeat(1, minmax(0, 1fr))" }}>
         <button
           type="button"
           onClick={handleGoogleLogin}
@@ -330,28 +330,30 @@ export default function LoginForm() {
             </>
           )}
         </button>
-        <button
-          type="button"
-          onClick={handleAppleLogin}
-          disabled={isFormDisabled}
-          className="auth-social-btn"
-          style={{ minHeight: "44px" }}
-        >
-          {loadingApple ? (
-            <>
-              <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24" style={{ width: "16px", height: "16px" }}>
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth={4} />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-              </svg>
-              Apple
-            </>
-          ) : (
-            <>
-              <AppleIcon />
-              Apple
-            </>
-          )}
-        </button>
+        {isAppleEnabled && (
+          <button
+            type="button"
+            onClick={handleAppleLogin}
+            disabled={isFormDisabled}
+            className="auth-social-btn"
+            style={{ minHeight: "44px" }}
+          >
+            {loadingApple ? (
+              <>
+                <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24" style={{ width: "16px", height: "16px" }}>
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth={4} />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                </svg>
+                Apple
+              </>
+            ) : (
+              <>
+                <AppleIcon />
+                Apple
+              </>
+            )}
+          </button>
+        )}
       </div>
     </form>
   );

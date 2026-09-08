@@ -27,6 +27,7 @@ async function fetchBeats(
         "https://via.placeholder.com/400?text=No+Cover",
       genre: b.genre || "Music",
       bpm: b.bpm || 120,
+      duration: b.duration || 0,
       previewUrl: (b.assets && b.assets.previewAudio) || "",
       plays: Math.floor(Math.random() * 5000),
     }));

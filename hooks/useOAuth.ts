@@ -9,7 +9,7 @@ import { useAppShell } from "../app/contexts/app-shell-context";
  */
 export function useOAuth() {
   const { requestGoogleCredential } = useGoogle();
-  const { requestAppleCredential } = useApple();
+  const { requestAppleCredential, isAppleEnabled } = useApple();
   const { loginWithGoogle: contextLoginWithGoogle, loginWithApple: contextLoginWithApple } = useAppShell();
 
   const [loadingGoogle, setLoadingGoogle] = useState(false);
@@ -59,6 +59,7 @@ export function useOAuth() {
   return {
     loginWithGoogle,
     loginWithApple,
+    isAppleEnabled,
     loading: loadingGoogle || loadingApple,
     loadingGoogle,
     loadingApple,

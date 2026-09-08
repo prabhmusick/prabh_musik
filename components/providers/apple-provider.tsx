@@ -10,6 +10,7 @@ declare global {
 }
 
 interface AppleContextValue {
+  isAppleEnabled: boolean;
   requestAppleCredential: () => Promise<OAuthCredential>;
 }
 
@@ -25,14 +26,19 @@ let timeoutId: NodeJS.Timeout | null = null;
 const REQUEST_TIMEOUT_MS = 60000; // 60 seconds
 
 export function AppleProvider({ children }: { children: React.ReactNode }) {
+  const isFeatureFlagEnabled = process.env.NEXT_PUBLIC_APPLE_SIGN_IN_ENABLED === "true";
   const appleClientId = process.env.NEXT_PUBLIC_APPLE_CLIENT_ID;
   const appleRedirectUri = process.env.NEXT_PUBLIC_APPLE_REDIRECT_URI;
 
-  // Validate environment configuration immediately on mount
+  const isAppleEnabled = Boolean(
+    isFeatureFlagEnabled && appleClientId && appleRedirectUri
+  );
+
+  // Validate environment configuration on mount
   useEffect(() => {
-    if (!appleClientId || !appleRedirectUri) {
-      console.error(
-        "[AppleProvider] Apple Sign-In configuration error: NEXT_PUBLIC_APPLE_CLIENT_ID or NEXT_PUBLIC_APPLE_REDIRECT_URI is missing."
+    if (isFeatureFlagEnabled && (!appleClientId || !appleRedirectUri)) {
+      console.warn(
+        "[AppleProvider] NEXT_PUBLIC_APPLE_SIGN_IN_ENABLED is set to true, but NEXT_PUBLIC_APPLE_CLIENT_ID or NEXT_PUBLIC_APPLE_REDIRECT_URI is missing. Apple Sign-In will remain disabled."
       );
     }
     return () => {
@@ -40,7 +46,7 @@ export function AppleProvider({ children }: { children: React.ReactNode }) {
       isAppleInitialized = false;
       cleanupRequest(new Error("AppleProvider unmounted. Request cancelled."));
     };
-  }, [appleClientId, appleRedirectUri]);
+  }, [isFeatureFlagEnabled, appleClientId, appleRedirectUri]);
 
   const cleanupRequest = (err: any = null) => {
     if (err && rejectCredential) {
@@ -62,6 +68,12 @@ export function AppleProvider({ children }: { children: React.ReactNode }) {
     }
 
     activePromise = new Promise<OAuthCredential>((resolve, reject) => {
+      if (!isFeatureFlagEnabled) {
+        return reject(
+          new Error("Apple Sign-In is currently disabled.")
+        );
+      }
+
       if (!appleClientId || !appleRedirectUri) {
         return reject(
           new Error("Apple Sign-In cannot be initiated: client configuration is missing.")
@@ -134,7 +146,7 @@ export function AppleProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AppleContext.Provider value={{ requestAppleCredential }}>
+    <AppleContext.Provider value={{ isAppleEnabled, requestAppleCredential }}>
       {children}
     </AppleContext.Provider>
   );

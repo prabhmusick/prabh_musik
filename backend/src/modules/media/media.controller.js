@@ -25,22 +25,37 @@ const streamMedia = async (req, res) => {
   // Try to stream directly from configured storage provider (Cloudflare R2)
   try {
     if (storageProvider && typeof storageProvider.getDownloadStream === "function") {
-      const download = await storageProvider.getDownloadStream(key);
+      const range = req.headers.range;
+      const download = await storageProvider.getDownloadStream(key, { range });
       if (download && download.stream) {
+        if (download.statusCode) {
+          res.status(download.statusCode);
+        }
+
         // CORS and CORP: allow cross-origin embedding of audio resources
         const origin = req.headers.origin || "*";
         res.setHeader("Access-Control-Allow-Origin", origin);
         res.setHeader("Access-Control-Allow-Credentials", "true");
         res.setHeader("Vary", "Origin");
         res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+        res.setHeader("Accept-Ranges", "bytes");
 
-        // Forward content-type if available
         if (download.mimeType) res.setHeader("Content-Type", download.mimeType);
-        // Note: R2 streams from SDK support piping and range support may be limited depending on implementation
+        if (download.contentLength != null) res.setHeader("Content-Length", download.contentLength);
+        if (download.contentRange) res.setHeader("Content-Range", download.contentRange);
+        if (download.eTag) res.setHeader("ETag", download.eTag);
+
         return download.stream.pipe(res);
       }
     }
   } catch (err) {
+    if (err && (err.$metadata?.httpStatusCode === 416 || err.name === "InvalidRange" || err.Code === "InvalidRange")) {
+      res.setHeader("Accept-Ranges", "bytes");
+      return res.status(416).json({
+        success: false,
+        error: { code: "INVALID_RANGE", message: "Requested range not satisfiable." }
+      });
+    }
     console.warn("Storage provider streaming failed, falling back to upstream URL:", err && err.message);
     // fallthrough to upstream HTTP fetch
   }
