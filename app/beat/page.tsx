@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { getBeats } from "@/services/beat.service";
 import { useAppShell } from "../contexts/app-shell-context";
 import { useAudioPlayer, Beat } from "../contexts/audio-player-context";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 // ─── API Integration ──────────────────────────────────────────────────────────
 
@@ -1145,9 +1145,7 @@ export default function BeatMarketplace() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const searchParams = useSearchParams();
-  const initialSearch = searchParams.get("q") ?? "";
-  const [search, setSearch] = useState(initialSearch);
+  const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [isMobile, setIsMobile] = useState(false);
   const [filters, setFilters] = useState<FilterState>({
@@ -1180,8 +1178,20 @@ export default function BeatMarketplace() {
   }, []);
 
   useEffect(() => {
-    setSearch(searchParams.get("q") ?? "");
-  }, [searchParams]);
+    const readSearch = () => {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        setSearch(params.get("q") ?? "");
+      } catch (e) {
+        // ignore in non-browser environments
+      }
+    };
+
+    readSearch();
+    const onPop = () => readSearch();
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
 
   const filtered = beats.filter((b) => {
     const normalizedQuery = search.trim().toLowerCase();
