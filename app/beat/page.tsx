@@ -1177,10 +1177,29 @@ export default function BeatMarketplace() {
     return () => window.removeEventListener("resize", update);
   }, []);
 
+  useEffect(() => {
+    const readSearch = () => {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        setSearch(params.get("q") ?? "");
+      } catch (e) {
+        // ignore in non-browser environments
+      }
+    };
+
+    readSearch();
+    const onPop = () => readSearch();
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
   const filtered = beats.filter((b) => {
+    const normalizedQuery = search.trim().toLowerCase();
     const matchesSearch =
-      b.title.toLowerCase().includes(search.toLowerCase()) ||
-      b.producer.toLowerCase().includes(search.toLowerCase());
+      !normalizedQuery ||
+      b.title.toLowerCase().includes(normalizedQuery) ||
+      b.genre.toLowerCase().includes(normalizedQuery) ||
+      b.producer.toLowerCase().includes(normalizedQuery);
 
     const matchesGenre = !filters.genre || b.genre === filters.genre;
 
@@ -1232,6 +1251,8 @@ export default function BeatMarketplace() {
     [filtered, playBeat]
   );
 
+  const hasSearchQuery = search.trim().length > 0;
+
   return (
     <>
       <style>{`
@@ -1262,6 +1283,19 @@ export default function BeatMarketplace() {
           overflowX: "hidden",
         }}
       >
+        {hasSearchQuery && !loading && filtered.length === 0 && (
+          <div
+            style={{
+              maxWidth: 1360,
+              margin: "20px auto 0",
+              padding: isMobile ? "0 16px" : "0 32px",
+              color: "rgba(255,255,255,0.75)",
+              fontSize: 14,
+            }}
+          >
+            No beats found for “{search}”. Try another keyword or clear the search.
+          </div>
+        )}
         {/* Subtle top vignette glow */}
         <div
           style={{
