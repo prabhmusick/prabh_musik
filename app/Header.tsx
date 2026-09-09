@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAppShell } from "./contexts/app-shell-context";
 
-const navLinks = ["Home", "About", "Services", "Beats"];
+const navLinks = ["Home", "Beat", "Services", "About"];
 
 
 export default function Header() {
@@ -14,13 +14,22 @@ export default function Header() {
   const [searchVal, setSearchVal] = useState("");
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  const submitSearch = (value?: string) => {
+    const query = (value ?? searchVal).trim();
+    if (!query) {
+      router.push("/beat");
+      return;
+    }
+    router.push(`/beat?q=${encodeURIComponent(query)}`);
+  };
+
   if (pathname?.startsWith("/admin")) return null;
 
   const getActiveLink = () => {
     if (pathname === "/") return "Home";
-    if (pathname === "/about") return "About";
+    if (pathname === "/beat") return "Beat";
     if (pathname === "/services") return "Services";
-    if (pathname === "/beat") return "Beats";
+    if (pathname === "/about") return "About";
     return "";
   };
   const activeLink = getActiveLink();
@@ -276,18 +285,27 @@ export default function Header() {
         }
 
         @media (max-width: 768px) {
-          .desktop-nav { display: none !important; }
+          .desktop-nav, .desktop-header-content { display: none !important; }
+          .mobile-header-content { display: flex !important; flex-direction: column; width: 100%; padding: 10px 12px 12px !important; }
+          .mobile-header-top { display: flex !important; align-items: center; justify-content: space-between; width: 100%; gap: 8px; }
+          .mobile-logo { display: flex !important; align-items: center; gap: 4px; flex-shrink: 0; }
+          .mobile-auth-actions { display: flex !important; align-items: center; gap: 6px; margin-left: auto; }
           .mobile-menu-btn { display: flex !important; }
+          .mobile-search-row { display: flex !important; width: 100%; margin-top: 10px; }
+          .mobile-search-row .search-container { width: 100%; padding: 6px 12px; }
+          .mobile-search-row .search-input { width: 100%; font-size: 12px; }
           .header-wrapper { margin: 12px 12px 16px; width: calc(100% - 24px); }
         }
         @media (min-width: 769px) {
-          .mobile-menu-btn { display: none !important; }
+          .mobile-header-content, .mobile-header-top, .mobile-auth-actions, .mobile-menu-btn, .mobile-search-row { display: none !important; }
           .mobile-nav { display: none !important; }
+          .desktop-header-content { display: flex !important; }
         }
       `}</style>
 
       <header className="header-wrapper">
         <div
+          className="desktop-header-content"
           style={{
             padding: "12px 28px",
             display: "flex",
@@ -336,7 +354,7 @@ export default function Header() {
                     router.push("/");
                   } else if (link === "Services") {
                     router.push("/services");
-                  } else if (link === "Beats") {
+                  } else if (link === "Beat") {
                     router.push("/beat");
                   }
                 }}
@@ -370,7 +388,16 @@ export default function Header() {
                 value={searchVal}
                 onChange={(e) => setSearchVal(e.target.value)}
                 onFocus={() => setSearchFocused(true)}
-                onBlur={() => setSearchFocused(false)}
+                onBlur={() => {
+                  setSearchFocused(false);
+                  if (searchVal.trim()) submitSearch();
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    submitSearch();
+                  }
+                }}
               />
             </div>
 
@@ -456,6 +483,99 @@ export default function Header() {
           </button>
         </div>
 
+        <div className="mobile-header-content" style={{ display: "none", padding: "12px 16px 14px", width: "100%" }}>
+          <div className="mobile-header-top" style={{ display: "none", alignItems: "center", justifyContent: "space-between", gap: "10px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
+              <button
+                className="mobile-menu-btn"
+                onClick={() => setMobileOpen((v) => !v)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background: "transparent",
+                  border: "none",
+                  color: "#ffffff",
+                  cursor: "pointer",
+                  padding: "4px",
+                  flexShrink: 0,
+                }}
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                  {mobileOpen ? (
+                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+                  ) : (
+                    <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" />
+                  )}
+                </svg>
+              </button>
+
+              <div
+                className="mobile-logo"
+                onClick={() => router.push("/")}
+                style={{
+                  display: "none",
+                  alignItems: "center",
+                  gap: "4px",
+                  cursor: "pointer",
+                  flexShrink: 0,
+                }}
+              >
+                <span className="logo-text-accent" style={{ fontSize: "18px" }}>
+                  Prahbh
+                </span>
+                <span className="logo-text-white" style={{ fontSize: "18px" }}>
+                  Musik
+                </span>
+              </div>
+            </div>
+
+            <div className="mobile-auth-actions" style={{ display: "flex", alignItems: "center", gap: "6px", marginLeft: "auto" }}>
+              <button
+                className="login-btn"
+                onClick={() => router.push("/login")}
+                style={{ padding: "6px 10px", fontSize: "11px", borderRadius: "7px" }}
+              >
+                Sign in
+              </button>
+              <button
+                className="signup-btn"
+                onClick={() => router.push("/signup")}
+                style={{ padding: "6px 10px", fontSize: "11px", borderRadius: "7px" }}
+              >
+                Sign up
+              </button>
+            </div>
+          </div>
+
+          <div className="mobile-search-row" style={{ display: "none", width: "100%" }}>
+            <div className={`search-container${searchFocused ? " focused" : ""}`} style={{ width: "100%" }}>
+              <svg className="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="rgba(255,255,255,0.45)">
+                <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
+              </svg>
+              <input
+                className="search-input"
+                type="text"
+                placeholder="Search beats, artists..."
+                value={searchVal}
+                onChange={(e) => setSearchVal(e.target.value)}
+                onFocus={() => setSearchFocused(true)}
+                onBlur={() => {
+                  setSearchFocused(false);
+                  if (searchVal.trim()) submitSearch();
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    submitSearch();
+                  }
+                }}
+                style={{ width: "100%" }}
+              />
+            </div>
+          </div>
+        </div>
+
         {/* ── Mobile dropdown ── */}
         {mobileOpen && (
           <div
@@ -484,7 +604,7 @@ export default function Header() {
                     router.push("/");
                   } else if (link === "Services") {
                     router.push("/services");
-                  } else if (link === "Beats") {
+                  } else if (link === "Beat") {
                     router.push("/beat");
                   }
                 }}
