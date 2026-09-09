@@ -139,27 +139,46 @@ function Rule() {
 /* ─────────────────────────────────────────────
    BUTTON
 ───────────────────────────────────────────── */
-function GoldBtn({ children, large }: { children: React.ReactNode; large?: boolean }) {
+function GoldBtn({ children, large, href }: { children: React.ReactNode; large?: boolean; href?: string }) {
   const [hov, setHov] = useState(false);
-  return (
-    <button
+  const baseStyle: React.CSSProperties = {
+    fontFamily: "'Space Mono', monospace",
+    fontSize: large ? 12 : 11,
+    letterSpacing: '0.22em',
+    textTransform: 'uppercase',
+    color: hov ? '#d4a017' : '#080808',
+    background: hov ? 'transparent' : '#d4a017',
+    border: '1.5px solid #d4a017',
+    padding: large ? '18px 56px' : '14px 36px',
+    cursor: 'pointer',
+    transition: 'all 0.25s ease',
+    outline: 'none',
+    display: 'inline-block',
+    textDecoration: 'none',
+  };
+
+  const content = (
+    <span
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
-      style={{
-        fontFamily: "'Space Mono', monospace",
-        fontSize: large ? 12 : 11,
-        letterSpacing: '0.22em',
-        textTransform: 'uppercase',
-        color: hov ? '#d4a017' : '#080808',
-        background: hov ? 'transparent' : '#d4a017',
-        border: '1.5px solid #d4a017',
-        padding: large ? '18px 56px' : '14px 36px',
-        cursor: 'pointer',
-        transition: 'all 0.25s ease',
-        outline: 'none',
-        display: 'inline-block',
-      }}
+      style={baseStyle}
     >
+      {children}
+    </span>
+  );
+
+  if (href) {
+    // open Gmail compose in new tab if possible, otherwise use mailto
+    const isGmail = href.startsWith('https://mail.google.com');
+    return (
+      <a href={href} target={isGmail ? '_blank' : undefined} rel={isGmail ? 'noopener noreferrer' : undefined} style={{ display: 'inline-block' }}>
+        {content}
+      </a>
+    );
+  }
+
+  return (
+    <button type="button" onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)} style={baseStyle}>
       {children}
     </button>
   );
@@ -231,7 +250,7 @@ function HeroSection({ isMobile }: { isMobile: boolean }) {
           </p>
         </Reveal>
         <Reveal delay={260}>
-          <GoldBtn>Start Your Journey</GoldBtn>
+          <GoldBtn href={"https://mail.google.com/mail/?view=cm&fs=1&to=support@prabhmusik.com&su=Start%20Your%20Journey&body=Name:%0AEmail:%0AProject%20Type:%20%0A%0ADetails:%0A"}>Start Your Journey</GoldBtn>
         </Reveal>
         {/* Vertical text */}
         {!isMobile && (
@@ -1007,7 +1026,7 @@ function CTASection({ isMobile }: { isMobile: boolean }) {
         }}>
           Every great career started with a single decision to begin.
         </p>
-        <GoldBtn large>Start Your Journey</GoldBtn>
+        <GoldBtn large href={"https://mail.google.com/mail/?view=cm&fs=1&to=support@prabhmusik.com&su=Start%20Your%20Journey&body=Name:%0AEmail:%0AProject%20Type:%20%0A%0ADetails:%0A"}>Start Your Journey</GoldBtn>
       </Reveal>
     </section>
   );

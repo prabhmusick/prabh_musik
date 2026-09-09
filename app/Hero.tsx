@@ -34,43 +34,61 @@ export default function HeroSection() {
           .hero-section {
             min-height: auto !important;
             align-items: flex-start !important;
-            padding-top: 60px !important;
-            padding-bottom: 60px !important;
+            padding-top: 48px !important;
+            padding-bottom: 48px !important;
+            flex-direction: column !important;
           }
 
           .hero-copy {
             max-width: 100% !important;
-            padding-left: 4% !important;
-            padding-right: 4% !important;
+            padding-left: 5% !important;
+            padding-right: 5% !important;
           }
 
+          /* Put the image into document flow below the text on small screens */
           .hero-image-container {
-            position: absolute !important;
+            position: static !important;
             width: 100% !important;
-            height: 40vh !important;
-            left: 0 !important;
-            right: 0 !important;
-            bottom: 0 !important;
+            height: auto !important;
+            left: auto !important;
+            right: auto !important;
+            bottom: auto !important;
             overflow: hidden !important;
+            order: 2 !important;
+            margin-top: 20px !important;
+            display: block !important;
           }
 
           .hero-image-container img {
             width: 100% !important;
-            height: 100% !important;
+            height: auto !important;
             object-fit: cover !important;
+            border-radius: 12px;
           }
 
           .hero-section h1 {
-            font-size: 3.4rem !important;
-            line-height: 1.05 !important;
+            font-size: clamp(2.2rem, 6vw, 3.4rem) !important;
+            line-height: 1.06 !important;
+            margin-bottom: 10px !important;
           }
 
           .hero-section p {
             font-size: clamp(0.95rem, 2.5vw, 1rem) !important;
           }
 
-          .hero-section button {
-            width: fit-content !important;
+          /* Make CTAs easier to tap on mobile */
+          .hero-section button,
+          .hero-section a.hero-primary-btn,
+          .hero-section a.hero-secondary-btn {
+            width: 100% !important;
+            max-width: 420px !important;
+            padding: 14px 18px !important;
+            border-radius: 10px !important;
+            text-align: center !important;
+          }
+
+          .hero-copy {
+            z-index: 10;
           }
         }
       `}</style>

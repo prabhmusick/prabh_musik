@@ -419,10 +419,10 @@ export default function ServicesPage() {
             className="fade-up-3"
             style={{ display: "flex", gap: "20px", justifyContent: "center", flexWrap: "wrap" }}
           >
-            <button className="hero-primary-btn">
+            <Link href="/beat" className="hero-primary-btn">
               Start Your Project <ArrowRightIcon />
-            </button>
-            <button className="hero-secondary-btn">View Portfolio</button>
+            </Link>
+            <Link href="/about" className="hero-secondary-btn">View Portfolio</Link>
           </div>
         </div>
       </section>
@@ -640,7 +640,7 @@ export default function ServicesPage() {
               }}
             >
               <button className="cta-primary">Get Started Now</button>
-              <button className="cta-secondary">Contact Support</button>
+              <a className="cta-secondary" href="https://mail.google.com/mail/?view=cm&fs=1&to=support@prabhmusik.com&su=Support%20Request">Contact Support</a>
             </div>
           </div>
         </div>

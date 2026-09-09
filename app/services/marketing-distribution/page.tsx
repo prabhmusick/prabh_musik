@@ -789,6 +789,23 @@ export default function BeatsMarketingPage() {
         </div>
         <div style={{ display: "flex", gap: 14 }}>
           <button
+            type="button"
+            onClick={() => {
+              try {
+                const subject = encodeURIComponent("Let's Build Something — Project Inquiry");
+                const body = encodeURIComponent('Name:%0AEmail:%0AProject%20Type:%20%0A%0ADetails:%0A');
+                const gmail = `https://mail.google.com/mail/?view=cm&fs=1&to=support@prabhmusik.com&su=${subject}&body=${body}`;
+                const win = window.open(gmail, '_blank');
+                if (!win) {
+                  // popup blocked — fallback to mailto
+                  window.location.href = `mailto:support@prabhmusik.com?subject=${subject}&body=${body}`;
+                }
+              } catch (e) {
+                const subject = encodeURIComponent("Let's Build Something — Project Inquiry");
+                const body = encodeURIComponent('Name:%0AEmail:%0AProject%20Type:%20%0A%0ADetails:%0A');
+                window.location.href = `mailto:support@prabhmusik.com?subject=${subject}&body=${body}`;
+              }
+            }}
             style={{
               background: "#000", color: "var(--orange)",
               border: "none", padding: "16px 40px",
@@ -801,6 +818,20 @@ export default function BeatsMarketingPage() {
             Get In Touch
           </button>
           <button
+            type="button"
+            onClick={() => {
+              try {
+                const subject = encodeURIComponent('Request: Download Deck');
+                const body = encodeURIComponent('Name:%0AEmail:%0AProject%20Type:%20%0A%0AI%20would%20like%20to%20receive%20the%20marketing%20deck.%0A%0ADetails:%0A');
+                const gmail = `https://mail.google.com/mail/?view=cm&fs=1&to=support@prabhmusik.com&su=${subject}&body=${body}`;
+                const win = window.open(gmail, '_blank');
+                if (!win) window.location.href = `mailto:support@prabhmusik.com?subject=${subject}&body=${body}`;
+              } catch (e) {
+                const subject = encodeURIComponent('Request: Download Deck');
+                const body = encodeURIComponent('Name:%0AEmail:%0AProject%20Type:%20%0A%0AI%20would%20like%20to%20receive%20the%20marketing%20deck.%0A%0ADetails:%0A');
+                window.location.href = `mailto:support@prabhmusik.com?subject=${subject}&body=${body}`;
+              }
+            }}
             style={{
               background: "transparent", color: "#000",
               border: "2px solid rgba(0,0,0,0.25)", padding: "14px 40px",
