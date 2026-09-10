@@ -75,7 +75,7 @@ export function GlobalAudioPlayer() {
     setIsDraggingSeek(false);
   };
 
-  const visibleBarCount = isMobile ? 60 : 210;
+  const visibleBarCount = isMobile ? 48 : 210;
   const waveformBars = Array.from({ length: visibleBarCount }, (_, i) => {
     const step = 210 / visibleBarCount;
     const sampleIdx = Math.floor(i * step);
@@ -117,7 +117,7 @@ export function GlobalAudioPlayer() {
         borderTop: "1px solid rgba(255,255,255,0.08)",
         boxShadow: "0 -18px 48px rgba(0,0,0,0.6)",
         backdropFilter: "blur(10px)",
-        padding: isMobile ? "10px 12px calc(14px + env(safe-area-inset-bottom))" : "8px 20px 12px",
+        padding: isMobile ? "8px 12px calc(12px + env(safe-area-inset-bottom))" : "8px 20px 12px",
         boxSizing: "border-box",
         width: "100vw",
         maxWidth: "100vw",
@@ -168,11 +168,12 @@ export function GlobalAudioPlayer() {
         <div
           style={{
             height: 42,
-            marginBottom: 8,
+            marginBottom: isMobile ? 6 : 8,
             display: "grid",
             gridTemplateColumns: isMobile ? "44px minmax(0, 1fr) 44px" : "56px 1fr 56px",
             alignItems: "center",
             gap: 8,
+            paddingRight: isMobile ? 32 : 0,
           }}
         >
           <span
@@ -194,6 +195,7 @@ export function GlobalAudioPlayer() {
             onPointerUp={handlePointerUpOrCancel}
             onPointerCancel={handlePointerUpOrCancel}
             style={{
+              position: "relative",
               height: 32,
               display: "flex",
               alignItems: "center",
@@ -224,6 +226,23 @@ export function GlobalAudioPlayer() {
                 />
               );
             })}
+
+            <div
+              style={{
+                position: "absolute",
+                top: 0,
+                bottom: 0,
+                left: `${progressRatio * 100}%`,
+                transform: "translateX(-50%)",
+                width: 2,
+                background: "#fbbf24",
+                boxShadow: "0 0 6px rgba(251,191,36,0.8)",
+                borderRadius: 1,
+                pointerEvents: "none",
+                zIndex: 2,
+                transition: isDraggingSeek ? "none" : "left 0.1s linear",
+              }}
+            />
           </div>
 
           <span
