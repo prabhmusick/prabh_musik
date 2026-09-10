@@ -114,7 +114,11 @@ export function GlobalAudioPlayer() {
         borderTop: "1px solid rgba(255,255,255,0.08)",
         boxShadow: "0 -18px 48px rgba(0,0,0,0.6)",
         backdropFilter: "blur(10px)",
-        padding: isMobile ? "10px 12px 14px" : "8px 20px 12px",
+        padding: isMobile ? "10px 12px calc(14px + env(safe-area-inset-bottom))" : "8px 20px 12px",
+        boxSizing: "border-box",
+        width: "100vw",
+        maxWidth: "100vw",
+        overflowX: "hidden",
       }}
     >
       <div
@@ -234,44 +238,46 @@ export function GlobalAudioPlayer() {
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            gap: 18,
+            gap: isMobile ? 10 : 18,
             minHeight: 56,
-            flexWrap: "wrap",
+            flexWrap: isMobile ? "nowrap" : "wrap",
+            flexDirection: isMobile ? "column" : "row",
           }}
         >
           <div
             style={{
               display: "flex",
-              flexDirection: isMobile ? "column" : "row",
-              alignItems: isMobile ? "flex-start" : "center",
+              flexDirection: isMobile ? "row" : "row",
+              alignItems: isMobile ? "center" : "center",
               gap: 12,
-              minWidth: 240,
-              flex: "1 1 320px",
+              minWidth: 0,
+              width: isMobile ? "100%" : "auto",
+              flex: isMobile ? "1 1 auto" : "1 1 320px",
             }}
           >
             <img
               src={currentBeat.cover}
               alt={currentBeat.title}
               style={{
-                width: 62,
-                height: 62,
+                width: isMobile ? 52 : 62,
+                height: isMobile ? 52 : 62,
                 borderRadius: 7,
                 objectFit: "cover",
                 flexShrink: 0,
               }}
             />
             <div
-              style={{ minWidth: 0, width: isMobile ? "100%" : "auto" }}
+              style={{ minWidth: 0, width: "100%", overflow: "hidden" }}
             >
               <p
                 style={{
                   whiteSpace: "nowrap",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
-                  maxWidth: 430,
-                  fontSize: 15,
+                  maxWidth: isMobile ? "100%" : 430,
+                  fontSize: isMobile ? 14 : 15,
                   fontWeight: 700,
-                  lineHeight: 1,
+                  lineHeight: 1.2,
                   color: "#f4f6f8",
                 }}
               >
@@ -280,12 +286,12 @@ export function GlobalAudioPlayer() {
               <p
                 style={{
                   marginTop: 4,
-                  fontSize: 13,
+                  fontSize: isMobile ? 12 : 13,
                   color: "rgba(255,255,255,0.56)",
                   whiteSpace: "nowrap",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
-                  maxWidth: 430,
+                  maxWidth: isMobile ? "100%" : 430,
                 }}
               >
                 {currentBeat.producer} • {currentBeat.bpm} BPM •{" "}
@@ -300,8 +306,9 @@ export function GlobalAudioPlayer() {
               alignItems: "center",
               gap: 14,
               flex: "0 1 auto",
-              flexWrap: "wrap",
-              justifyContent: isMobile ? "flex-start" : "flex-end",
+              flexWrap: "nowrap",
+              justifyContent: isMobile ? "space-between" : "flex-end",
+              width: isMobile ? "100%" : "auto",
             }}
           >
             <button
@@ -388,11 +395,12 @@ export function GlobalAudioPlayer() {
             style={{
               display: "flex",
               alignItems: "center",
-              gap: 16,
+              gap: isMobile ? 12 : 16,
               justifyContent: isMobile ? "space-between" : "flex-end",
-              flex: "1 1 400px",
-              minWidth: 240,
-              flexWrap: "wrap",
+              flex: isMobile ? "1 1 auto" : "1 1 400px",
+              minWidth: isMobile ? 0 : 240,
+              width: isMobile ? "100%" : "auto",
+              flexWrap: "nowrap",
             }}
           >
             <button
@@ -401,9 +409,10 @@ export function GlobalAudioPlayer() {
                 border: "none",
                 background: "transparent",
                 color: isLooping ? "#fbbf24" : "rgba(255,255,255,0.9)",
-                fontSize: 13,
+                fontSize: isMobile ? 12 : 13,
                 fontWeight: 600,
                 cursor: "pointer",
+                whiteSpace: "nowrap",
               }}
             >
               ↻ Loop
@@ -416,15 +425,16 @@ export function GlobalAudioPlayer() {
                 background: "#0f6bff",
                 color: "#fff",
                 borderRadius: 10,
-                height: 38,
-                padding: "0 14px",
+                height: isMobile ? 34 : 38,
+                padding: isMobile ? "0 12px" : "0 14px",
                 display: "flex",
                 alignItems: "center",
                 gap: 9,
-                fontSize: 16,
+                fontSize: isMobile ? 13 : 16,
                 fontWeight: 700,
                 cursor: "pointer",
                 boxShadow: "0 8px 22px rgba(15,107,255,0.32)",
+                whiteSpace: "nowrap",
               }}
             >
               <svg
