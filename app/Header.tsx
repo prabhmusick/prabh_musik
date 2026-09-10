@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAppShell } from "./contexts/app-shell-context";
 
@@ -14,8 +14,31 @@ export default function Header() {
   const [searchVal, setSearchVal] = useState("");
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  useEffect(() => {
+    const syncFromUrl = () => {
+      const params = new URLSearchParams(window.location.search);
+      const nextValue = params.get("q") ?? "";
+      setSearchVal(nextValue);
+    };
+
+    syncFromUrl();
+    window.addEventListener("popstate", syncFromUrl);
+    const handleSync = (event: Event) => {
+      const nextValue = (event as CustomEvent<{ value?: string }>).detail?.value ?? "";
+      setSearchVal(nextValue);
+    };
+    window.addEventListener("app-search-sync", handleSync);
+
+    return () => {
+      window.removeEventListener("popstate", syncFromUrl);
+      window.removeEventListener("app-search-sync", handleSync);
+    };
+  }, [pathname]);
+
   const submitSearch = (value?: string) => {
     const query = (value ?? searchVal).trim();
+    setSearchVal(query);
+    window.dispatchEvent(new CustomEvent("app-search-sync", { detail: { value: query } }));
     if (!query) {
       router.push("/beat");
       return;
@@ -386,7 +409,11 @@ export default function Header() {
                 type="text"
                 placeholder="Search beats, artists..."
                 value={searchVal}
-                onChange={(e) => setSearchVal(e.target.value)}
+                onChange={(e) => {
+                  const nextValue = e.target.value;
+                  setSearchVal(nextValue);
+                  window.dispatchEvent(new CustomEvent("app-search-sync", { detail: { value: nextValue } }));
+                }}
                 onFocus={() => setSearchFocused(true)}
                 onBlur={() => {
                   setSearchFocused(false);
@@ -573,7 +600,11 @@ export default function Header() {
                 type="text"
                 placeholder="Search beats, artists..."
                 value={searchVal}
-                onChange={(e) => setSearchVal(e.target.value)}
+                onChange={(e) => {
+                  const nextValue = e.target.value;
+                  setSearchVal(nextValue);
+                  window.dispatchEvent(new CustomEvent("app-search-sync", { detail: { value: nextValue } }));
+                }}
                 onFocus={() => setSearchFocused(true)}
                 onBlur={() => {
                   setSearchFocused(false);

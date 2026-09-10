@@ -623,7 +623,11 @@ function TrendingHeader({
           </svg>
           <input
             value={search}
-            onChange={(e) => onSearch(e.target.value)}
+            onChange={(e) => {
+              const nextValue = e.target.value;
+              onSearch(nextValue);
+              window.dispatchEvent(new CustomEvent("app-search-sync", { detail: { value: nextValue } }));
+            }}
             placeholder="Search for tags"
             style={{
               flex: 1,
@@ -1154,6 +1158,44 @@ export default function BeatMarketplace() {
     priceRange: null,
     bpmRange: null,
   });
+
+  useEffect(() => {
+    const syncFromUrl = () => {
+      const params = new URLSearchParams(window.location.search);
+      const nextValue = params.get("q") ?? "";
+      setSearch(nextValue);
+      window.dispatchEvent(new CustomEvent("app-search-sync", { detail: { value: nextValue } }));
+    };
+
+    syncFromUrl();
+    window.addEventListener("popstate", syncFromUrl);
+    const handleSync = (event: Event) => {
+      const nextValue = (event as CustomEvent<{ value?: string }>).detail?.value ?? "";
+      setSearch(nextValue);
+    };
+    window.addEventListener("app-search-sync", handleSync);
+
+    return () => {
+      window.removeEventListener("popstate", syncFromUrl);
+      window.removeEventListener("app-search-sync", handleSync);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (search.trim()) {
+      params.set("q", search.trim());
+    } else {
+      params.delete("q");
+    }
+
+    const nextUrl = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}`;
+    const currentUrl = `${window.location.pathname}${window.location.search}`;
+    if (nextUrl !== currentUrl) {
+      window.history.replaceState({}, "", nextUrl);
+    }
+  }, [search]);
   const router = useRouter();
   const { isAuthenticated, addToCart } = useAppShell();
   const { currentBeat, isPlaying, playBeat } = useAudioPlayer();
