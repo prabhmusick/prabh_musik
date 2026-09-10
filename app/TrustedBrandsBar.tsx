@@ -1,81 +1,11 @@
 "use client";
 
 const brands = [
-  {
-    name: "zapier",
-    svg: (
-      <svg width="90" height="28" viewBox="0 0 90 28" fill="none">
-        <text x="0" y="22" fontFamily="'Inter', sans-serif" fontWeight="700" fontSize="22" fill="#d4820a" letterSpacing="-0.5">zap</text>
-        {/* lightning bolt dot on i */}
-        <text x="48" y="22" fontFamily="'Inter', sans-serif" fontWeight="700" fontSize="22" fill="#d4820a">ier</text>
-        <line x1="48" y1="6" x2="52" y2="12" stroke="#d4820a" strokeWidth="2" strokeLinecap="round"/>
-        <line x1="52" y1="12" x2="49" y2="12" stroke="#d4820a" strokeWidth="2" strokeLinecap="round"/>
-        <line x1="49" y1="12" x2="53" y2="18" stroke="#d4820a" strokeWidth="2" strokeLinecap="round"/>
-      </svg>
-    ),
-  },
-  {
-    name: "Spotify",
-    svg: (
-      <svg width="110" height="28" viewBox="0 0 110 28" fill="none">
-        {/* Circle icon */}
-        <circle cx="13" cy="14" r="13" fill="#d4820a"/>
-        <path d="M7 10.5 Q13 8 19 10.5" stroke="#000" strokeWidth="2" strokeLinecap="round" fill="none"/>
-        <path d="M7.5 14 Q13 11.5 18.5 14" stroke="#000" strokeWidth="2" strokeLinecap="round" fill="none"/>
-        <path d="M8.5 17.5 Q13 15.5 17.5 17.5" stroke="#000" strokeWidth="1.8" strokeLinecap="round" fill="none"/>
-        <text x="30" y="21" fontFamily="'Inter', sans-serif" fontWeight="700" fontSize="20" fill="#d4820a">Spotify</text>
-      </svg>
-    ),
-  },
-  {
-    name: "zoom",
-    svg: (
-      <svg width="90" height="28" viewBox="0 0 90 28" fill="none">
-        <text x="0" y="22" fontFamily="'Inter', sans-serif" fontWeight="700" fontSize="22" fill="#d4820a" letterSpacing="1">zoom</text>
-      </svg>
-    ),
-  },
-  {
-    name: "slack",
-    svg: (
-      <svg width="100" height="28" viewBox="0 0 100 28" fill="none">
-        {/* Slack hash-like icon */}
-        <g transform="translate(0,2)">
-          {/* Top-left pill */}
-          <rect x="0" y="0" width="7" height="14" rx="3.5" fill="#d4820a"/>
-          {/* Bottom-left pill */}
-          <rect x="0" y="9" width="14" height="7" rx="3.5" fill="#d4820a" opacity="0.7"/>
-          {/* Top-right pill */}
-          <rect x="9" y="0" width="14" height="7" rx="3.5" fill="#d4820a" opacity="0.7"/>
-          {/* Right pill */}
-          <rect x="16" y="0" width="7" height="14" rx="3.5" fill="#d4820a" opacity="0.5"/>
-        </g>
-        <text x="30" y="21" fontFamily="'Inter', sans-serif" fontWeight="700" fontSize="20" fill="#d4820a">slack</text>
-      </svg>
-    ),
-  },
-  {
-    name: "amazon",
-    svg: (
-      <svg width="110" height="28" viewBox="0 0 110 28" fill="none">
-        <text x="0" y="20" fontFamily="'Inter', sans-serif" fontWeight="700" fontSize="20" fill="#d4820a">amazon</text>
-        {/* Smile arrow */}
-        <path d="M2 24 Q35 30 68 24" stroke="#d4820a" strokeWidth="2" strokeLinecap="round" fill="none"/>
-        <path d="M63 21 L68 24 L63 27" fill="none" stroke="#d4820a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
-    ),
-  },
-  {
-    name: "Adobe",
-    svg: (
-      <svg width="100" height="28" viewBox="0 0 100 28" fill="none">
-        {/* Adobe A triangle */}
-        <path d="M0 24 L10 4 L20 24Z" fill="#d4820a"/>
-        <path d="M6 18 L14 18" stroke="#1a1a1a" strokeWidth="2"/>
-        <text x="26" y="21" fontFamily="'Inter', sans-serif" fontWeight="700" fontSize="20" fill="#d4820a">Adobe</text>
-      </svg>
-    ),
-  },
+  { name: "spotify" },
+  { name: "zap ler" },
+  { name: "wynk" },
+  { name: "apple music" },
+  { name: "amazon" },
 ];
 
 // Duplicate for seamless infinite scroll
@@ -107,15 +37,27 @@ export default function TrustedBrands() {
         .brand-item {
           display: flex;
           align-items: center;
+          justify-content: center;
           opacity: 0.9;
           transition: opacity 0.2s ease, transform 0.2s ease;
           cursor: pointer;
           flex-shrink: 0;
+          min-width: 128px;
         }
 
         .brand-item:hover {
           opacity: 1;
           transform: translateY(-2px);
+        }
+
+        .brand-name {
+          font-family: 'Inter', sans-serif;
+          font-size: 20px;
+          font-weight: 700;
+          letter-spacing: -0.04em;
+          color: rgba(255,255,255,0.85);
+          text-transform: lowercase;
+          white-space: nowrap;
         }
 
         @media (max-width: 900px) {
@@ -202,7 +144,7 @@ export default function TrustedBrands() {
           <div className="marquee-track">
             {allBrands.map((brand, i) => (
               <div key={`${brand.name}-${i}`} className="brand-item">
-                {brand.svg}
+                <span className="brand-name">{brand.name}</span>
               </div>
             ))}
           </div>
