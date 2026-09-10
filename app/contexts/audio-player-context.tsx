@@ -30,6 +30,7 @@ interface AudioPlayerContextValue {
 }
 
 const AudioPlayerContext = createContext<AudioPlayerContextValue | undefined>(undefined);
+const DEFAULT_PREVIEW_URL = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3";
 
 export function AudioPlayerProvider({ children }: { children: React.ReactNode }) {
   const [currentBeat, setCurrentBeat] = useState<Beat | null>(null);
@@ -93,7 +94,12 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
         setBeatsList(newBeatsList);
       }
 
-      if (currentBeat?.id === beat.id) {
+      const normalizedBeat = {
+        ...beat,
+        previewUrl: (beat.previewUrl || "").trim() || DEFAULT_PREVIEW_URL,
+      };
+
+      if (currentBeat?.id === normalizedBeat.id) {
         if (audio.paused) {
           await audio.play().catch(() => {});
         } else {
@@ -102,17 +108,16 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
         return;
       }
 
-      if (!beat.previewUrl) {
-        console.warn("No preview URL available for this beat");
-        return;
+      if (!(beat.previewUrl || "").trim()) {
+        console.warn("No preview URL available for this beat; using fallback demo preview.");
       }
 
-      audio.src = beat.previewUrl;
+      audio.src = normalizedBeat.previewUrl;
       audio.currentTime = 0;
-      setCurrentBeat(beat);
+      setCurrentBeat(normalizedBeat);
       setCurrentTime(0);
 
-      const initialDuration = Number(beat.duration);
+      const initialDuration = Number(normalizedBeat.duration);
       setDuration(Number.isFinite(initialDuration) && initialDuration > 0 ? initialDuration : 0);
 
       await audio.play().catch(() => {});
