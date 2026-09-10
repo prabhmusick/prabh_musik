@@ -9,7 +9,7 @@ const navLinks = ["Home", "Beat", "Services", "About"];
 export default function Header() {
   const router = useRouter();
   const pathname = usePathname();
-  const { isAuthenticated, user, cart, cartOpen, openCart, closeCart, logout } = useAppShell();
+  const { isAuthenticated, user, cart, openCart, logout } = useAppShell();
   const [searchFocused, setSearchFocused] = useState(false);
   const [searchVal, setSearchVal] = useState("");
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -531,20 +531,35 @@ export default function Header() {
             </div>
 
             <div className="mobile-auth-actions" style={{ display: "flex", alignItems: "center", gap: "6px", marginLeft: "auto" }}>
-              <button
-                className="login-btn"
-                onClick={() => router.push("/login")}
-                style={{ padding: "6px 10px", fontSize: "11px", borderRadius: "7px" }}
-              >
-                Sign in
-              </button>
-              <button
-                className="signup-btn"
-                onClick={() => router.push("/signup")}
-                style={{ padding: "6px 10px", fontSize: "11px", borderRadius: "7px" }}
-              >
-                Sign up
-              </button>
+              {isAuthenticated ? (
+                <button
+                  className="profile-btn"
+                  onClick={() => router.push("/profile")}
+                  style={{ padding: "8px 12px", fontSize: "11px", borderRadius: "7px" }}
+                >
+                  <span style={{ width: 20, height: 20, borderRadius: "50%", background: "linear-gradient(135deg, rgba(245, 158, 11, 0.4), rgba(217, 119, 6, 0.2))", border: "1px solid rgba(245, 158, 11, 0.4)", color: "#ffb84d", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 700, marginRight: 6 }}>
+                    {user?.fullName?.charAt(0) || "P"}
+                  </span>
+                  Profile
+                </button>
+              ) : (
+                <>
+                  <button
+                    className="login-btn"
+                    onClick={() => router.push("/login")}
+                    style={{ padding: "6px 10px", fontSize: "11px", borderRadius: "7px" }}
+                  >
+                    Sign in
+                  </button>
+                  <button
+                    className="signup-btn"
+                    onClick={() => router.push("/signup")}
+                    style={{ padding: "6px 10px", fontSize: "11px", borderRadius: "7px" }}
+                  >
+                    Sign up
+                  </button>
+                </>
+              )}
             </div>
           </div>
 

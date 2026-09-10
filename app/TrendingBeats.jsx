@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getBeats } from "@/services/beat.service";
+import { useAudioPlayer } from "./contexts/audio-player-context";
 import { useAppShell } from "./contexts/app-shell-context";
 
 // Color palettes for visual variety
@@ -34,9 +35,8 @@ function formatBeatForDisplay(beat, index) {
   const palette = colorPalettes[index % colorPalettes.length];
   return {
     ...beat,
-    songs: 412, // Default fallback
     ...palette,
-    id: beat.id,
+    id: String(beat.id),
     genre: beat.genre || "MUSIC",
     // Support both backend raw shape and mapped frontend shape
     label: beat.title || beat.beat_name,
@@ -85,7 +85,7 @@ function ChevronIcon({ direction }) {
   );
 }
 
-function BeatCard({ beat, index, onPurchase }) {
+function BeatCard({ beat, index, onPurchase, onPlay }) {
   const [hovered, setHovered] = useState(false);
   const [playHovered, setPlayHovered] = useState(false);
   const [cartHovered, setCartHovered] = useState(false);
@@ -93,12 +93,14 @@ function BeatCard({ beat, index, onPurchase }) {
   return (
     <div
       className="beat-card-container"
+      onClick={() => onPlay(beat)}
       style={{
         display: "flex",
         flexDirection: "column",
         gap: "14px",
         animation: `fadeSlideUp 0.5s ease both`,
         animationDelay: `${index * 0.1}s`,
+        cursor: "pointer",
       }}
     >
       {/* Image Card */}
@@ -277,6 +279,10 @@ function BeatCard({ beat, index, onPurchase }) {
         >
           <button
             className="play-button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onPlay(beat);
+            }}
             onMouseEnter={() => setPlayHovered(true)}
             onMouseLeave={() => setPlayHovered(false)}
             style={{
@@ -311,24 +317,10 @@ function BeatCard({ beat, index, onPurchase }) {
             fontWeight: "700",
             color: "#ffffff",
             letterSpacing: "0.5px",
-            marginBottom: "4px",
-          }}
-        >
-          {beat.genre}
-        </div>
-        <div
-          className="beat-card-songs"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "5px",
-            color: "rgba(255,255,255,0.5)",
-            fontSize: "12px",
             marginBottom: "14px",
           }}
         >
-          <MusicIcon />
-          <span>{beat.songs} Songs</span>
+          {beat.genre}
         </div>
 
         {/* Add to Cart Button */}
@@ -375,7 +367,47 @@ export default function TrendingTypeBeats() {
   const [leftHovered, setLeftHovered] = useState(false);
   const [rightHovered, setRightHovered] = useState(false);
   const router = useRouter();
+  const { playBeat } = useAudioPlayer();
   const { isAuthenticated, addToCart } = useAppShell();
+
+  const handlePlay = (beat) => {
+    playBeat(
+      {
+        id: String(beat.id),
+        title: beat.label || beat.title || beat.beat_name || "Untitled",
+        producer: beat.producer || beat.artist_name || "Unknown Artist",
+        price: beat.price ?? null,
+        cover:
+          beat.cover ||
+          beat.img ||
+          beat.cover_image_url ||
+          beat.banner_image_url ||
+          "",
+        genre: beat.genre,
+        bpm: beat.bpm,
+        duration: beat.duration ?? 0,
+        previewUrl: beat.previewUrl || beat.audio_url || "",
+        plays: beat.plays || 0,
+      },
+      beats.map((item) => ({
+        id: String(item.id),
+        title: item.label || item.title || item.beat_name || "Untitled",
+        producer: item.producer || item.artist_name || "Unknown Artist",
+        price: item.price ?? null,
+        cover:
+          item.cover ||
+          item.img ||
+          item.cover_image_url ||
+          item.banner_image_url ||
+          "",
+        genre: item.genre,
+        bpm: item.bpm,
+        duration: item.duration ?? 0,
+        previewUrl: item.previewUrl || item.audio_url || "",
+        plays: item.plays || 0,
+      }))
+    );
+  };
 
   const handlePurchase = (beat) => {
     if (!isAuthenticated) {
@@ -612,7 +644,7 @@ export default function TrendingTypeBeats() {
                   }}
                 >
                   Say goodbye to interruptions and enjoy uninterrupted music
-                  streaming. With our ad-free platform, you'll have access to
+                  streaming. With our ad-free platform, you&apos;ll have access to
                   millions to songs
                 </p>
               </div>
@@ -677,6 +709,7 @@ export default function TrendingTypeBeats() {
                   beat={beat}
                   index={i}
                   onPurchase={handlePurchase}
+                  onPlay={handlePlay}
                 />
               ))}
             </div>

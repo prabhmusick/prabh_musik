@@ -17,7 +17,7 @@ const monoFont =
   '"JetBrains Mono","SF Mono",ui-monospace,Menlo,Consolas,monospace';
 
 export default function ProfilePage() {
-  const { user, isAuthenticated, logout, purchasedBeats, wishlist, cart } =
+  const { user, isAuthenticated, logout, purchasedBeats, cart } =
     useAppShell();
 
   if (!isAuthenticated || !user) {
@@ -65,10 +65,10 @@ export default function ProfilePage() {
               margin: "0 0 8px",
             }}
           >
-            Sign in to your crate
+            Sign in to your cart
           </h2>
           <p style={{ color: MUTED, margin: "0 0 26px", lineHeight: 1.5 }}>
-            Your purchased beats, saved tracks, and cart live here once you're
+            Your purchased beats, saved tracks, and cart live here once you&apos;re
             signed in.
           </p>
           <div style={{ display: "flex", justifyContent: "center", gap: 10 }}>
@@ -112,14 +112,12 @@ export default function ProfilePage() {
 
   const counts = {
     purchased: purchasedBeats.length,
-    wishlist: wishlist.length,
     cart: cart.length,
   };
-  const maxCount = Math.max(counts.purchased, counts.wishlist, counts.cart, 1);
+  const maxCount = Math.max(counts.purchased, counts.cart, 1);
 
   const bars = [
     { label: "Purchased", value: counts.purchased, color: GOLD },
-    { label: "Wishlist", value: counts.wishlist, color: AMBER },
     { label: "Cart", value: counts.cart, color: "#e0651f" },
   ];
 
@@ -283,7 +281,6 @@ export default function ProfilePage() {
           }}
         >
           <Crate title="Purchased beats" items={purchasedBeats} empty="No purchases yet." ctaHref="/browse" ctaLabel="Browse beats" />
-          <Crate title="Wishlist" items={wishlist} empty="No saved beats." ctaHref="/browse" ctaLabel="Discover beats" />
         </section>
 
         {/* Cart */}

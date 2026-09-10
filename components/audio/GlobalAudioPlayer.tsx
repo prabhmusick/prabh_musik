@@ -265,9 +265,6 @@ export function GlobalAudioPlayer() {
             >
               <p
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
                   whiteSpace: "nowrap",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
@@ -278,30 +275,7 @@ export function GlobalAudioPlayer() {
                   color: "#f4f6f8",
                 }}
               >
-                <span
-                  style={{
-                    fontSize: 13,
-                    letterSpacing: "0.06em",
-                    fontWeight: 600,
-                    color: "rgba(255,255,255,0.55)",
-                    background: "rgba(255,255,255,0.08)",
-                    borderRadius: 4,
-                    padding: "3px 6px",
-                    flexShrink: 0,
-                  }}
-                >
-                  AD
-                </span>
-                <span
-                  style={{
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  }}
-                >
-                  "{currentBeat.title}" - Afro Fusion Instrumental x
-                  Afr...
-                </span>
+                {currentBeat.title}
               </p>
               <p
                 style={{
@@ -433,20 +407,6 @@ export function GlobalAudioPlayer() {
               }}
             >
               ↻ Loop
-            </button>
-
-            <button
-              style={{
-                border: "none",
-                background: "transparent",
-                color: "rgba(255,255,255,0.88)",
-                fontSize: 23,
-                fontWeight: 600,
-                cursor: "pointer",
-                lineHeight: 1,
-              }}
-            >
-              ⋯
             </button>
 
             <button
