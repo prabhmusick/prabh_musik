@@ -75,9 +75,12 @@ export function GlobalAudioPlayer() {
     setIsDraggingSeek(false);
   };
 
-  const waveformBars = Array.from({ length: 210 }, (_, i) => {
+  const visibleBarCount = isMobile ? 60 : 210;
+  const waveformBars = Array.from({ length: visibleBarCount }, (_, i) => {
+    const step = 210 / visibleBarCount;
+    const sampleIdx = Math.floor(i * step);
     const wave =
-      Math.sin(i * 0.21) + Math.sin(i * 0.09 + 1.3) + Math.sin(i * 0.045 + 2.2);
+      Math.sin(sampleIdx * 0.21) + Math.sin(sampleIdx * 0.09 + 1.3) + Math.sin(sampleIdx * 0.045 + 2.2);
     const normalized = Math.abs(wave / 3);
     return 7 + Math.round(normalized * 30);
   });
@@ -167,7 +170,7 @@ export function GlobalAudioPlayer() {
             height: 42,
             marginBottom: 8,
             display: "grid",
-            gridTemplateColumns: isMobile ? "1fr" : "56px 1fr 56px",
+            gridTemplateColumns: isMobile ? "44px minmax(0, 1fr) 44px" : "56px 1fr 56px",
             alignItems: "center",
             gap: 8,
           }}
@@ -195,10 +198,11 @@ export function GlobalAudioPlayer() {
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
-              gap: 2,
+              gap: isMobile ? 1 : 2,
               cursor: "pointer",
               overflow: "hidden",
               touchAction: "none",
+              minWidth: 0,
             }}
           >
             {waveformBars.map((barHeight, i) => {
@@ -208,13 +212,14 @@ export function GlobalAudioPlayer() {
                 <span
                   key={i}
                   style={{
-                    width: 3,
+                    width: isMobile ? 2 : 3,
                     height: barHeight,
                     borderRadius: 999,
                     background: played
                       ? "#f3f6f6"
                       : "rgba(255,255,255,0.14)",
                     transition: "background 0.14s linear",
+                    flexShrink: 0,
                   }}
                 />
               );
