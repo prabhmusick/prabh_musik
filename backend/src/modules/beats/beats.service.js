@@ -126,6 +126,13 @@ const toPublicBeatDto = (beatEntity) => {
         : null,
     musical_key: beatEntity.musical_key || null,
     description: beatEntity.description || null,
+    related_artist_name: beatEntity.related_artist_name || null,
+    related_artist_image_url: resolvePublicUrl(
+      beatEntity.related_artist_image_key,
+    ),
+    artist_id: beatEntity.artist_public_id || beatEntity.artist_id || null,
+    play_count: Number(beatEntity.play_count) || 0,
+    is_trending: Boolean(beatEntity.is_trending),
     audio_url: resolvePublicUrl(beatEntity.audio_key),
     cover_url: resolvePublicUrl(beatEntity.cover_key),
     banner_url: resolvePublicUrl(beatEntity.banner_key),
@@ -197,6 +204,16 @@ const createBeat = async (beatInput, creatorUserId) => {
   const slug = await generateUniqueSlug(title);
 
   // 3. Assemble Prepared Persistence Payload
+  let artistId = null;
+  if (beatInput.artist_id || beatInput.artistId) {
+    const artist =
+      await require("../artists/artists.repository").findByPublicId(
+        String(beatInput.artist_id || beatInput.artistId),
+      );
+    if (!artist) throw new AppError("Artist not found.", 400);
+    artistId = artist.id;
+  }
+
   const preparedPayload = {
     public_id: publicId,
     title,
@@ -211,6 +228,14 @@ const createBeat = async (beatInput, creatorUserId) => {
     description: beatInput.description
       ? String(beatInput.description).trim()
       : null,
+    related_artist_name: beatInput.related_artist_name
+      ? String(beatInput.related_artist_name).trim()
+      : null,
+    related_artist_image_key: beatInput.related_artist_image_key
+      ? String(beatInput.related_artist_image_key).trim()
+      : null,
+    artist_id: artistId,
+    is_trending: Boolean(beatInput.is_trending),
     audio_key: audioKey,
     cover_key: beatInput.cover_key ? String(beatInput.cover_key).trim() : null,
     banner_key: beatInput.banner_key
@@ -307,6 +332,21 @@ const listPublicBeats = async (options = {}) => {
   }
 
   return entities.map(toPublicBeatDto);
+};
+
+const listTrendingBeats = async (limit = 4) => {
+  const safeLimit = Math.min(Math.max(Number(limit) || 4, 1), 20);
+  const entities = await repository.listTrendingBeats(safeLimit);
+  return entities.map(toPublicBeatDto);
+};
+
+const recordPlay = async (publicId) => {
+  if (!publicId || typeof publicId !== "string" || !publicId.trim()) {
+    throw new AppError("Public ID is required.", 400);
+  }
+  const entity = await repository.recordPlay(publicId.trim());
+  if (!entity) throw new AppError("Beat not found.", 404);
+  return toPublicBeatDto(entity);
 };
 
 /**
@@ -466,6 +506,36 @@ const updateBeat = async (publicId, updatesPayload, adminUserId) => {
     sanitizedPayload.description = updatesPayload.description
       ? String(updatesPayload.description).trim()
       : null;
+  }
+
+  if (updatesPayload.related_artist_name !== undefined) {
+    sanitizedPayload.related_artist_name = updatesPayload.related_artist_name
+      ? String(updatesPayload.related_artist_name).trim()
+      : null;
+  }
+
+  if (updatesPayload.related_artist_image_key !== undefined) {
+    sanitizedPayload.related_artist_image_key =
+      updatesPayload.related_artist_image_key
+        ? String(updatesPayload.related_artist_image_key).trim()
+        : null;
+  }
+
+  if (updatesPayload.artist_id !== undefined) {
+    if (!updatesPayload.artist_id) {
+      sanitizedPayload.artist_id = null;
+    } else {
+      const artist =
+        await require("../artists/artists.repository").findByPublicId(
+          String(updatesPayload.artist_id),
+        );
+      if (!artist) throw new AppError("Artist not found.", 400);
+      sanitizedPayload.artist_id = artist.id;
+    }
+  }
+
+  if (updatesPayload.is_trending !== undefined) {
+    sanitizedPayload.is_trending = updatesPayload.is_trending ? 1 : 0;
   }
 
   if (updatesPayload.audio_key !== undefined) {
@@ -628,6 +698,8 @@ module.exports = {
   getBeatByPublicId,
   getBeatBySlug,
   listPublicBeats,
+  listTrendingBeats,
+  recordPlay,
   listAdminBeats,
   updateBeat,
   updateStatus,

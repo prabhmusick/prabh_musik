@@ -20,7 +20,7 @@ const createBeat = async (req, res, next) => {
 
     res.status(201).json({
       success: true,
-      data: beatDto
+      data: beatDto,
     });
   } catch (error) {
     next(error);
@@ -41,7 +41,7 @@ const getBeatByPublicId = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      data: beatDto
+      data: beatDto,
     });
   } catch (error) {
     next(error);
@@ -62,7 +62,7 @@ const getBeatBySlug = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      data: beatDto
+      data: beatDto,
     });
   } catch (error) {
     next(error);
@@ -84,15 +84,34 @@ const listPublicBeats = async (req, res, next) => {
       limit: req.query.limit,
       offset: req.query.offset,
       sortBy: req.query.sortBy,
-      sortOrder: req.query.sortOrder
+      sortOrder: req.query.sortOrder,
     };
 
     const beats = await service.listPublicBeats(options);
 
     res.status(200).json({
       success: true,
-      data: beats
+      data: beats,
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const listTrendingBeats = async (req, res, next) => {
+  try {
+    const limit = Number(req.query.limit) || 4;
+    const beats = await service.listTrendingBeats(limit);
+    res.status(200).json({ success: true, data: beats });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const recordPlay = async (req, res, next) => {
+  try {
+    const beat = await service.recordPlay(req.params.publicId);
+    res.status(200).json({ success: true, data: beat });
   } catch (error) {
     next(error);
   }
@@ -114,14 +133,14 @@ const listAdminBeats = async (req, res, next) => {
       limit: req.query.limit,
       offset: req.query.offset,
       sortBy: req.query.sortBy,
-      sortOrder: req.query.sortOrder
+      sortOrder: req.query.sortOrder,
     };
 
     const beats = await service.listAdminBeats(options);
 
     res.status(200).json({
       success: true,
-      data: beats
+      data: beats,
     });
   } catch (error) {
     next(error);
@@ -142,12 +161,12 @@ const updateBeat = async (req, res, next) => {
     const updatedBeatDto = await service.updateBeat(
       req.params.publicId,
       req.body,
-      adminUserId
+      adminUserId,
     );
 
     res.status(200).json({
       success: true,
-      data: updatedBeatDto
+      data: updatedBeatDto,
     });
   } catch (error) {
     next(error);
@@ -170,12 +189,12 @@ const updateStatus = async (req, res, next) => {
     const updatedBeatDto = await service.updateStatus(
       req.params.publicId,
       status,
-      adminUserId
+      adminUserId,
     );
 
     res.status(200).json({
       success: true,
-      data: updatedBeatDto
+      data: updatedBeatDto,
     });
   } catch (error) {
     next(error);
@@ -187,7 +206,9 @@ module.exports = {
   getBeatByPublicId,
   getBeatBySlug,
   listPublicBeats,
+  listTrendingBeats,
+  recordPlay,
   listAdminBeats,
   updateBeat,
-  updateStatus
+  updateStatus,
 };

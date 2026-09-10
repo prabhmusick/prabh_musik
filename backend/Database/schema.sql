@@ -10,6 +10,7 @@ DROP TABLE IF EXISTS ownerships;
 DROP TABLE IF EXISTS order_items;
 DROP TABLE IF EXISTS orders;
 DROP TABLE IF EXISTS beat_purchases;
+DROP TABLE IF EXISTS cart_items;
 DROP TABLE IF EXISTS beats;
 DROP TABLE IF EXISTS email_verification_tokens;
 DROP TABLE IF EXISTS password_reset_tokens;
@@ -95,6 +96,17 @@ CREATE TABLE email_verification_tokens (
 -- BEATS
 -- ==========================================
 
+CREATE TABLE artists (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    public_id TEXT UNIQUE NOT NULL,
+    name TEXT NOT NULL,
+    phone TEXT,
+    email TEXT,
+    image_key TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE beats (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     public_id TEXT UNIQUE NOT NULL,            -- Pattern: bt_<ULID> (Exposed to frontend)
@@ -106,6 +118,11 @@ CREATE TABLE beats (
     bpm INTEGER,
     musical_key TEXT,                          -- Catalog metadata (e.g. 'Cmin', 'Amaj')
     description TEXT,
+    related_artist_name TEXT,
+    related_artist_image_key TEXT,
+    artist_id INTEGER,
+    play_count INTEGER NOT NULL DEFAULT 0,
+    is_trending INTEGER NOT NULL DEFAULT 0 CHECK(is_trending IN (0, 1)),
     audio_key TEXT NOT NULL,                   -- Pattern: audio/bt_<public_id>.mp3
     cover_key TEXT,                            -- Pattern: covers/bt_<public_id>_<timestamp>.webp
     banner_key TEXT,                           -- Pattern: banners/bt_<public_id>_<timestamp>.webp
@@ -114,7 +131,8 @@ CREATE TABLE beats (
     created_by INTEGER NOT NULL,               -- Foreign key referencing users.id
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY(created_by) REFERENCES users(id) ON DELETE RESTRICT
+    FOREIGN KEY(created_by) REFERENCES users(id) ON DELETE RESTRICT,
+    FOREIGN KEY(artist_id) REFERENCES artists(id) ON DELETE SET NULL
 );
 
 -- ==========================================
@@ -129,6 +147,16 @@ CREATE TABLE beat_purchases (
     purchased_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(user_id) REFERENCES users(id),
     FOREIGN KEY(beat_id) REFERENCES beats(id)
+);
+
+CREATE TABLE cart_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    beat_id INTEGER NOT NULL,
+    added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY(beat_id) REFERENCES beats(id) ON DELETE CASCADE,
+    UNIQUE(user_id, beat_id)
 );
 
 CREATE TABLE orders (
@@ -238,6 +266,8 @@ CREATE INDEX idx_order_items_beat ON order_items(beat_id);
 CREATE INDEX idx_ownerships_user ON ownerships(user_id);
 CREATE INDEX idx_ownerships_beat ON ownerships(beat_id);
 CREATE INDEX idx_ownerships_order ON ownerships(order_id);
+CREATE INDEX idx_beat_purchases_user ON beat_purchases(user_id);
+CREATE INDEX idx_cart_items_user ON cart_items(user_id);
 CREATE INDEX idx_ownerships_status ON ownerships(status);
 CREATE UNIQUE INDEX idx_unique_ownership ON ownerships(user_id, beat_id, order_id);
 

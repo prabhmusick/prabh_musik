@@ -5,17 +5,17 @@ const SELLING_STATUS_WHITELIST = ["available", "sold"];
 
 /**
  * Trims strings or returns value
- * 
+ *
  * @param {*} value - The input value to clean
  * @returns {*} Cleaned value
  */
-const cleanString = (value) => 
+const cleanString = (value) =>
   typeof value === "string" ? value.trim() : value;
 
 /**
  * Validates payload parameters for beat creation.
  * Throws AppError on schema violations.
- * 
+ *
  * @param {object} data - Input properties payload
  * @returns {object} Cleaned, validated, and normalized data
  */
@@ -55,7 +55,11 @@ const validateCreateBeat = (data) => {
 
   // Duration validation
   let duration = null;
-  if (data.duration !== undefined && data.duration !== null && data.duration !== "") {
+  if (
+    data.duration !== undefined &&
+    data.duration !== null &&
+    data.duration !== ""
+  ) {
     duration = Number(data.duration);
     if (Number.isNaN(duration) || duration < 0 || !Number.isInteger(duration)) {
       throw new AppError("Duration must be a valid integer number", 400);
@@ -65,12 +69,18 @@ const validateCreateBeat = (data) => {
   // Status Whitelists
   const status = cleanString(data.status) || "draft";
   if (!STATUS_WHITELIST.includes(status)) {
-    throw new AppError(`Invalid status. Must be one of: ${STATUS_WHITELIST.join(", ")}`, 400);
+    throw new AppError(
+      `Invalid status. Must be one of: ${STATUS_WHITELIST.join(", ")}`,
+      400,
+    );
   }
 
   const selling_status = cleanString(data.selling_status) || "available";
   if (!SELLING_STATUS_WHITELIST.includes(selling_status)) {
-    throw new AppError(`Invalid selling_status. Must be one of: ${SELLING_STATUS_WHITELIST.join(", ")}`, 400);
+    throw new AppError(
+      `Invalid selling_status. Must be one of: ${SELLING_STATUS_WHITELIST.join(", ")}`,
+      400,
+    );
   }
 
   return {
@@ -84,17 +94,20 @@ const validateCreateBeat = (data) => {
     beat_type: cleanString(data.beat_type) || null,
     genre: cleanString(data.genre) || null,
     description: cleanString(data.description) || null,
+    related_artist_name: cleanString(data.related_artist_name) || null,
+    related_artist_image_key:
+      cleanString(data.related_artist_image_key) || null,
     cover_key: cleanString(data.cover_key) || null,
     banner_key: cleanString(data.banner_key) || null,
     track_type: cleanString(data.track_type) || null,
-    mood: cleanString(data.mood) || null
+    mood: cleanString(data.mood) || null,
   };
 };
 
 /**
  * Validates payload parameters for beat updates.
  * Throws AppError on schema violations.
- * 
+ *
  * @param {object} data - Updated properties payload
  * @returns {object} Sanitized and type-validated update fields
  */
@@ -150,7 +163,11 @@ const validateUpdateBeat = (data) => {
       sanitized.duration = null;
     } else {
       const duration = Number(data.duration);
-      if (Number.isNaN(duration) || duration < 0 || !Number.isInteger(duration)) {
+      if (
+        Number.isNaN(duration) ||
+        duration < 0 ||
+        !Number.isInteger(duration)
+      ) {
         throw new AppError("Duration must be a valid integer number", 400);
       }
       sanitized.duration = duration;
@@ -160,7 +177,10 @@ const validateUpdateBeat = (data) => {
   if (data.status !== undefined) {
     const status = cleanString(data.status);
     if (!STATUS_WHITELIST.includes(status)) {
-      throw new AppError(`Invalid status. Must be one of: ${STATUS_WHITELIST.join(", ")}`, 400);
+      throw new AppError(
+        `Invalid status. Must be one of: ${STATUS_WHITELIST.join(", ")}`,
+        400,
+      );
     }
     sanitized.status = status;
   }
@@ -168,7 +188,10 @@ const validateUpdateBeat = (data) => {
   if (data.selling_status !== undefined) {
     const selling_status = cleanString(data.selling_status);
     if (!SELLING_STATUS_WHITELIST.includes(selling_status)) {
-      throw new AppError(`Invalid selling_status. Must be one of: ${SELLING_STATUS_WHITELIST.join(", ")}`, 400);
+      throw new AppError(
+        `Invalid selling_status. Must be one of: ${SELLING_STATUS_WHITELIST.join(", ")}`,
+        400,
+      );
     }
     sanitized.selling_status = selling_status;
   }
@@ -178,10 +201,12 @@ const validateUpdateBeat = (data) => {
     "beat_type",
     "genre",
     "description",
+    "related_artist_name",
+    "related_artist_image_key",
     "cover_key",
     "banner_key",
     "track_type",
-    "mood"
+    "mood",
   ];
 
   stringFields.forEach((field) => {
@@ -195,5 +220,5 @@ const validateUpdateBeat = (data) => {
 
 module.exports = {
   validateCreateBeat,
-  validateUpdateBeat
+  validateUpdateBeat,
 };
