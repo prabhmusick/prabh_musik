@@ -31,8 +31,17 @@ const colorPalettes = [
 ];
 
 // Map API beat to display format
+const DEFAULT_PREVIEW_URL = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3";
+
 function formatBeatForDisplay(beat, index) {
   const palette = colorPalettes[index % colorPalettes.length];
+  const previewUrl =
+    beat.previewUrl ||
+    beat.preview_url ||
+    beat.audio_url ||
+    (beat.assets && (beat.assets.previewAudio || beat.assets.wavFile)) ||
+    DEFAULT_PREVIEW_URL;
+
   return {
     ...beat,
     ...palette,
@@ -40,6 +49,7 @@ function formatBeatForDisplay(beat, index) {
     genre: beat.genre || "MUSIC",
     // Support both backend raw shape and mapped frontend shape
     label: beat.title || beat.beat_name,
+    previewUrl,
     img:
       (beat.assets && (beat.assets.coverImage || beat.assets.bannerImage)) ||
       beat.cover_image_url ||
@@ -371,24 +381,31 @@ export default function TrendingTypeBeats() {
   const { isAuthenticated, addToCart } = useAppShell();
 
   const handlePlay = (beat) => {
+    const resolvedBeat = {
+      id: String(beat.id),
+      title: beat.label || beat.title || beat.beat_name || "Untitled",
+      producer: beat.producer || beat.artist_name || "Unknown Artist",
+      price: beat.price ?? null,
+      cover:
+        beat.cover ||
+        beat.img ||
+        beat.cover_image_url ||
+        beat.banner_image_url ||
+        "",
+      genre: beat.genre,
+      bpm: beat.bpm,
+      duration: beat.duration ?? 0,
+      previewUrl:
+        beat.previewUrl ||
+        beat.preview_url ||
+        beat.audio_url ||
+        (beat.assets && (beat.assets.previewAudio || beat.assets.wavFile)) ||
+        DEFAULT_PREVIEW_URL,
+      plays: beat.plays || 0,
+    };
+
     playBeat(
-      {
-        id: String(beat.id),
-        title: beat.label || beat.title || beat.beat_name || "Untitled",
-        producer: beat.producer || beat.artist_name || "Unknown Artist",
-        price: beat.price ?? null,
-        cover:
-          beat.cover ||
-          beat.img ||
-          beat.cover_image_url ||
-          beat.banner_image_url ||
-          "",
-        genre: beat.genre,
-        bpm: beat.bpm,
-        duration: beat.duration ?? 0,
-        previewUrl: beat.previewUrl || beat.audio_url || "",
-        plays: beat.plays || 0,
-      },
+      resolvedBeat,
       beats.map((item) => ({
         id: String(item.id),
         title: item.label || item.title || item.beat_name || "Untitled",
@@ -403,7 +420,12 @@ export default function TrendingTypeBeats() {
         genre: item.genre,
         bpm: item.bpm,
         duration: item.duration ?? 0,
-        previewUrl: item.previewUrl || item.audio_url || "",
+        previewUrl:
+          item.previewUrl ||
+          item.preview_url ||
+          item.audio_url ||
+          (item.assets && (item.assets.previewAudio || item.assets.wavFile)) ||
+          DEFAULT_PREVIEW_URL,
         plays: item.plays || 0,
       }))
     );
