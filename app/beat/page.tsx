@@ -1476,64 +1476,6 @@ export default function BeatMarketplace() {
             onFilterChange={setFilters}
           />
 
-          {/* ── Toolbar ── */}
-          <div
-            style={{
-              display: "flex",
-              justifyContent: isMobile ? "space-between" : "flex-end",
-              flexWrap: "wrap",
-              marginTop: 18,
-              marginBottom: 18,
-              gap: 8,
-            }}
-          >
-            {(["grid", "list"] as const).map((m) => (
-              <button
-                key={m}
-                disabled
-                style={{
-                  width: 38,
-                  height: 38,
-                  borderRadius: 9,
-                  cursor: "not-allowed",
-                  border:
-                    viewMode === m
-                      ? "1px solid rgba(251,191,36,0.55)"
-                      : "1px solid rgba(255,255,255,0.1)",
-                  background:
-                    viewMode === m
-                      ? "rgba(251,191,36,0.14)"
-                      : "rgba(255,255,255,0.04)",
-                  color: viewMode === m ? "#fbbf24" : "rgba(255,255,255,0.24)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  transition: "all 0.15s",
-                }}
-              >
-                {m === "grid" ? (
-                  <svg
-                    width="15"
-                    height="15"
-                    viewBox="0 0 16 16"
-                    fill="currentColor"
-                  >
-                    <path d="M1 1h6v6H1zm8 0h6v6H9zM1 9h6v6H1zm8 0h6v6H9z" />
-                  </svg>
-                ) : (
-                  <svg
-                    width="15"
-                    height="15"
-                    viewBox="0 0 16 16"
-                    fill="currentColor"
-                  >
-                    <path d="M1 3h14v2H1zm0 4h14v2H1zm0 4h14v2H1z" />
-                  </svg>
-                )}
-              </button>
-            ))}
-          </div>
-
           {/* ── Grid ── */}
           {viewMode === "grid" ? (
             <div
