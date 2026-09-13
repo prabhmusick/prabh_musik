@@ -1,10 +1,11 @@
 'use client';
+import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 
 /* ─────────────────────────────────────────────
    TYPES
 ───────────────────────────────────────────── */
-interface ServiceItem { icon: string; title: string; desc: string }
+interface ServiceItem { icon: string; title: string; desc: string; href: string }
 interface StepItem    { phase: string; title: string; desc: string }
 interface StatItem    { symbol: string; value: string; label: string }
 
@@ -12,10 +13,10 @@ interface StatItem    { symbol: string; value: string; label: string }
    DATA
 ───────────────────────────────────────────── */
 const SERVICES: ServiceItem[] = [
-  { icon: '◎', title: 'Music Production',    desc: 'Custom production tailored to your artistic identity — from concept to final session file.' },
-  { icon: '≋', title: 'Mixing & Mastering',  desc: 'Industry-standard sound that translates on every speaker, stream, and stage.' },
-  { icon: '◈', title: 'Creative Direction',  desc: 'Shape your visual and sonic identity with clarity, consistency, and intent.' },
-  { icon: '↗', title: 'Artist Development',  desc: 'Long-term strategy, guidance, and growth planning built around your career goals.' },
+  { icon: '◎', title: 'Music Production', desc: 'Custom production tailored to your artistic identity — from concept to final session file.', href: '/services/music-production' },
+  { icon: '≋', title: 'Mix n Master', desc: 'Industry-standard sound that translates on every speaker, stream, and stage.', href: '/services/mix-n-master' },
+  { icon: '◈', title: 'Lyrics', desc: 'Powerful words, real emotion. We write lyrics that connect, inspire, and make your music unforgettable.', href: '/services/lyrics' },
+  { icon: '↗', title: 'Marketing & Distribution', desc: 'Long-term strategy, guidance, and growth planning built around your career goals.', href: '/services/marketing-distribution' },
 ];
 
 const STEPS: StepItem[] = [
@@ -495,69 +496,72 @@ function ServiceCard({ item, index, isMobile }: { item: ServiceItem; index: numb
   const [hov, setHov] = useState(false);
   return (
     <Reveal delay={index * 90}>
-      <div
-        onMouseEnter={() => setHov(true)}
-        onMouseLeave={() => setHov(false)}
-        style={{
-          padding: isMobile ? '40px 28px' : '52px 36px',
-          borderRight: !isMobile && index < 3 ? '1px solid rgba(212,160,23,0.15)' : 'none',
-          background: hov ? 'rgba(212,160,23,0.07)' : 'transparent',
-          transition: 'background 0.3s',
-          position: 'relative',
-          cursor: 'default',
-          overflow: 'hidden',
-        }}
-      >
-        {/* Top accent bar */}
-        <div style={{
-          position: 'absolute',
-          top: 0, left: 0, right: 0,
-          height: 2,
-          background: '#d4a017',
-          transform: hov ? 'scaleX(1)' : 'scaleX(0)',
-          transformOrigin: 'left',
-          transition: 'transform 0.45s cubic-bezier(.16,1,.3,1)',
-        }} />
-        <div style={{
-          fontFamily: "'Bebas Neue', sans-serif",
-          fontSize: 40,
-          color: hov ? '#d4a017' : 'rgba(212,160,23,0.35)',
-          marginBottom: 28,
-          lineHeight: 1,
-          transition: 'color 0.3s',
-        }}>
-          {item.icon}
+      <Link href={item.href} style={{ textDecoration: 'none', display: 'block' }}>
+        <div
+          onMouseEnter={() => setHov(true)}
+          onMouseLeave={() => setHov(false)}
+          style={{
+            padding: isMobile ? '40px 28px' : '52px 36px',
+            borderRight: !isMobile && index < 3 ? '1px solid rgba(212,160,23,0.15)' : 'none',
+            background: hov ? 'rgba(212,160,23,0.07)' : 'transparent',
+            transition: 'background 0.3s',
+            position: 'relative',
+            cursor: 'pointer',
+            overflow: 'hidden',
+            height: '100%',
+          }}
+        >
+          {/* Top accent bar */}
+          <div style={{
+            position: 'absolute',
+            top: 0, left: 0, right: 0,
+            height: 2,
+            background: '#d4a017',
+            transform: hov ? 'scaleX(1)' : 'scaleX(0)',
+            transformOrigin: 'left',
+            transition: 'transform 0.45s cubic-bezier(.16,1,.3,1)',
+          }} />
+          <div style={{
+            fontFamily: "'Bebas Neue', sans-serif",
+            fontSize: 40,
+            color: hov ? '#d4a017' : 'rgba(212,160,23,0.35)',
+            marginBottom: 28,
+            lineHeight: 1,
+            transition: 'color 0.3s',
+          }}>
+            {item.icon}
+          </div>
+          <h3 style={{
+            fontFamily: "'Bebas Neue', sans-serif",
+            fontSize: 22,
+            letterSpacing: '0.1em',
+            color: '#f5f0e8',
+            marginBottom: 16,
+          }}>
+            {item.title}
+          </h3>
+          <p style={{
+            fontFamily: "'Cormorant Garamond', serif",
+            fontSize: 15,
+            lineHeight: 1.85,
+            color: 'rgba(245,240,232,0.5)',
+            margin: 0,
+          }}>
+            {item.desc}
+          </p>
+          <div style={{
+            position: 'absolute',
+            bottom: 28, right: 28,
+            fontFamily: "'Space Mono', monospace",
+            fontSize: 10,
+            letterSpacing: '0.2em',
+            color: 'rgba(212,160,23,0.25)',
+            transition: 'color 0.3s',
+          }}>
+            {String(index + 1).padStart(2, '0')}
+          </div>
         </div>
-        <h3 style={{
-          fontFamily: "'Bebas Neue', sans-serif",
-          fontSize: 22,
-          letterSpacing: '0.1em',
-          color: '#f5f0e8',
-          marginBottom: 16,
-        }}>
-          {item.title}
-        </h3>
-        <p style={{
-          fontFamily: "'Cormorant Garamond', serif",
-          fontSize: 15,
-          lineHeight: 1.85,
-          color: 'rgba(245,240,232,0.5)',
-          margin: 0,
-        }}>
-          {item.desc}
-        </p>
-        <div style={{
-          position: 'absolute',
-          bottom: 28, right: 28,
-          fontFamily: "'Space Mono', monospace",
-          fontSize: 10,
-          letterSpacing: '0.2em',
-          color: 'rgba(212,160,23,0.25)',
-          transition: 'color 0.3s',
-        }}>
-          {String(index + 1).padStart(2, '0')}
-        </div>
-      </div>
+      </Link>
     </Reveal>
   );
 }

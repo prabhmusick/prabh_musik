@@ -83,6 +83,40 @@ export default function Header() {
           transition: border-color 0.3s ease, box-shadow 0.3s ease;
         }
 
+        .desktop-header-top {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 28px;
+          padding: 12px 28px 8px;
+        }
+
+        .desktop-header-actions {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          flex-shrink: 0;
+        }
+
+        .desktop-search-row {
+          padding: 10px 28px 16px;
+          width: 100%;
+          margin-top: 4px;
+        }
+
+        .desktop-search-row .search-container {
+          width: 100%;
+          max-width: 100%;
+          min-height: 48px;
+          padding: 10px 18px;
+        }
+
+        .desktop-search-row .search-input {
+          width: 100%;
+          min-height: 28px;
+          font-size: 14px;
+        }
+
         .header-wrapper::after {
           content: "";
           position: absolute;
@@ -327,16 +361,7 @@ export default function Header() {
       `}</style>
 
       <header className="header-wrapper">
-        <div
-          className="desktop-header-content"
-          style={{
-            padding: "12px 28px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: "28px",
-          }}
-        >
+        <div className="desktop-header-top">
           {/* ── Logo ── */}
           <div
             onClick={() => router.push("/")}
@@ -349,7 +374,7 @@ export default function Header() {
             }}
           >
             <span className="logo-text-accent">
-              Prahbh
+              Prabh
             </span>
             <span className="logo-text-white">
               Musik
@@ -388,47 +413,7 @@ export default function Header() {
             ))}
           </nav>
 
-          {/* ── Right side ── */}
-          <div
-            className="desktop-nav"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "14px",
-              flexShrink: 0,
-            }}
-          >
-            {/* Search pill */}
-            <div className={`search-container${searchFocused ? " focused" : ""}`}>
-              {/* Search icon */}
-              <svg className="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="rgba(255,255,255,0.45)">
-                <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
-              </svg>
-              <input
-                className="search-input"
-                type="text"
-                placeholder="Search beats, artists..."
-                value={searchVal}
-                onChange={(e) => {
-                  const nextValue = e.target.value;
-                  setSearchVal(nextValue);
-                  window.dispatchEvent(new CustomEvent("app-search-sync", { detail: { value: nextValue } }));
-                }}
-                onFocus={() => setSearchFocused(true)}
-                onBlur={() => {
-                  setSearchFocused(false);
-                  if (searchVal.trim()) submitSearch();
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    submitSearch();
-                  }
-                }}
-              />
-            </div>
-
-            {/* Cart Button */}
+          <div className="desktop-header-actions">
             <button
               className="cart-btn"
               onClick={() => { if (isAuthenticated) { openCart(); } else { router.push("/login"); } }}
@@ -438,7 +423,6 @@ export default function Header() {
               <span className="cart-badge">{cart.length}</span>
             </button>
 
-            {/* Profile / Auth actions */}
             {isAuthenticated ? (
               <button
                 className="profile-btn"
@@ -485,7 +469,6 @@ export default function Header() {
             )}
           </div>
 
-          {/* ── Mobile hamburger ── */}
           <button
             className="mobile-menu-btn"
             onClick={() => setMobileOpen((v) => !v)}
@@ -508,6 +491,36 @@ export default function Header() {
               )}
             </svg>
           </button>
+        </div>
+
+        <div className="desktop-search-row">
+          <div className={`search-container${searchFocused ? " focused" : ""}`}>
+            <svg className="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="rgba(255,255,255,0.45)">
+              <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
+            </svg>
+            <input
+              className="search-input"
+              type="text"
+              placeholder="Search beats, artists..."
+              value={searchVal}
+              onChange={(e) => {
+                const nextValue = e.target.value;
+                setSearchVal(nextValue);
+                window.dispatchEvent(new CustomEvent("app-search-sync", { detail: { value: nextValue } }));
+              }}
+              onFocus={() => setSearchFocused(true)}
+              onBlur={() => {
+                setSearchFocused(false);
+                if (searchVal.trim()) submitSearch();
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  submitSearch();
+                }
+              }}
+            />
+          </div>
         </div>
 
         <div className="mobile-header-content" style={{ display: "none", padding: "12px 16px 14px", width: "100%" }}>
@@ -549,7 +562,7 @@ export default function Header() {
                 }}
               >
                 <span className="logo-text-accent" style={{ fontSize: "18px" }}>
-                  Prahbh
+                  Prabh
                 </span>
                 <span className="logo-text-white" style={{ fontSize: "18px" }}>
                   Musik

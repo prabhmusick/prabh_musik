@@ -1100,7 +1100,7 @@ export default function MusicProductionPage() {
 
       {/* STRIP */}
       <div className="services-strip">
-        {["Beat Production", "Mixing & Mastering", "Session Recording", "Film Scoring", "Vocal Production", "Sound Design"].map((s, i) => (
+        {["Beat Production", "Mixing & Mastering", "Song Marketing", "Film Scoring", "Vocal Production", "Sound Design"].map((s, i) => (
           <div key={i} className="strip-item">
             <span className="strip-dot">✦</span>
             <span className="strip-text">{s}</span>
@@ -1184,8 +1184,8 @@ export default function MusicProductionPage() {
               <div className="contact-details">
                 {[
                   { icon: "📍", label: "Studio", val: "sri ganganagar rajasthan" },
-                  { icon: "📧", label: "Email", val: "hello@resonance.studio" },
-                  { icon: "📞", label: "Phone", val: "+91 98765 43210" },
+                  { icon: "📧", label: "Email", val: "support@prabhmusik.com" },
+                  { icon: "📞", label: "Phone", val: "+91 94612 09922" },
                 ].map((c, i) => (
                   <div key={i} className="contact-item">
                     <div className="contact-icon">{c.icon}</div>
@@ -1217,8 +1217,8 @@ export default function MusicProductionPage() {
                   <option value="" disabled>Select a service…</option>
                   <option value="beat">Beat Production</option>
                   <option value="mix">Mixing & Mastering</option>
-                  <option value="record">Session Recording</option>
-                  <option value="film">Film / Sync</option>
+                  <option value="record">Song Marketing</option>
+                  <option value="film">Music Lyrics</option>
                   <option value="other">Other</option>
                 </select>
               </div>
