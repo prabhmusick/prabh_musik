@@ -5,38 +5,38 @@ import SignupForm from "@/components/auth/SignupForm";
 
 // ─── SEO Metadata ───────────────────────────────────────────────────────────
 export const metadata: Metadata = {
-  title: "Create Account | Prahbh Musik",
-  description: "Join Prahbh Musik — access premium studio-grade beats, instant audio downloads, and exclusive distribution tools built for serious music producers and artists.",
+  title: "Create Account | Prabh Musik",
+  description: "Join Prabh Musik — access premium studio-grade beats, instant audio downloads, and exclusive distribution tools built for serious music producers and artists.",
   keywords: [
     "music licensing",
     "buy beats online",
     "studio grade tracks",
     "instrumentals for artists",
     "audio stems download",
-    "Prahbh Musik sign up"
+    "Prabh Musik sign up"
   ],
   alternates: {
     canonical: "https://prabhmusik.com/signup"
   },
   openGraph: {
-    title: "Create Account | Prahbh Musik",
-    description: "Join Prahbh Musik — access premium studio-grade beats, instant audio downloads, and exclusive distribution tools built for serious music producers and artists.",
+    title: "Create Account | Prabh Musik",
+    description: "Join Prabh Musik — access premium studio-grade beats, instant audio downloads, and exclusive distribution tools built for serious music producers and artists.",
     url: "https://prabhmusik.com/signup",
-    siteName: "Prahbh Musik",
+    siteName: "Prabh Musik",
     type: "website",
     images: [
       {
         url: "https://prabhmusik.com/og-image.jpg",
         width: 1200,
         height: 630,
-        alt: "Join Prahbh Musik today"
+        alt: "Join Prabh Musik today"
       }
     ]
   },
   twitter: {
     card: "summary_large_image",
-    title: "Create Account | Prahbh Musik",
-    description: "Join Prahbh Musik — access premium studio-grade beats, instant audio downloads, and exclusive distribution tools built for serious music producers.",
+    title: "Create Account | Prabh Musik",
+    description: "Join Prabh Musik — access premium studio-grade beats, instant audio downloads, and exclusive distribution tools built for serious music producers.",
     images: ["https://prabhmusik.com/og-image.jpg"]
   },
   robots: {
@@ -99,7 +99,7 @@ export default function SignupPage() {
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "RegisterAction",
-    "name": "Sign up for Prahbh Musik",
+    "name": "Sign up for Prabh Musik",
     "description": "Create your account and unlock professional-grade beats, exclusive services, and tools built for serious artists.",
     "target": {
       "@type": "EntryPoint",
@@ -111,7 +111,7 @@ export default function SignupPage() {
     },
     "publisher": {
       "@type": "Organization",
-      "name": "Prahbh Musik",
+      "name": "Prabh Musik",
       "logo": {
         "@type": "ImageObject",
         "url": "https://prabhmusik.com/logo.png"
@@ -417,14 +417,14 @@ export default function SignupPage() {
       <header className="hidden lg:hidden absolute top-0 left-0 right-0 z-20 w-full h-20 bg-[#050505]/50 backdrop-blur-md border-b border-white/[0.04]">
         <nav className="flex items-center justify-between px-6 sm:px-10 lg:px-14 max-w-7xl mx-auto w-full h-full" aria-label="Main Navigation">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 group" aria-label="Prahbh Musik Home">
+          <Link href="/" className="flex items-center gap-2 group" aria-label="Prabh Musik Home">
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#f59e0b] shadow-[0_0_15px_rgba(245,158,11,0.3)] group-hover:scale-105 transition-transform duration-300">
               <svg className="h-4 w-4 text-black" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" stroke="black" strokeWidth="2" strokeLinecap="round" fill="none"/>
               </svg>
             </span>
             <span className="text-lg text-white font-irish font-normal tracking-wide">
-              Prahbh <span className="text-[#f59e0b] group-hover:text-[#ffb333] transition-colors duration-300">Musik</span>
+              Prabh <span className="text-[#f59e0b] group-hover:text-[#ffb333] transition-colors duration-300">Musik</span>
             </span>
           </Link>
 
@@ -467,7 +467,7 @@ export default function SignupPage() {
 
             {/* Hero headline */}
             <h1 className="mb-4 text-4xl font-normal font-jacques leading-[0.95] text-white sm:text-5xl lg:text-6xl tracking-tight drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)]">
-              Join <span className="text-[#f59e0b] drop-shadow-[0_2px_15px_rgba(245,158,11,0.15)]">Prahbh<br />Musik</span>
+              Join <span className="text-[#f59e0b] drop-shadow-[0_2px_15px_rgba(245,158,11,0.15)]">Prabh<br />Musik</span>
             </h1>
 
             <p className="max-w-md text-sm leading-relaxed text-gray-300 drop-shadow-[0_1px_5px_rgba(0,0,0,0.5)] mx-auto">

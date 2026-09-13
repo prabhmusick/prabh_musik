@@ -304,19 +304,22 @@ export default function SignupForm() {
         type="submit"
         disabled={isFormDisabled}
         aria-busy={loading}
-        className="rounded-md bg-[#f59e0b] py-2.5 text-sm font-black text-black hover:bg-[#f5a623] disabled:opacity-50 disabled:pointer-events-none transition-colors"
+        className="group relative overflow-hidden rounded-xl border border-[#fbbf24]/60 bg-gradient-to-r from-[#f59e0b] via-[#f7b84a] to-[#e78a00] py-4 text-base font-black tracking-[0.02em] text-black shadow-[0_10px_30px_rgba(245,158,11,0.22)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_34px_rgba(245,158,11,0.32)] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
       >
-        {loading ? (
-          <>
-            <svg className="h-4 w-4 animate-spin inline mr-2" fill="none" viewBox="0 0 24 24" style={{ width: "16px", height: "16px" }}>
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth={4} />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-            </svg>
-            Creating Account…
-          </>
-        ) : (
-          "Create Account"
-        )}
+        <span className="absolute inset-0 bg-white/10 opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
+        <span className="relative flex items-center justify-center gap-2">
+          {loading ? (
+            <>
+              <svg className="h-4 w-4 animate-spin inline" fill="none" viewBox="0 0 24 24" style={{ width: "16px", height: "16px" }}>
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth={4} />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+              </svg>
+              Creating Account…
+            </>
+          ) : (
+            "Create Account"
+          )}
+        </span>
       </button>
 
       {/* Divider */}

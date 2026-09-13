@@ -92,6 +92,16 @@ export default function MixMasterPage() {
   const [scrollY, setScrollY] = useState(0);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [activeService, setActiveService] = useState(0);
+  const [showQuoteForm, setShowQuoteForm] = useState(false);
+  const [quoteSubmitted, setQuoteSubmitted] = useState(false);
+  const [quoteForm, setQuoteForm] = useState({
+    name: "",
+    email: "",
+    projectType: "Mixing & Mastering",
+    trackTitle: "",
+    timeline: "",
+    requirements: "",
+  });
   const waveRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -131,6 +141,37 @@ export default function MixMasterPage() {
     draw();
     return () => cancelAnimationFrame(raf);
   }, []);
+
+  const handleQuoteChange = (field: keyof typeof quoteForm, value: string) => {
+    setQuoteForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleQuoteSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const message = [
+      "Hi Prabh Musik, I want a custom quote for Mixing & Mastering.",
+      `Name: ${quoteForm.name || "Not provided"}`,
+      `Email: ${quoteForm.email || "Not provided"}`,
+      `Project Type: ${quoteForm.projectType}`,
+      `Track Title: ${quoteForm.trackTitle || "Not provided"}`,
+      `Timeline: ${quoteForm.timeline || "Not provided"}`,
+      "Requirements:",
+      quoteForm.requirements || "No additional requirements provided",
+    ].join("\n");
+
+    window.open(`https://wa.me/919461209922?text=${encodeURIComponent(message)}`, "_blank", "noopener,noreferrer");
+    setQuoteSubmitted(true);
+    setShowQuoteForm(false);
+    setQuoteForm({
+      name: "",
+      email: "",
+      projectType: "Mixing & Mastering",
+      trackTitle: "",
+      timeline: "",
+      requirements: "",
+    });
+  };
 
   return (
     <div style={{ background: "#0d0d0d", color: "#e8e2d9", fontFamily: "'Plus Jakarta Sans', sans-serif", minHeight: "100vh", overflowX: "hidden" }}>
@@ -439,39 +480,171 @@ export default function MixMasterPage() {
                     <div key={di} className="detail-chip">{d}</div>
                   ))}
                 </div>
-                <button className="pill-btn" style={{ padding: "14px 32px", fontSize: 14 }}>
+                <a
+                  href="https://wa.me/919461209922?text=Hi%20Prabh%20Musik%2C%20I%20want%20to%20book%20this%20service."
+                  target="_blank"
+                  rel="noreferrer"
+                  className="pill-btn"
+                  style={{ padding: "14px 32px", fontSize: 14, display: "inline-flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }}
+                >
                   Book This Service
-                </button>
+                </a>
               </div>
 
               <div style={{
                 background: "#141414", border: "1px solid #1e1e1e",
                 borderRadius: 12, padding: "40px 36px",
                 display: "flex", flexDirection: "column",
-                alignItems: "flex-start", gap: 8,
+                alignItems: "flex-start", gap: 18,
                 animation: "glow-pulse 4s ease infinite",
               }}>
                 <span style={{ fontSize: 11, fontWeight: 600, color: "#444", letterSpacing: 3, textTransform: "uppercase" }}>
-                  Starting from
+                  Premium Sound
                 </span>
-                <span style={{ fontSize: "clamp(56px, 6vw, 80px)", fontWeight: 800, color: "#FF9124", lineHeight: 1, letterSpacing: "-2px" }}>
-                  {s.price}
-                </span>
-                <span style={{ fontSize: 13, color: "#555", fontWeight: 300 }}>per track</span>
-                <div style={{ width: "100%", height: 1, background: "#1e1e1e", margin: "20px 0" }} />
-                <p style={{ fontSize: 13, color: "#555", fontWeight: 300, lineHeight: 1.7 }}>
-                  Need stems, albums, or EPs? Message us for a custom quote — we work with all budgets and timelines.
+                <h3 style={{ fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 800, color: "#fff", lineHeight: 1.1, letterSpacing: "-1px" }}>
+                  High-Quality Mixing & Mastering
+                </h3>
+                <p style={{ fontSize: 16, color: "#d3d3d3", fontWeight: 300, lineHeight: 1.8 }}>
+                  Give your music the professional sound it deserves. Our mixing and mastering services are tailored to bring out the best in every track.
                 </p>
-                <button
-                  className="ghost-btn"
-                  style={{ marginTop: 20, width: "100%", padding: "13px 0" }}
+                <div style={{ width: "100%", height: 1, background: "#1e1e1e", margin: "8px 0 4px" }} />
+                <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 10, width: "100%" }}>
+                  {[
+                    "Detailed mix balancing and tonal shaping",
+                    "Streaming-ready mastering with loudness optimization",
+                    "Revision-friendly workflow for artists and labels",
+                  ].map((item) => (
+                    <li key={item} style={{ fontSize: 14, color: "#b8b8b8", display: "flex", alignItems: "center", gap: 10 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#FF9124", display: "inline-block" }} />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+                <a
+                  href="https://wa.me/919461209922?text=Hi%20Prabh%20Musik%2C%20I%20want%20a%20custom%20quote%20for%20Mixing%20%26%20Mastering."
+                  target="_blank"
+                  rel="noreferrer"
+                  className="pill-btn"
+                  style={{ marginTop: 18, width: "100%", padding: "14px 0", display: "inline-flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }}
                 >
                   Get a Custom Quote
-                </button>
+                </a>
+                {quoteSubmitted && (
+                  <div style={{ marginTop: 12, color: "#7ee7a8", fontSize: 13, fontWeight: 500 }}>
+                    Thanks! Your project details are ready for WhatsApp follow-up.
+                  </div>
+                )}
               </div>
             </div>
           )
         ))}
+
+        {showQuoteForm && (
+          <form
+            onSubmit={handleQuoteSubmit}
+            style={{
+              marginTop: 28,
+              background: "#141414",
+              border: "1px solid #1e1e1e",
+              borderRadius: 12,
+              padding: "28px 24px",
+              display: "grid",
+              gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+              gap: 18,
+            }}
+          >
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <label htmlFor="quote-name" style={{ fontSize: 12, fontWeight: 700, color: "#b8b8b8", letterSpacing: 1.2, textTransform: "uppercase" }}>
+                Your Name
+              </label>
+              <input
+                id="quote-name"
+                value={quoteForm.name}
+                onChange={(e) => handleQuoteChange("name", e.target.value)}
+                placeholder="Enter your name"
+                style={{ background: "#0d0d0d", border: "1px solid #2b2b2b", borderRadius: 8, padding: "12px 14px", color: "#f4f4f4" }}
+                required
+              />
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <label htmlFor="quote-email" style={{ fontSize: 12, fontWeight: 700, color: "#b8b8b8", letterSpacing: 1.2, textTransform: "uppercase" }}>
+                Email
+              </label>
+              <input
+                id="quote-email"
+                type="email"
+                value={quoteForm.email}
+                onChange={(e) => handleQuoteChange("email", e.target.value)}
+                placeholder="you@example.com"
+                style={{ background: "#0d0d0d", border: "1px solid #2b2b2b", borderRadius: 8, padding: "12px 14px", color: "#f4f4f4" }}
+                required
+              />
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <label htmlFor="quote-project" style={{ fontSize: 12, fontWeight: 700, color: "#b8b8b8", letterSpacing: 1.2, textTransform: "uppercase" }}>
+                Project Type
+              </label>
+              <select
+                id="quote-project"
+                value={quoteForm.projectType}
+                onChange={(e) => handleQuoteChange("projectType", e.target.value)}
+                style={{ background: "#0d0d0d", border: "1px solid #2b2b2b", borderRadius: 8, padding: "12px 14px", color: "#f4f4f4" }}
+              >
+                <option>Mixing & Mastering</option>
+                <option>Mixing Only</option>
+                <option>Mastering Only</option>
+                <option>Album / EP</option>
+                <option>Other</option>
+              </select>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <label htmlFor="quote-track" style={{ fontSize: 12, fontWeight: 700, color: "#b8b8b8", letterSpacing: 1.2, textTransform: "uppercase" }}>
+                Track / Song Title
+              </label>
+              <input
+                id="quote-track"
+                value={quoteForm.trackTitle}
+                onChange={(e) => handleQuoteChange("trackTitle", e.target.value)}
+                placeholder="Name of the song or project"
+                style={{ background: "#0d0d0d", border: "1px solid #2b2b2b", borderRadius: 8, padding: "12px 14px", color: "#f4f4f4" }}
+              />
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, gridColumn: "1 / -1" }}>
+              <label htmlFor="quote-timeline" style={{ fontSize: 12, fontWeight: 700, color: "#b8b8b8", letterSpacing: 1.2, textTransform: "uppercase" }}>
+                Desired Timeline
+              </label>
+              <input
+                id="quote-timeline"
+                value={quoteForm.timeline}
+                onChange={(e) => handleQuoteChange("timeline", e.target.value)}
+                placeholder="e.g. 2 weeks, ASAP, release in 10 days"
+                style={{ background: "#0d0d0d", border: "1px solid #2b2b2b", borderRadius: 8, padding: "12px 14px", color: "#f4f4f4" }}
+              />
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, gridColumn: "1 / -1" }}>
+              <label htmlFor="quote-requirements" style={{ fontSize: 12, fontWeight: 700, color: "#b8b8b8", letterSpacing: 1.2, textTransform: "uppercase" }}>
+                Project Requirements
+              </label>
+              <textarea
+                id="quote-requirements"
+                value={quoteForm.requirements}
+                onChange={(e) => handleQuoteChange("requirements", e.target.value)}
+                rows={5}
+                placeholder="Tell us about the track, references, number of stems, genre, preferred sound, and any deadlines."
+                style={{ background: "#0d0d0d", border: "1px solid #2b2b2b", borderRadius: 8, padding: "12px 14px", color: "#f4f4f4", resize: "vertical" }}
+                required
+              />
+            </div>
+            <div style={{ gridColumn: "1 / -1", display: "flex", justifyContent: "flex-end", gap: 12, flexWrap: "wrap" }}>
+              <button type="button" className="ghost-btn" onClick={() => setShowQuoteForm(false)}>
+                Cancel
+              </button>
+              <button type="submit" className="pill-btn">
+                Send Quote Request
+              </button>
+            </div>
+          </form>
+        )}
       </section>
 
       {/* ── PROCESS ── */}
@@ -595,26 +768,43 @@ export default function MixMasterPage() {
             </h3>
           </div>
           <div style={{ display: "flex", gap: 12 }}>
-            <button style={{
-              background: "#000", color: "#FF9124", border: "none",
-              padding: "15px 36px", borderRadius: 8,
-              fontFamily: "'Plus Jakarta Sans',sans-serif",
-              fontSize: 14, fontWeight: 700, cursor: "pointer",
-              transition: "transform 0.15s, box-shadow 0.2s",
-            }}
-              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-2px)"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.transform = ""; }}
+            <a
+              href="https://wa.me/919461209922?text=Hi%20Prabh%20Musik%2C%20I%20want%20to%20upload%20my%20track%20for%20mixing%20and%20mastering."
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                background: "#000", color: "#FF9124", border: "none",
+                padding: "15px 36px", borderRadius: 8,
+                fontFamily: "'Plus Jakarta Sans',sans-serif",
+                fontSize: 14, fontWeight: 700, cursor: "pointer",
+                transition: "transform 0.15s, box-shadow 0.2s",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                textDecoration: "none",
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-2px)"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.transform = ""; }}
             >
               Upload Your Track
-            </button>
-            <button style={{
-              background: "transparent", color: "#000",
-              border: "2px solid rgba(0,0,0,0.2)", padding: "14px 36px",
-              borderRadius: 8, fontFamily: "'Plus Jakarta Sans',sans-serif",
-              fontSize: 14, fontWeight: 700, cursor: "pointer",
-            }}>
+            </a>
+            <a
+              href="https://wa.me/919461209922?text=Hi%20Prabh%20Musik%2C%20I%20want%20to%20talk%20about%20my%20track."
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                background: "transparent", color: "#000",
+                border: "2px solid rgba(0,0,0,0.2)", padding: "14px 36px",
+                borderRadius: 8, fontFamily: "'Plus Jakarta Sans',sans-serif",
+                fontSize: 14, fontWeight: 700, cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                textDecoration: "none",
+              }}
+            >
               WhatsApp Us
-            </button>
+            </a>
           </div>
         </div>
       </section>

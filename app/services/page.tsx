@@ -419,7 +419,12 @@ export default function ServicesPage() {
             className="fade-up-3"
             style={{ display: "flex", gap: "20px", justifyContent: "center", flexWrap: "wrap" }}
           >
-            <Link href="/beat" className="hero-primary-btn">
+            <Link
+              href="https://wa.me/919461209922?text=Hi%20Prabh%20Musik%2C%20I%20want%20to%20start%20my%20project."
+              target="_blank"
+              rel="noreferrer"
+              className="hero-primary-btn"
+            >
               Start Your Project <ArrowRightIcon />
             </Link>
             <Link href="/about" className="hero-secondary-btn">View Portfolio</Link>
@@ -628,7 +633,7 @@ export default function ServicesPage() {
               }}
             >
               Let's collaborate on your next masterpiece. Join the elite network of producers
-              and artists using Prahbh Music.
+              and artists using Prabh Music.
             </p>
 
             <div
@@ -639,7 +644,15 @@ export default function ServicesPage() {
                 flexWrap: "wrap",
               }}
             >
-              <button className="cta-primary">Get Started Now</button>
+              <a
+                href="https://wa.me/919461209922?text=Hi%20Prabh%20Musik%2C%20I%20want%20to%20get%20started%20with%20my%20project."
+                target="_blank"
+                rel="noreferrer"
+                className="cta-primary"
+                style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }}
+              >
+                Get Started Now
+              </a>
               <a className="cta-secondary" href="https://mail.google.com/mail/?view=cm&fs=1&to=support@prabhmusik.com&su=Support%20Request">Contact Support</a>
             </div>
           </div>
