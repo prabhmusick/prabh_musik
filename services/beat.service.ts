@@ -25,6 +25,29 @@ const resolveApiBase = () => {
 const API_HOST = resolveApiBase();
 const API_OBJECT_BASE = API_HOST ? `${API_HOST}/api` : "/api";
 
+const normalizeMediaUrl = (value: unknown): string => {
+  if (typeof value !== "string" || !value.trim()) return "";
+
+  try {
+    const parsed = new URL(
+      value,
+      API_HOST ||
+        (typeof window !== "undefined"
+          ? window.location.origin
+          : "http://localhost:5005"),
+    );
+
+    if (parsed.pathname.replace(/\/+$/, "") === "/api/media") {
+      const key = parsed.searchParams.get("key");
+      return key && key !== "api/media" ? parsed.toString() : "";
+    }
+  } catch {
+    return "";
+  }
+
+  return value;
+};
+
 // ============================================================================
 // DTO Mappers: Bridges Backend Column names and Frontend TypeScript typings
 // ============================================================================
@@ -61,10 +84,10 @@ export function mapBackendToFrontend(beat: any): Beat {
     createdAt: beat.created_at || new Date().toISOString(),
     duration: beat.duration || 0,
     assets: {
-      coverImage: beat.cover_url || "",
-      bannerImage: beat.banner_url || "",
-      previewAudio: beat.audio_url || "",
-      wavFile: beat.audio_url || "", // Wav fallback map
+      coverImage: normalizeMediaUrl(beat.cover_url),
+      bannerImage: normalizeMediaUrl(beat.banner_url),
+      previewAudio: normalizeMediaUrl(beat.audio_url),
+      wavFile: normalizeMediaUrl(beat.audio_url), // Wav fallback map
       stemsFile: "",
     },
     analytics: {

@@ -12,6 +12,7 @@ import { StatusBadge } from "../StatusBadge"
 import { Button } from "../../ui/button"
 import { ConfirmDialog } from "../ConfirmDialog"
 import { useDeleteBeat, useDuplicateBeat } from "../../../hooks/useBeats"
+import { getApiErrorMessage } from "../../../lib/api"
 
 interface BeatTableProps {
   beats: Beat[];
@@ -35,8 +36,7 @@ export function BeatTable({ beats }: BeatTableProps) {
         },
         onError: (err: any) => {
           setBeatToDelete(null)
-          const msg = err?.response?.data?.error || err?.response?.data?.message || err?.message || "Failed to delete track"
-          setActionError(msg)
+          setActionError(getApiErrorMessage(err, "Failed to delete track"))
         }
       })
     }
@@ -50,8 +50,7 @@ export function BeatTable({ beats }: BeatTableProps) {
       },
       onError: (err: any) => {
         setActiveDropdownId(null)
-        const msg = err?.response?.data?.error || err?.response?.data?.message || err?.message || "Failed to duplicate track"
-        setActionError(msg)
+        setActionError(getApiErrorMessage(err, "Failed to duplicate track"))
       }
     })
   }
