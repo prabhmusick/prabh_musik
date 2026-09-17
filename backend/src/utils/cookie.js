@@ -6,13 +6,28 @@
 const AppError = require("../errors/AppError");
 
 const getRefreshCookieOptions = () => {
-  return {
+  const secure =
+    process.env.NODE_ENV === "production" ||
+    process.env.COOKIE_SECURE === "true";
+  const sameSite = process.env.COOKIE_SAME_SITE || "lax";
+  const path = process.env.COOKIE_PATH || "/";
+  const options = {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production" || process.env.COOKIE_SECURE === "true",
-    sameSite: "lax",
-    path: "/api/auth",
-    maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days in milliseconds
+    secure,
+    sameSite,
+    path,
+    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days in milliseconds
   };
+
+  if (
+    process.env.COOKIE_DOMAIN &&
+    process.env.COOKIE_DOMAIN.trim() &&
+    process.env.COOKIE_DOMAIN.trim() !== "localhost"
+  ) {
+    options.domain = process.env.COOKIE_DOMAIN.trim();
+  }
+
+  return options;
 };
 
 /**
@@ -33,16 +48,28 @@ const setRefreshCookie = (res, token) => {
  * @returns {void}
  */
 const clearRefreshCookie = (res) => {
-  res.clearCookie("refreshToken", {
-    path: "/api/auth",
+  const options = {
+    path: process.env.COOKIE_PATH || "/",
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production" || process.env.COOKIE_SECURE === "true",
-    sameSite: "lax"
-  });
+    secure:
+      process.env.NODE_ENV === "production" ||
+      process.env.COOKIE_SECURE === "true",
+    sameSite: process.env.COOKIE_SAME_SITE || "lax",
+  };
+
+  if (
+    process.env.COOKIE_DOMAIN &&
+    process.env.COOKIE_DOMAIN.trim() &&
+    process.env.COOKIE_DOMAIN.trim() !== "localhost"
+  ) {
+    options.domain = process.env.COOKIE_DOMAIN.trim();
+  }
+
+  res.clearCookie("refreshToken", options);
 };
 
 module.exports = {
   getRefreshCookieOptions,
   setRefreshCookie,
-  clearRefreshCookie
+  clearRefreshCookie,
 };
