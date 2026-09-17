@@ -5,16 +5,16 @@ import LoginForm from "@/components/auth/LoginForm";
 
 // ─── SEO Metadata ───────────────────────────────────────────────────────────
 export const metadata: Metadata = {
-  title: "Login | Prahbh Musik",
-  description: "Log in to your Prahbh Musik account to access premium studio-grade beats, downloads, and distribution tools.",
+  title: "Login | Prabh Musik",
+  description: "Log in to your Prabh Musik account to access premium studio-grade beats, downloads, and distribution tools.",
   alternates: {
     canonical: "https://prabhmusik.com/login"
   },
   openGraph: {
-    title: "Login | Prahbh Musik",
-    description: "Log in to your Prahbh Musik account to access premium studio-grade beats, downloads, and distribution tools.",
+    title: "Login | Prabh Musik",
+    description: "Log in to your Prabh Musik account to access premium studio-grade beats, downloads, and distribution tools.",
     url: "https://prabhmusik.com/login",
-    siteName: "Prahbh Musik",
+    siteName: "Prabh Musik",
     type: "website"
   }
 };
@@ -64,8 +64,8 @@ export default function LoginPage() {
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "LoginAction",
-    "name": "Log in to Prahbh Musik",
-    "description": "Log in to your Prahbh Musik account and unlock professional-grade beats and distribution tools.",
+    "name": "Log in to Prabh Musik",
+    "description": "Log in to your Prabh Musik account and unlock professional-grade beats and distribution tools.",
     "target": {
       "@type": "EntryPoint",
       "urlTemplate": "https://prabhmusik.com/login",
@@ -374,14 +374,14 @@ export default function LoginPage() {
       <header className="hidden lg:hidden absolute top-0 left-0 right-0 z-20 w-full h-20 bg-[#050505]/50 backdrop-blur-md border-b border-white/[0.04]">
         <nav className="flex items-center justify-between px-6 sm:px-10 lg:px-14 max-w-7xl mx-auto w-full h-full" aria-label="Main Navigation">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 group" aria-label="Prahbh Musik Home">
+          <Link href="/" className="flex items-center gap-2 group" aria-label="Prabh Musik Home">
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#f59e0b] shadow-[0_0_15px_rgba(245,158,11,0.3)] group-hover:scale-105 transition-transform duration-300">
               <svg className="h-4 w-4 text-black" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" stroke="black" strokeWidth="2" strokeLinecap="round" fill="none"/>
               </svg>
             </span>
             <span className="text-lg text-white font-irish font-normal tracking-wide">
-              Prahbh <span className="text-[#f59e0b] group-hover:text-[#ffb333] transition-colors duration-300">Musik</span>
+              Prabh <span className="text-[#f59e0b] group-hover:text-[#ffb333] transition-colors duration-300">Musik</span>
             </span>
           </Link>
 
@@ -424,7 +424,7 @@ export default function LoginPage() {
 
             {/* Hero headline */}
             <h1 className="mb-4 text-4xl font-normal font-jacques leading-[0.95] text-white sm:text-5xl lg:text-6xl tracking-tight drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)]">
-              Login to <span className="text-[#f59e0b] drop-shadow-[0_2px_15px_rgba(245,158,11,0.15)]">Prahbh<br />Musik</span>
+              Login to <span className="text-[#f59e0b] drop-shadow-[0_2px_15px_rgba(245,158,11,0.15)]">Prabh<br />Musik</span>
             </h1>
 
             <p className="max-w-md text-sm leading-relaxed text-gray-300 drop-shadow-[0_1px_5px_rgba(0,0,0,0.5)] mx-auto">

@@ -623,7 +623,11 @@ function TrendingHeader({
           </svg>
           <input
             value={search}
-            onChange={(e) => onSearch(e.target.value)}
+            onChange={(e) => {
+              const nextValue = e.target.value;
+              onSearch(nextValue);
+              window.dispatchEvent(new CustomEvent("app-search-sync", { detail: { value: nextValue } }));
+            }}
             placeholder="Search for tags"
             style={{
               flex: 1,
@@ -1154,6 +1158,44 @@ export default function BeatMarketplace() {
     priceRange: null,
     bpmRange: null,
   });
+
+  useEffect(() => {
+    const syncFromUrl = () => {
+      const params = new URLSearchParams(window.location.search);
+      const nextValue = params.get("q") ?? "";
+      setSearch(nextValue);
+      window.dispatchEvent(new CustomEvent("app-search-sync", { detail: { value: nextValue } }));
+    };
+
+    syncFromUrl();
+    window.addEventListener("popstate", syncFromUrl);
+    const handleSync = (event: Event) => {
+      const nextValue = (event as CustomEvent<{ value?: string }>).detail?.value ?? "";
+      setSearch(nextValue);
+    };
+    window.addEventListener("app-search-sync", handleSync);
+
+    return () => {
+      window.removeEventListener("popstate", syncFromUrl);
+      window.removeEventListener("app-search-sync", handleSync);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (search.trim()) {
+      params.set("q", search.trim());
+    } else {
+      params.delete("q");
+    }
+
+    const nextUrl = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}`;
+    const currentUrl = `${window.location.pathname}${window.location.search}`;
+    if (nextUrl !== currentUrl) {
+      window.history.replaceState({}, "", nextUrl);
+    }
+  }, [search]);
   const router = useRouter();
   const { isAuthenticated, addToCart } = useAppShell();
   const { currentBeat, isPlaying, playBeat } = useAudioPlayer();
@@ -1433,64 +1475,6 @@ export default function BeatMarketplace() {
             filters={filters}
             onFilterChange={setFilters}
           />
-
-          {/* ── Toolbar ── */}
-          <div
-            style={{
-              display: "flex",
-              justifyContent: isMobile ? "space-between" : "flex-end",
-              flexWrap: "wrap",
-              marginTop: 18,
-              marginBottom: 18,
-              gap: 8,
-            }}
-          >
-            {(["grid", "list"] as const).map((m) => (
-              <button
-                key={m}
-                disabled
-                style={{
-                  width: 38,
-                  height: 38,
-                  borderRadius: 9,
-                  cursor: "not-allowed",
-                  border:
-                    viewMode === m
-                      ? "1px solid rgba(251,191,36,0.55)"
-                      : "1px solid rgba(255,255,255,0.1)",
-                  background:
-                    viewMode === m
-                      ? "rgba(251,191,36,0.14)"
-                      : "rgba(255,255,255,0.04)",
-                  color: viewMode === m ? "#fbbf24" : "rgba(255,255,255,0.24)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  transition: "all 0.15s",
-                }}
-              >
-                {m === "grid" ? (
-                  <svg
-                    width="15"
-                    height="15"
-                    viewBox="0 0 16 16"
-                    fill="currentColor"
-                  >
-                    <path d="M1 1h6v6H1zm8 0h6v6H9zM1 9h6v6H1zm8 0h6v6H9z" />
-                  </svg>
-                ) : (
-                  <svg
-                    width="15"
-                    height="15"
-                    viewBox="0 0 16 16"
-                    fill="currentColor"
-                  >
-                    <path d="M1 3h14v2H1zm0 4h14v2H1zm0 4h14v2H1z" />
-                  </svg>
-                )}
-              </button>
-            ))}
-          </div>
 
           {/* ── Grid ── */}
           {viewMode === "grid" ? (

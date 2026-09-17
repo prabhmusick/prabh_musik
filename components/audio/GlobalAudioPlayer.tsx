@@ -75,9 +75,12 @@ export function GlobalAudioPlayer() {
     setIsDraggingSeek(false);
   };
 
-  const waveformBars = Array.from({ length: 210 }, (_, i) => {
+  const visibleBarCount = isMobile ? 48 : 210;
+  const waveformBars = Array.from({ length: visibleBarCount }, (_, i) => {
+    const step = 210 / visibleBarCount;
+    const sampleIdx = Math.floor(i * step);
     const wave =
-      Math.sin(i * 0.21) + Math.sin(i * 0.09 + 1.3) + Math.sin(i * 0.045 + 2.2);
+      Math.sin(sampleIdx * 0.21) + Math.sin(sampleIdx * 0.09 + 1.3) + Math.sin(sampleIdx * 0.045 + 2.2);
     const normalized = Math.abs(wave / 3);
     return 7 + Math.round(normalized * 30);
   });
@@ -114,7 +117,11 @@ export function GlobalAudioPlayer() {
         borderTop: "1px solid rgba(255,255,255,0.08)",
         boxShadow: "0 -18px 48px rgba(0,0,0,0.6)",
         backdropFilter: "blur(10px)",
-        padding: isMobile ? "10px 12px 14px" : "8px 20px 12px",
+        padding: isMobile ? "8px 12px calc(12px + env(safe-area-inset-bottom))" : "8px 20px 12px",
+        boxSizing: "border-box",
+        width: "100vw",
+        maxWidth: "100vw",
+        overflowX: "hidden",
       }}
     >
       <div
@@ -161,11 +168,12 @@ export function GlobalAudioPlayer() {
         <div
           style={{
             height: 42,
-            marginBottom: 8,
+            marginBottom: isMobile ? 6 : 8,
             display: "grid",
-            gridTemplateColumns: isMobile ? "1fr" : "56px 1fr 56px",
+            gridTemplateColumns: isMobile ? "44px minmax(0, 1fr) 44px" : "56px 1fr 56px",
             alignItems: "center",
             gap: 8,
+            paddingRight: isMobile ? 32 : 0,
           }}
         >
           <span
@@ -187,14 +195,16 @@ export function GlobalAudioPlayer() {
             onPointerUp={handlePointerUpOrCancel}
             onPointerCancel={handlePointerUpOrCancel}
             style={{
+              position: "relative",
               height: 32,
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
-              gap: 2,
+              gap: isMobile ? 1 : 2,
               cursor: "pointer",
               overflow: "hidden",
               touchAction: "none",
+              minWidth: 0,
             }}
           >
             {waveformBars.map((barHeight, i) => {
@@ -204,17 +214,35 @@ export function GlobalAudioPlayer() {
                 <span
                   key={i}
                   style={{
-                    width: 3,
+                    width: isMobile ? 2 : 3,
                     height: barHeight,
                     borderRadius: 999,
                     background: played
                       ? "#f3f6f6"
                       : "rgba(255,255,255,0.14)",
                     transition: "background 0.14s linear",
+                    flexShrink: 0,
                   }}
                 />
               );
             })}
+
+            <div
+              style={{
+                position: "absolute",
+                top: 0,
+                bottom: 0,
+                left: `${progressRatio * 100}%`,
+                transform: "translateX(-50%)",
+                width: 2,
+                background: "#fbbf24",
+                boxShadow: "0 0 6px rgba(251,191,36,0.8)",
+                borderRadius: 1,
+                pointerEvents: "none",
+                zIndex: 2,
+                transition: isDraggingSeek ? "none" : "left 0.1s linear",
+              }}
+            />
           </div>
 
           <span
@@ -234,44 +262,46 @@ export function GlobalAudioPlayer() {
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            gap: 18,
+            gap: isMobile ? 10 : 18,
             minHeight: 56,
-            flexWrap: "wrap",
+            flexWrap: isMobile ? "nowrap" : "wrap",
+            flexDirection: isMobile ? "column" : "row",
           }}
         >
           <div
             style={{
               display: "flex",
-              flexDirection: isMobile ? "column" : "row",
-              alignItems: isMobile ? "flex-start" : "center",
+              flexDirection: isMobile ? "row" : "row",
+              alignItems: isMobile ? "center" : "center",
               gap: 12,
-              minWidth: 240,
-              flex: "1 1 320px",
+              minWidth: 0,
+              width: isMobile ? "100%" : "auto",
+              flex: isMobile ? "1 1 auto" : "1 1 320px",
             }}
           >
             <img
               src={currentBeat.cover}
               alt={currentBeat.title}
               style={{
-                width: 62,
-                height: 62,
+                width: isMobile ? 52 : 62,
+                height: isMobile ? 52 : 62,
                 borderRadius: 7,
                 objectFit: "cover",
                 flexShrink: 0,
               }}
             />
             <div
-              style={{ minWidth: 0, width: isMobile ? "100%" : "auto" }}
+              style={{ minWidth: 0, width: "100%", overflow: "hidden" }}
             >
               <p
                 style={{
                   whiteSpace: "nowrap",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
-                  maxWidth: 430,
-                  fontSize: 15,
+                  maxWidth: isMobile ? "100%" : 430,
+                  fontSize: isMobile ? 14 : 15,
                   fontWeight: 700,
-                  lineHeight: 1,
+                  lineHeight: 1.2,
                   color: "#f4f6f8",
                 }}
               >
@@ -280,12 +310,12 @@ export function GlobalAudioPlayer() {
               <p
                 style={{
                   marginTop: 4,
-                  fontSize: 13,
+                  fontSize: isMobile ? 12 : 13,
                   color: "rgba(255,255,255,0.56)",
                   whiteSpace: "nowrap",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
-                  maxWidth: 430,
+                  maxWidth: isMobile ? "100%" : 430,
                 }}
               >
                 {currentBeat.producer} • {currentBeat.bpm} BPM •{" "}
@@ -300,8 +330,9 @@ export function GlobalAudioPlayer() {
               alignItems: "center",
               gap: 14,
               flex: "0 1 auto",
-              flexWrap: "wrap",
-              justifyContent: isMobile ? "flex-start" : "flex-end",
+              flexWrap: "nowrap",
+              justifyContent: isMobile ? "space-between" : "flex-end",
+              width: isMobile ? "100%" : "auto",
             }}
           >
             <button
@@ -388,11 +419,12 @@ export function GlobalAudioPlayer() {
             style={{
               display: "flex",
               alignItems: "center",
-              gap: 16,
+              gap: isMobile ? 12 : 16,
               justifyContent: isMobile ? "space-between" : "flex-end",
-              flex: "1 1 400px",
-              minWidth: 240,
-              flexWrap: "wrap",
+              flex: isMobile ? "1 1 auto" : "1 1 400px",
+              minWidth: isMobile ? 0 : 240,
+              width: isMobile ? "100%" : "auto",
+              flexWrap: "nowrap",
             }}
           >
             <button
@@ -401,9 +433,10 @@ export function GlobalAudioPlayer() {
                 border: "none",
                 background: "transparent",
                 color: isLooping ? "#fbbf24" : "rgba(255,255,255,0.9)",
-                fontSize: 13,
+                fontSize: isMobile ? 12 : 13,
                 fontWeight: 600,
                 cursor: "pointer",
+                whiteSpace: "nowrap",
               }}
             >
               ↻ Loop
@@ -416,15 +449,16 @@ export function GlobalAudioPlayer() {
                 background: "#0f6bff",
                 color: "#fff",
                 borderRadius: 10,
-                height: 38,
-                padding: "0 14px",
+                height: isMobile ? 34 : 38,
+                padding: isMobile ? "0 12px" : "0 14px",
                 display: "flex",
                 alignItems: "center",
                 gap: 9,
-                fontSize: 16,
+                fontSize: isMobile ? 13 : 16,
                 fontWeight: 700,
                 cursor: "pointer",
                 boxShadow: "0 8px 22px rgba(15,107,255,0.32)",
+                whiteSpace: "nowrap",
               }}
             >
               <svg

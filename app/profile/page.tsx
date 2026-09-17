@@ -280,7 +280,7 @@ export default function ProfilePage() {
             gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
           }}
         >
-          <Crate title="Purchased beats" items={purchasedBeats} empty="No purchases yet." ctaHref="/browse" ctaLabel="Browse beats" />
+          <Crate title="Purchased beats" items={purchasedBeats} empty="No purchases yet." ctaHref="/beat" ctaLabel="Browse beats" />
         </section>
 
         {/* Cart */}
