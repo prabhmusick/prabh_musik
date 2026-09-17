@@ -46,4 +46,12 @@ router.patch(
   controller.updateStatus,
 );
 
+// 8. DELETE /:publicId - Archives a beat (Admin Only)
+router.delete(
+  "/:publicId",
+  authMiddleware,
+  requireAdmin,
+  controller.archiveBeat,
+);
+
 module.exports = router;

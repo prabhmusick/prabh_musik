@@ -201,6 +201,20 @@ const updateStatus = async (req, res, next) => {
   }
 };
 
+const archiveBeat = async (req, res, next) => {
+  try {
+    const adminUserId = req.user ? req.user.id : undefined;
+    await service.archiveBeat(req.params.publicId, adminUserId);
+
+    res.status(200).json({
+      success: true,
+      message: "Beat archived successfully.",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createBeat,
   getBeatByPublicId,
@@ -211,4 +225,5 @@ module.exports = {
   listAdminBeats,
   updateBeat,
   updateStatus,
+  archiveBeat,
 };

@@ -113,14 +113,19 @@ export function mapFrontendToBackend(beat: any): any {
     const getRawKey = (url: string | undefined): string | null => {
       if (!url) return null;
 
-      if (url.includes("/api/media")) {
-        try {
-          const parsed = new URL(url);
-          const keyFromQuery = parsed.searchParams.get("key");
-          if (keyFromQuery) return decodeURIComponent(keyFromQuery);
-        } catch {
-          // fall through to direct URL fallback below
+      try {
+        const parsed = new URL(
+          url,
+          API_HOST ||
+            (typeof window !== "undefined"
+              ? window.location.origin
+              : "http://localhost:5005"),
+        );
+        if (parsed.pathname.replace(/\/+$/, "") === "/api/media") {
+          return parsed.searchParams.get("key") || null;
         }
+      } catch {
+        // fall through to direct URL fallback below
       }
 
       if (url.includes("/beats/object/")) {
@@ -128,8 +133,15 @@ export function mapFrontendToBackend(beat: any): any {
       }
 
       try {
-        const parsed = new URL(url);
+        const parsed = new URL(
+          url,
+          API_HOST ||
+            (typeof window !== "undefined"
+              ? window.location.origin
+              : "http://localhost:5005"),
+        );
         const pathname = parsed.pathname.replace(/^\/+|\/+$/g, "");
+        if (pathname === "api/media") return null;
         return pathname || null;
       } catch {
         return url;
