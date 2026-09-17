@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { getBeats } from "@/services/beat.service";
+import { getTrendingBeats } from "@/services/beat.service";
 import { useAudioPlayer } from "./contexts/audio-player-context";
 import { useAppShell } from "./contexts/app-shell-context";
 
@@ -31,7 +31,8 @@ const colorPalettes = [
 ];
 
 // Map API beat to display format
-const DEFAULT_PREVIEW_URL = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3";
+const DEFAULT_PREVIEW_URL =
+  "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3";
 
 function formatBeatForDisplay(beat, index) {
   const palette = colorPalettes[index % colorPalettes.length];
@@ -427,7 +428,7 @@ export default function TrendingTypeBeats() {
           (item.assets && (item.assets.previewAudio || item.assets.wavFile)) ||
           DEFAULT_PREVIEW_URL,
         plays: item.plays || 0,
-      }))
+      })),
     );
   };
 
@@ -459,11 +460,10 @@ export default function TrendingTypeBeats() {
       try {
         setLoading(true);
         setError(null);
-        const data = await getBeats();
-        // getBeats returns mapped frontend Beat shape from services/beat.service
-        const formattedBeats = data
-          .slice(0, 4)
-          .map((beat, i) => formatBeatForDisplay(beat, i));
+        const data = await getTrendingBeats();
+        const formattedBeats = data.map((beat, i) =>
+          formatBeatForDisplay(beat, i),
+        );
         setBeats(formattedBeats);
       } catch (err) {
         console.error("Error fetching beats:", err);
@@ -476,6 +476,8 @@ export default function TrendingTypeBeats() {
 
     getBeatsFromApi();
   }, []);
+
+  const visibleBeats = beats.slice(0, 4);
 
   return (
     <>
@@ -621,7 +623,7 @@ export default function TrendingTypeBeats() {
           </div>
         )}
 
-        {!loading && !error && beats.length === 0 && (
+        {!loading && !error && visibleBeats.length === 0 && (
           <div
             style={{ textAlign: "center", padding: "60px 20px", color: "#aaa" }}
           >
@@ -629,7 +631,7 @@ export default function TrendingTypeBeats() {
           </div>
         )}
 
-        {!loading && !error && beats.length > 0 && (
+        {!loading && !error && visibleBeats.length > 0 && (
           <>
             {/* Header */}
             <div
@@ -666,8 +668,8 @@ export default function TrendingTypeBeats() {
                   }}
                 >
                   Say goodbye to interruptions and enjoy uninterrupted music
-                  streaming. With our ad-free platform, you&apos;ll have access to
-                  millions to songs
+                  streaming. With our ad-free platform, you&apos;ll have access
+                  to millions to songs
                 </p>
               </div>
 
@@ -725,7 +727,7 @@ export default function TrendingTypeBeats() {
                 gap: "28px",
               }}
             >
-              {beats.map((beat, i) => (
+              {visibleBeats.map((beat, i) => (
                 <BeatCard
                   key={beat.id}
                   beat={beat}

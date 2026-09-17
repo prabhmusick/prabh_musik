@@ -42,9 +42,13 @@ export function mapBackendToFrontend(beat: any): Beat {
 
   return {
     id: String(beat.public_id || beat.id),
-    artistId: "", // Artist is single/global and managed on backend
+    artistId: String(beat.artist_id || ""),
     title: beat.title || "",
     description: beat.description || "",
+    relatedArtistName: beat.related_artist_name || "",
+    relatedArtistImage: beat.related_artist_image_url || "",
+    isTrending: Boolean(beat.is_trending),
+    playCount: Number(beat.play_count || 0),
     genre: beat.genre || "",
     bpm: beat.bpm || 0,
     key: beat.musical_key || "",
@@ -87,6 +91,13 @@ export function mapFrontendToBackend(beat: any): any {
   if (beat.key !== undefined) data.musical_key = beat.key;
   if (beat.price !== undefined)
     data.price_amount = Math.round(Number(beat.price) * 100);
+  if (beat.relatedArtistName !== undefined)
+    data.related_artist_name = beat.relatedArtistName || null;
+  if (beat.relatedArtistImage !== undefined)
+    data.related_artist_image_key = beat.relatedArtistImage || null;
+  if (beat.artistId !== undefined) data.artist_id = beat.artistId || null;
+  if (beat.isTrending !== undefined)
+    data.is_trending = Boolean(beat.isTrending);
 
   if (beat.status !== undefined) {
     const statusMapInverse: Record<string, string> = {
@@ -146,6 +157,16 @@ export async function getBeats(): Promise<Beat[]> {
     console.error("Error fetching beats:", error);
     return [];
   }
+}
+
+export async function getTrendingBeats(): Promise<Beat[]> {
+  const response = await api.get("/beats/trending?limit=4");
+  const rawList = response?.data?.data || [];
+  return Array.isArray(rawList) ? rawList.map(mapBackendToFrontend) : [];
+}
+
+export async function recordBeatPlay(id: string): Promise<void> {
+  await api.post(`/beats/${id}/play`);
 }
 
 /**

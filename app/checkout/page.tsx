@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAppShell } from "../contexts/app-shell-context";
+import api, { getApiErrorMessage } from "../../lib/api";
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -109,55 +110,17 @@ function CheckoutForm({ cart, user, onCheckoutComplete }: any) {
     setError("");
 
     try {
-      const resolveApiBase = () => {
-        const configured =
-          process.env.NEXT_PUBLIC_API_URL || process.env.BACKEND_PUBLIC_URL;
-
-        if (configured && configured.trim()) {
-          return configured
-            .trim()
-            .replace(/\/api\/?$/, "")
-            .replace(/\/+$/, "");
-        }
-
-        if (
-          typeof window !== "undefined" &&
-          !["localhost", "127.0.0.1"].includes(window.location.hostname)
-        ) {
-          return "";
-        }
-
-        return "http://localhost:5005";
-      };
-
-      const API_BASE = resolveApiBase();
-      const response = await fetch(
-        `${API_BASE ? `${API_BASE}/api` : "/api"}/payments/create-checkout-session`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            amount: totalInPaise,
-            currency: "INR",
-            email,
-            beats: cart.map((b: any) => ({
-              id: b.id,
-              title: b.title,
-              price: b.price,
-            })),
-          }),
-        },
-      );
-
-      const paymentData = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          paymentData?.error?.message ||
-            paymentData?.error ||
-            "Payment processing failed",
-        );
-      }
+      const response = await api.post("/payments/create-checkout-session", {
+        amount: totalInPaise,
+        currency: "INR",
+        email,
+        beats: cart.map((b: any) => ({
+          id: b.id,
+          title: b.title,
+          price: b.price,
+        })),
+      });
+      const paymentData = response.data;
 
       // Only mark checkout complete after payment success. Do not clear cart before opening Razorpay.
       if (typeof window !== "undefined" && paymentData.keyId) {
@@ -173,14 +136,21 @@ function CheckoutForm({ cart, user, onCheckoutComplete }: any) {
             name: "Prabh Musik",
             description: "Beat purchase",
             order_id: paymentData.orderId,
-            handler: (response: any) => {
-              // Successful payment handler from Razorpay
+            handler: async (paymentResponse: any) => {
               try {
+                await api.post("/payments/payment-success", {
+                  orderId: paymentData.orderId,
+                  paymentId: paymentResponse.razorpay_payment_id,
+                  signature: paymentResponse.razorpay_signature,
+                });
                 onCheckoutComplete();
-              } catch (e) {
-                // ignore errors from checkout completion side-effects
+              } catch (confirmationError: any) {
+                setError(
+                  confirmationError?.response?.data?.error ||
+                    "Payment confirmation failed",
+                );
+                return;
               }
-              // Redirect to profile after marking purchase
               window.location.href = "/profile?payment=success";
             },
             // Optional: handle payment failures to show message without redirect
@@ -206,7 +176,7 @@ function CheckoutForm({ cart, user, onCheckoutComplete }: any) {
         window.location.href = paymentData.url || "/profile?payment=success";
       }
     } catch (err: any) {
-      setError(err.message || "An error occurred");
+      setError(getApiErrorMessage(err, "Payment processing failed"));
     } finally {
       setLoading(false);
     }
