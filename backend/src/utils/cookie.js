@@ -6,10 +6,13 @@
 const AppError = require("../errors/AppError");
 
 const getRefreshCookieOptions = () => {
-  const secure =
+  const isProduction =
     process.env.NODE_ENV === "production" ||
     process.env.COOKIE_SECURE === "true";
-  const sameSite = process.env.COOKIE_SAME_SITE || "lax";
+  const secure = isProduction || process.env.COOKIE_SECURE === "true";
+  const sameSite = (
+    process.env.COOKIE_SAME_SITE || (isProduction ? "none" : "lax")
+  ).toLowerCase();
   const path = process.env.COOKIE_PATH || "/";
   const options = {
     httpOnly: true,
@@ -48,13 +51,16 @@ const setRefreshCookie = (res, token) => {
  * @returns {void}
  */
 const clearRefreshCookie = (res) => {
+  const isProduction =
+    process.env.NODE_ENV === "production" ||
+    process.env.COOKIE_SECURE === "true";
   const options = {
     path: process.env.COOKIE_PATH || "/",
     httpOnly: true,
-    secure:
-      process.env.NODE_ENV === "production" ||
-      process.env.COOKIE_SECURE === "true",
-    sameSite: process.env.COOKIE_SAME_SITE || "lax",
+    secure: isProduction || process.env.COOKIE_SECURE === "true",
+    sameSite: (
+      process.env.COOKIE_SAME_SITE || (isProduction ? "none" : "lax")
+    ).toLowerCase(),
   };
 
   if (
