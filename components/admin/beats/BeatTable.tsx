@@ -1,106 +1,115 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import Link from "next/link"
-import { ColumnDef } from "@tanstack/react-table"
-import { Eye, Edit, Trash2, Copy, MoreHorizontal } from "lucide-react"
+import * as React from "react";
+import Link from "next/link";
+import { ColumnDef } from "@tanstack/react-table";
+import { Eye, Edit, Trash2, Copy, MoreHorizontal } from "lucide-react";
 
-import { Beat } from "../../../types/admin"
-import { useArtists } from "../../../hooks/useArtists"
-import { DataTable } from "../DataTable"
-import { StatusBadge } from "../StatusBadge"
-import { Button } from "../../ui/button"
-import { ConfirmDialog } from "../ConfirmDialog"
-import { useDeleteBeat, useDuplicateBeat } from "../../../hooks/useBeats"
+import { Beat } from "../../../types/admin";
+import { useArtists } from "../../../hooks/useArtists";
+import { DataTable } from "../DataTable";
+import { StatusBadge } from "../StatusBadge";
+import { Button } from "../../ui/button";
+import { ConfirmDialog } from "../ConfirmDialog";
+import { useDeleteBeat, useDuplicateBeat } from "../../../hooks/useBeats";
+import { getApiErrorMessage } from "../../../lib/api";
 
 interface BeatTableProps {
   beats: Beat[];
 }
 
 export function BeatTable({ beats }: BeatTableProps) {
-  const deleteBeatMutation = useDeleteBeat()
-  const duplicateBeatMutation = useDuplicateBeat()
-  const { data: artists = [] } = useArtists()
+  const deleteBeatMutation = useDeleteBeat();
+  const duplicateBeatMutation = useDuplicateBeat();
+  const { data: artists = [] } = useArtists();
 
-  const [beatToDelete, setBeatToDelete] = React.useState<string | null>(null)
-  const [activeDropdownId, setActiveDropdownId] = React.useState<string | null>(null)
-  const [actionError, setActionError] = React.useState<string | null>(null)
+  const [beatToDelete, setBeatToDelete] = React.useState<string | null>(null);
+  const [activeDropdownId, setActiveDropdownId] = React.useState<string | null>(
+    null,
+  );
+  const [actionError, setActionError] = React.useState<string | null>(null);
 
   const handleDeleteConfirm = () => {
     if (beatToDelete) {
-      setActionError(null)
+      setActionError(null);
       deleteBeatMutation.mutate(beatToDelete, {
         onSuccess: () => {
-          setBeatToDelete(null)
+          setBeatToDelete(null);
         },
         onError: (err: any) => {
-          setBeatToDelete(null)
-          const msg = err?.response?.data?.error || err?.response?.data?.message || err?.message || "Failed to delete track"
-          setActionError(msg)
-        }
-      })
+          setBeatToDelete(null);
+          setActionError(getApiErrorMessage(err, "Failed to delete track"));
+        },
+      });
     }
-  }
+  };
 
   const handleDuplicate = (id: string) => {
-    setActionError(null)
+    setActionError(null);
     duplicateBeatMutation.mutate(id, {
       onSuccess: () => {
-        setActiveDropdownId(null)
+        setActiveDropdownId(null);
       },
       onError: (err: any) => {
-        setActiveDropdownId(null)
-        const msg = err?.response?.data?.error || err?.response?.data?.message || err?.message || "Failed to duplicate track"
-        setActionError(msg)
-      }
-    })
-  }
+        setActiveDropdownId(null);
+        setActionError(getApiErrorMessage(err, "Failed to duplicate track"));
+      },
+    });
+  };
 
   const columns: ColumnDef<Beat>[] = [
     {
       id: "cover",
       header: "Cover",
       cell: ({ row }) => {
-        const cover = row.original.assets.coverImage
+        const cover = row.original.assets.coverImage;
         return (
           <div className="relative h-10 w-10 rounded-md bg-neutral-900 border border-card-border overflow-hidden flex items-center justify-center shrink-0">
             {cover ? (
               <>
-                <img 
-                  src={cover} 
-                  alt="Cover" 
-                  className="h-full w-full object-cover" 
+                <img
+                  src={cover}
+                  alt="Cover"
+                  className="h-full w-full object-cover"
                   onError={(e) => {
                     (e.target as HTMLImageElement).style.display = "none";
-                    const fallbackEl = (e.target as HTMLImageElement).nextElementSibling as HTMLElement;
+                    const fallbackEl = (e.target as HTMLImageElement)
+                      .nextElementSibling as HTMLElement;
                     if (fallbackEl) fallbackEl.style.display = "flex";
                   }}
                 />
-                <div style={{ display: "none" }} className="h-full w-full flex items-center justify-center bg-gradient-to-br from-neutral-900 to-neutral-800 text-[10px] text-neutral-600 font-bold font-mono">
+                <div
+                  style={{ display: "none" }}
+                  className="h-full w-full flex items-center justify-center bg-gradient-to-br from-neutral-900 to-neutral-800 text-[10px] text-neutral-600 font-bold font-mono"
+                >
                   NO IMG
                 </div>
               </>
             ) : (
-              <span className="text-[10px] text-neutral-600 font-bold font-mono">NO IMG</span>
+              <span className="text-[10px] text-neutral-600 font-bold font-mono">
+                NO IMG
+              </span>
             )}
           </div>
-        )
-      }
+        );
+      },
     },
     {
       accessorKey: "title",
       header: "Beat Name",
       cell: ({ row }) => (
-        <span className="font-semibold text-neutral-100">{row.original.title}</span>
-      )
+        <span className="font-semibold text-neutral-100">
+          {row.original.title}
+        </span>
+      ),
     },
     {
       id: "artist",
       header: "Artist",
       cell: ({ row }) => {
-        const artist = artists.find(a => a.id === row.original.artistId)
-        return <span>{artist ? artist.stageName : "Prabh Musik"}</span>
-      }
+        const artist = artists.find((a) => a.id === row.original.artistId);
+        return <span>{artist ? artist.stageName : "Prabh Musik"}</span>;
+      },
     },
     {
       accessorKey: "genre",
@@ -109,22 +118,26 @@ export function BeatTable({ beats }: BeatTableProps) {
         <span className="px-2 py-0.5 rounded bg-neutral-900 border border-card-border text-xs text-neutral-400 font-mono">
           {row.original.genre}
         </span>
-      )
+      ),
     },
     {
       accessorKey: "bpm",
       header: "BPM",
-      cell: ({ row }) => <span className="font-mono">{row.original.bpm}</span>
+      cell: ({ row }) => <span className="font-mono">{row.original.bpm}</span>,
     },
     {
       accessorKey: "price",
       header: "Price",
-      cell: ({ row }) => <span className="font-mono text-primary font-semibold">${row.original.price.toFixed(2)}</span>
+      cell: ({ row }) => (
+        <span className="font-mono text-primary font-semibold">
+          ${row.original.price.toFixed(2)}
+        </span>
+      ),
     },
     {
       accessorKey: "status",
       header: "Selling Status",
-      cell: ({ row }) => <StatusBadge status={row.original.status} />
+      cell: ({ row }) => <StatusBadge status={row.original.status} />,
     },
     {
       accessorKey: "createdAt",
@@ -133,14 +146,14 @@ export function BeatTable({ beats }: BeatTableProps) {
         <span className="text-neutral-500 font-mono text-xs">
           {new Date(row.original.createdAt).toLocaleDateString()}
         </span>
-      )
+      ),
     },
     {
       id: "actions",
       header: "Actions",
       cell: ({ row }) => {
-        const id = row.original.id
-        const isOpen = activeDropdownId === id
+        const id = row.original.id;
+        const isOpen = activeDropdownId === id;
 
         return (
           <div className="relative">
@@ -152,11 +165,11 @@ export function BeatTable({ beats }: BeatTableProps) {
             >
               <MoreHorizontal size={16} />
             </Button>
-            
+
             {isOpen && (
               <>
-                <div 
-                  className="fixed inset-0 z-10" 
+                <div
+                  className="fixed inset-0 z-10"
                   onClick={() => setActiveDropdownId(null)}
                 />
                 <div className="absolute right-0 mt-1 w-36 rounded-md border border-card-border bg-card p-1 shadow-xl z-20 animate-in fade-in slide-in-from-top-1">
@@ -186,8 +199,8 @@ export function BeatTable({ beats }: BeatTableProps) {
                   <div className="my-1 border-t border-card-border" />
                   <button
                     onClick={() => {
-                      setBeatToDelete(id)
-                      setActiveDropdownId(null)
+                      setBeatToDelete(id);
+                      setActiveDropdownId(null);
                     }}
                     className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-xs text-red-400 hover:bg-red-500/5 hover:text-red-300 transition-colors"
                   >
@@ -198,17 +211,22 @@ export function BeatTable({ beats }: BeatTableProps) {
               </>
             )}
           </div>
-        )
-      }
-    }
-  ]
+        );
+      },
+    },
+  ];
 
   return (
     <>
       {actionError && (
         <div className="mb-4 rounded-xl border border-red-500/20 bg-red-500/10 p-3.5 text-sm text-red-400 font-medium flex items-center justify-between animate-in fade-in duration-200">
           <span>⚠️ {actionError}</span>
-          <button onClick={() => setActionError(null)} className="text-red-400/60 hover:text-red-300 text-xs font-semibold">Dismiss</button>
+          <button
+            onClick={() => setActionError(null)}
+            className="text-red-400/60 hover:text-red-300 text-xs font-semibold"
+          >
+            Dismiss
+          </button>
         </div>
       )}
       <DataTable columns={columns} data={beats} />
@@ -223,5 +241,5 @@ export function BeatTable({ beats }: BeatTableProps) {
         isDestructive
       />
     </>
-  )
+  );
 }

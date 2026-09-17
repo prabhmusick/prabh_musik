@@ -79,12 +79,31 @@ const generateUniqueSlug = async (title) => {
  */
 const resolvePublicUrl = (key) => {
   if (!key || typeof key !== "string") return null;
-  if (key.startsWith("http://") || key.startsWith("https://")) {
-    return key;
+  const normalizedKey = key.trim();
+  if (!normalizedKey) return null;
+
+  try {
+    const parsedKey = new URL(normalizedKey, "http://localhost");
+    if (parsedKey.pathname.replace(/\/+$/, "") === "/api/media") {
+      const nestedKey = parsedKey.searchParams.get("key");
+      return nestedKey ? resolvePublicUrl(nestedKey) : null;
+    }
+  } catch {
+    return null;
+  }
+
+  if (normalizedKey.replace(/^\/+|\/+$/g, "") === "api/media") {
+    return null;
+  }
+  if (
+    normalizedKey.startsWith("http://") ||
+    normalizedKey.startsWith("https://")
+  ) {
+    return normalizedKey;
   }
   const r2Url = process.env.R2_PUBLIC_URL;
   if (r2Url) {
-    return `${r2Url.replace(/\/$/, "")}/${key.replace(/^\//, "")}`;
+    return `${r2Url.replace(/\/$/, "")}/${normalizedKey.replace(/^\//, "")}`;
   }
 
   // If R2 is not configured, try to resolve a public backend URL.
@@ -96,7 +115,7 @@ const resolvePublicUrl = (key) => {
     process.env.BACKEND_PUBLIC_URL ||
     process.env.APP_URL ||
     `http://localhost:${process.env.PORT || 5005}`;
-  return `${backendPublic.replace(/\/$/, "")}/api/media?key=${encodeURIComponent(key)}`;
+  return `${backendPublic.replace(/\/$/, "")}/api/media?key=${encodeURIComponent(normalizedKey)}`;
 };
 
 /**
@@ -663,6 +682,31 @@ const updateStatus = async (publicId, status, adminUserId) => {
   return toPublicBeatDto(updatedEntity);
 };
 
+const archiveBeat = async (publicId, adminUserId) => {
+  if (!publicId || typeof publicId !== "string" || !publicId.trim()) {
+    throw new AppError("Public ID is required.", 400);
+  }
+  if (!adminUserId) {
+    throw new AppError("Admin user identification is required.", 400);
+  }
+
+  const existingBeat = await repository.findByPublicId(publicId.trim());
+  if (!existingBeat) {
+    throw new AppError("Beat not found.", 404);
+  }
+
+  if (existingBeat.status === "archived") {
+    return toPublicBeatDto(existingBeat);
+  }
+
+  const archivedEntity = await repository.archiveBeat(publicId.trim());
+  if (!archivedEntity) {
+    throw new AppError("Beat not found.", 404);
+  }
+
+  return toPublicBeatDto(archivedEntity);
+};
+
 /**
  * Handles inventory updates when an order is fulfilled.
  * For exclusive licenses, transitions the beat status to archived so it is removed from the catalog.
@@ -703,5 +747,6 @@ module.exports = {
   listAdminBeats,
   updateBeat,
   updateStatus,
+  archiveBeat,
   handleOrderFulfillment,
 };

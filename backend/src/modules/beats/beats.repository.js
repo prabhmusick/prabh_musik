@@ -452,6 +452,39 @@ const updateStatus = async (publicId, status) => {
   }
 };
 
+const archiveBeat = async (publicId) => {
+  const sql = `
+    UPDATE beats
+    SET status = 'archived', updated_at = CURRENT_TIMESTAMP
+    WHERE public_id = ?
+  `;
+
+  try {
+    const result = await db.prepare(sql).bind(publicId).run();
+    const changesCount = result
+      ? result.changes !== undefined
+        ? result.changes
+        : result.meta
+          ? result.meta.changes
+          : 1
+      : 0;
+
+    if (changesCount === 0) {
+      return null;
+    }
+
+    return await findByPublicId(publicId);
+  } catch (err) {
+    if (err instanceof RepositoryError) {
+      throw err;
+    }
+    throw new RepositoryError(
+      `Failed to archive beat record: ${err.message}`,
+      err,
+    );
+  }
+};
+
 /**
  * Locates a single beat record matching the given internal integer database ID.
  *
@@ -517,6 +550,7 @@ module.exports = {
   listBeats,
   updateBeat,
   updateStatus,
+  archiveBeat,
   getBeatById,
   listTrendingBeats,
   recordPlay,
