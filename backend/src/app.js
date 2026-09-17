@@ -10,6 +10,8 @@ const beatsRoutes = require("./modules/beats/beats.routes");
 const authRoutes = require("./modules/auth/auth.routes");
 const ordersRoutes = require("./modules/orders/orders.routes");
 const paymentsRoutes = require("./modules/payments/payments.routes");
+const cartRoutes = require("./modules/cart/cart.routes");
+const artistsRoutes = require("./modules/artists/artists.routes");
 const ownershipsRoutes = require("./modules/ownerships/ownerships.routes");
 const downloadsRoutes = require("./modules/downloads/downloads.routes");
 const uploadsRoutes = require("./modules/uploads/uploads.routes");
@@ -192,7 +194,9 @@ app.get("/health", async (req, res) => {
   });
 
   const storageConnected = await checkStorage().catch(() => false);
-  const stripeAvailable = !!(process.env.STRIPE_SECRET_KEY || "");
+  const razorpayAvailable = !!(
+    process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET
+  );
 
   res.status(200).json({
     success: true,
@@ -204,7 +208,7 @@ app.get("/health", async (req, res) => {
     dependencies: {
       database: dbConnected ? "connected" : "disconnected",
       storage: storageConnected ? "connected" : "disconnected",
-      stripe: stripeAvailable ? "configured" : "unconfigured",
+      razorpay: razorpayAvailable ? "configured" : "unconfigured",
     },
   });
 });
@@ -249,6 +253,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/beats", beatsRoutes);
 app.use("/api/orders", ordersRoutes);
 app.use("/api/payments", paymentsRoutes);
+app.use("/api/cart", cartRoutes);
+app.use("/api/artists", artistsRoutes);
 app.use("/api/ownerships", ownershipsRoutes);
 app.use("/api/downloads", downloadsRoutes);
 app.use("/api/uploads", uploadsRoutes);

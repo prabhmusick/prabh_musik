@@ -17,7 +17,8 @@ const handlePaymentError = (error) => {
   console.error("Razorpay API Error:", razorData);
 
   // If Razorpay provided a description, surface it for easier debugging
-  const description = razorData?.error?.description || razorData?.message || null;
+  const description =
+    razorData?.error?.description || razorData?.message || null;
   const message = description
     ? `Razorpay API operation failed: ${description}`
     : "Razorpay API operation failed";
@@ -29,12 +30,20 @@ const ensureRazorpayConfigured = () => {
   if (!razorpayKeyId || !razorpayKeySecret) {
     throw new AppError(
       "Razorpay keys not configured. Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in the environment",
-      500
+      500,
     );
   }
 };
 
-const createCheckoutSession = async ({ amount, currency = "INR", email, beats, successUrl, cancelUrl }) => {
+const createCheckoutSession = async ({
+  amount,
+  currency = "INR",
+  email,
+  beats,
+  userId,
+  successUrl,
+  cancelUrl,
+}) => {
   try {
     ensureRazorpayConfigured();
     const orderPayload = buildCheckoutSessionParams({
@@ -42,14 +51,19 @@ const createCheckoutSession = async ({ amount, currency = "INR", email, beats, s
       currency,
       email,
       beats,
+      userId,
       successUrl,
       cancelUrl,
     });
 
-    const response = await axios.post(`${razorpayBaseUrl}/orders`, orderPayload, {
-      auth: buildRazorpayAuth(),
-      headers: { "Content-Type": "application/json" },
-    });
+    const response = await axios.post(
+      `${razorpayBaseUrl}/orders`,
+      orderPayload,
+      {
+        auth: buildRazorpayAuth(),
+        headers: { "Content-Type": "application/json" },
+      },
+    );
 
     logger.info({
       event: "PAYMENT_CHECKOUT_SESSION_CREATED",
@@ -71,7 +85,14 @@ const createCheckoutSession = async ({ amount, currency = "INR", email, beats, s
   }
 };
 
-const createPaymentIntent = async ({ amount, currency = "INR", email, beats, paymentMethodId }) => {
+const createPaymentIntent = async ({
+  amount,
+  currency = "INR",
+  email,
+  beats,
+  userId,
+  paymentMethodId,
+}) => {
   try {
     ensureRazorpayConfigured();
     const orderPayload = buildCheckoutSessionParams({
@@ -79,14 +100,19 @@ const createPaymentIntent = async ({ amount, currency = "INR", email, beats, pay
       currency,
       email,
       beats,
+      userId,
       successUrl: "",
       cancelUrl: "",
     });
 
-    const response = await axios.post(`${razorpayBaseUrl}/orders`, orderPayload, {
-      auth: buildRazorpayAuth(),
-      headers: { "Content-Type": "application/json" },
-    });
+    const response = await axios.post(
+      `${razorpayBaseUrl}/orders`,
+      orderPayload,
+      {
+        auth: buildRazorpayAuth(),
+        headers: { "Content-Type": "application/json" },
+      },
+    );
 
     logger.info({
       event: "PAYMENT_INTENT_CREATED",
@@ -108,9 +134,12 @@ const createPaymentIntent = async ({ amount, currency = "INR", email, beats, pay
 const getPaymentStatus = async (paymentIntentId) => {
   try {
     ensureRazorpayConfigured();
-    const response = await axios.get(`${razorpayBaseUrl}/orders/${paymentIntentId}`, {
-      auth: buildRazorpayAuth(),
-    });
+    const response = await axios.get(
+      `${razorpayBaseUrl}/orders/${paymentIntentId}`,
+      {
+        auth: buildRazorpayAuth(),
+      },
+    );
     return {
       status: response.data.status,
       amount: response.data.amount / 100,
@@ -124,9 +153,12 @@ const getPaymentStatus = async (paymentIntentId) => {
 const verifyPaymentIntent = async (paymentIntentId) => {
   try {
     ensureRazorpayConfigured();
-    const response = await axios.get(`${razorpayBaseUrl}/orders/${paymentIntentId}`, {
-      auth: buildRazorpayAuth(),
-    });
+    const response = await axios.get(
+      `${razorpayBaseUrl}/orders/${paymentIntentId}`,
+      {
+        auth: buildRazorpayAuth(),
+      },
+    );
 
     if (response.data.status !== "paid") {
       throw new AppError("Payment not completed", 400);

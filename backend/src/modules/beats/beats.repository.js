@@ -20,6 +20,12 @@ const BEAT_COLUMNS = `
   bpm,
   musical_key,
   description,
+  related_artist_name,
+  related_artist_image_key,
+  artist_id,
+  (SELECT public_id FROM artists WHERE id = artist_id) AS artist_public_id,
+  play_count,
+  is_trending,
   audio_key,
   cover_key,
   banner_key,
@@ -36,7 +42,7 @@ const BEAT_COLUMNS = `
 const ALLOWED_SORT_COLUMNS = {
   created_at: "created_at",
   title: "title",
-  price_amount: "price_amount"
+  price_amount: "price_amount",
 };
 
 /**
@@ -44,7 +50,7 @@ const ALLOWED_SORT_COLUMNS = {
  */
 const ALLOWED_SORT_ORDERS = {
   ASC: "ASC",
-  DESC: "DESC"
+  DESC: "DESC",
 };
 
 /**
@@ -59,11 +65,14 @@ const UPDATABLE_COLUMNS = {
   bpm: "bpm",
   musical_key: "musical_key",
   description: "description",
+  related_artist_name: "related_artist_name",
+  related_artist_image_key: "related_artist_image_key",
+  is_trending: "is_trending",
   audio_key: "audio_key",
   cover_key: "cover_key",
   banner_key: "banner_key",
   duration: "duration",
-  status: "status"
+  status: "status",
 };
 
 /**
@@ -85,13 +94,18 @@ const createBeat = async (beatData) => {
       bpm,
       musical_key,
       description,
+      related_artist_name,
+      related_artist_image_key,
+      artist_id,
+      play_count,
+      is_trending,
       audio_key,
       cover_key,
       banner_key,
       duration,
       status,
       created_by
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
   const params = [
@@ -104,17 +118,25 @@ const createBeat = async (beatData) => {
     beatData.bpm,
     beatData.musical_key,
     beatData.description,
+    beatData.related_artist_name,
+    beatData.related_artist_image_key,
+    beatData.artist_id,
+    beatData.play_count || 0,
+    beatData.is_trending ? 1 : 0,
     beatData.audio_key,
     beatData.cover_key,
     beatData.banner_key,
     beatData.duration,
     beatData.status,
-    beatData.created_by
+    beatData.created_by,
   ];
 
   try {
     // 1. Execute the insert mutation using D1 prepared statements
-    await db.prepare(insertSql).bind(...params).run();
+    await db
+      .prepare(insertSql)
+      .bind(...params)
+      .run();
 
     // 2. Retrieve the inserted row using the stable, globally unique public_id
     const selectSql = `
@@ -124,9 +146,14 @@ const createBeat = async (beatData) => {
       WHERE public_id = ?
     `;
 
-    const createdBeat = await db.prepare(selectSql).bind(beatData.public_id).first();
+    const createdBeat = await db
+      .prepare(selectSql)
+      .bind(beatData.public_id)
+      .first();
     if (!createdBeat) {
-      throw new RepositoryError("Beat record was inserted successfully, but retrieval failed.");
+      throw new RepositoryError(
+        "Beat record was inserted successfully, but retrieval failed.",
+      );
     }
 
     return createdBeat;
@@ -135,7 +162,10 @@ const createBeat = async (beatData) => {
       throw err;
     }
     // Wrap database driver failures to isolate repository concerns
-    throw new RepositoryError(`Failed to insert beat record: ${err.message}`, err);
+    throw new RepositoryError(
+      `Failed to insert beat record: ${err.message}`,
+      err,
+    );
   }
 };
 
@@ -161,7 +191,10 @@ const findByPublicId = async (publicId) => {
     if (err instanceof RepositoryError) {
       throw err;
     }
-    throw new RepositoryError(`Failed to fetch beat by public ID: ${err.message}`, err);
+    throw new RepositoryError(
+      `Failed to fetch beat by public ID: ${err.message}`,
+      err,
+    );
   }
 };
 
@@ -187,7 +220,10 @@ const findBySlug = async (slug) => {
     if (err instanceof RepositoryError) {
       throw err;
     }
-    throw new RepositoryError(`Failed to fetch beat by slug: ${err.message}`, err);
+    throw new RepositoryError(
+      `Failed to fetch beat by slug: ${err.message}`,
+      err,
+    );
   }
 };
 
@@ -213,7 +249,10 @@ const existsBySlug = async (slug) => {
     if (err instanceof RepositoryError) {
       throw err;
     }
-    throw new RepositoryError(`Failed to verify beat slug existence: ${err.message}`, err);
+    throw new RepositoryError(
+      `Failed to verify beat slug existence: ${err.message}`,
+      err,
+    );
   }
 };
 
@@ -237,7 +276,7 @@ const listBeats = async (options = {}) => {
     limit = 20,
     offset = 0,
     sortBy = "created_at",
-    sortOrder = "DESC"
+    sortOrder = "DESC",
   } = options;
 
   const whereConditions = [];
@@ -254,13 +293,13 @@ const listBeats = async (options = {}) => {
     params.push(genre);
   }
 
-  const whereClause = whereConditions.length > 0 
-    ? `WHERE ${whereConditions.join(" AND ")}` 
-    : "";
+  const whereClause =
+    whereConditions.length > 0 ? `WHERE ${whereConditions.join(" AND ")}` : "";
 
   // 2. Validate and resolve ORDER BY clause against strict whitelists
   const validatedSortBy = ALLOWED_SORT_COLUMNS[sortBy] || "created_at";
-  const validatedSortOrder = ALLOWED_SORT_ORDERS[String(sortOrder).toUpperCase()] || "DESC";
+  const validatedSortOrder =
+    ALLOWED_SORT_ORDERS[String(sortOrder).toUpperCase()] || "DESC";
   const orderByClause = `ORDER BY ${validatedSortBy} ${validatedSortOrder}`;
 
   // 3. Construct final SQL query statement
@@ -277,7 +316,10 @@ const listBeats = async (options = {}) => {
   params.push(Number(limit), Number(offset));
 
   try {
-    const results = await db.prepare(sql).bind(...params).all();
+    const results = await db
+      .prepare(sql)
+      .bind(...params)
+      .all();
 
     // Handle both local array return and D1 { results: [...] } structure
     if (Array.isArray(results)) {
@@ -335,10 +377,19 @@ const updateBeat = async (publicId, updates = {}) => {
   `;
 
   try {
-    const result = await db.prepare(sql).bind(...params).run();
+    const result = await db
+      .prepare(sql)
+      .bind(...params)
+      .run();
 
     // Inspect change count across D1 and local SQLite drivers
-    const changesCount = result ? (result.changes !== undefined ? result.changes : (result.meta ? result.meta.changes : 1)) : 0;
+    const changesCount = result
+      ? result.changes !== undefined
+        ? result.changes
+        : result.meta
+          ? result.meta.changes
+          : 1
+      : 0;
 
     if (changesCount === 0) {
       return null;
@@ -350,7 +401,10 @@ const updateBeat = async (publicId, updates = {}) => {
     if (err instanceof RepositoryError) {
       throw err;
     }
-    throw new RepositoryError(`Failed to update beat record: ${err.message}`, err);
+    throw new RepositoryError(
+      `Failed to update beat record: ${err.message}`,
+      err,
+    );
   }
 };
 
@@ -374,7 +428,13 @@ const updateStatus = async (publicId, status) => {
   try {
     const result = await db.prepare(sql).bind(status, publicId).run();
 
-    const changesCount = result ? (result.changes !== undefined ? result.changes : (result.meta ? result.meta.changes : 1)) : 0;
+    const changesCount = result
+      ? result.changes !== undefined
+        ? result.changes
+        : result.meta
+          ? result.meta.changes
+          : 1
+      : 0;
 
     if (changesCount === 0) {
       return null;
@@ -385,7 +445,10 @@ const updateStatus = async (publicId, status) => {
     if (err instanceof RepositoryError) {
       throw err;
     }
-    throw new RepositoryError(`Failed to update beat status: ${err.message}`, err);
+    throw new RepositoryError(
+      `Failed to update beat status: ${err.message}`,
+      err,
+    );
   }
 };
 
@@ -411,8 +474,39 @@ const getBeatById = async (id) => {
     if (err instanceof RepositoryError) {
       throw err;
     }
-    throw new RepositoryError(`Failed to fetch beat by ID: ${err.message}`, err);
+    throw new RepositoryError(
+      `Failed to fetch beat by ID: ${err.message}`,
+      err,
+    );
   }
+};
+
+const listTrendingBeats = async (limit = 4) => {
+  const sql = `
+    SELECT ${BEAT_COLUMNS}
+    FROM beats
+    WHERE status = 'published'
+    ORDER BY is_trending DESC, play_count DESC, created_at DESC
+    LIMIT ?
+  `;
+  const result = await db.prepare(sql).bind(limit).all();
+  return result.results || result;
+};
+
+const recordPlay = async (publicId) => {
+  const result = await db
+    .prepare(
+      `
+    UPDATE beats
+    SET play_count = play_count + 1, updated_at = CURRENT_TIMESTAMP
+    WHERE public_id = ? AND status = 'published'
+  `,
+    )
+    .bind(publicId)
+    .run();
+  const changes = result?.changes ?? result?.meta?.changes ?? 0;
+  if (!changes) return null;
+  return findByPublicId(publicId);
 };
 
 module.exports = {
@@ -423,6 +517,7 @@ module.exports = {
   listBeats,
   updateBeat,
   updateStatus,
-  getBeatById
+  getBeatById,
+  listTrendingBeats,
+  recordPlay,
 };
-

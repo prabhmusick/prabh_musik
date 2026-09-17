@@ -14,7 +14,7 @@ const router = express.Router();
 const catalogRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100,
-  message: "Too many catalog requests, please try again later."
+  message: "Too many catalog requests, please try again later.",
 });
 
 // 1. POST / - Creates a new beat record (Admin Only)
@@ -22,6 +22,9 @@ router.post("/", authMiddleware, requireAdmin, controller.createBeat);
 
 // 2. GET / - Lists published beats for the storefront catalog
 router.get("/", catalogRateLimiter, controller.listPublicBeats);
+router.get("/trending", catalogRateLimiter, controller.listTrendingBeats);
+
+router.post("/:publicId/play", catalogRateLimiter, controller.recordPlay);
 
 // 3. GET /admin - Lists all beats (drafts, published, archived) for admin view (Admin Only)
 router.get("/admin", authMiddleware, requireAdmin, controller.listAdminBeats);
@@ -36,6 +39,11 @@ router.get("/:publicId", catalogRateLimiter, controller.getBeatByPublicId);
 router.patch("/:publicId", authMiddleware, requireAdmin, controller.updateBeat);
 
 // 7. PATCH /:publicId/status - Updates a beat's lifecycle status (Admin Only)
-router.patch("/:publicId/status", authMiddleware, requireAdmin, controller.updateStatus);
+router.patch(
+  "/:publicId/status",
+  authMiddleware,
+  requireAdmin,
+  controller.updateStatus,
+);
 
 module.exports = router;

@@ -14,7 +14,7 @@ const formatOrderResponse = (order, items) => {
     customer: {
       id: order.customer_id,
       name: order.customer_name,
-      email: order.customer_email
+      email: order.customer_email,
     },
     totalAmount: order.total_amount,
     paymentMethod: order.payment_method,
@@ -23,12 +23,12 @@ const formatOrderResponse = (order, items) => {
     fulfilledAt: order.fulfilled_at,
     createdAt: order.created_at,
     updatedAt: order.updated_at,
-    items: items.map(item => ({
+    items: items.map((item) => ({
       beatId: item.beat_id,
       title: item.beat_title,
       price: item.price,
-      licenseType: item.license_type
-    }))
+      licenseType: item.license_type,
+    })),
   };
 };
 
@@ -75,7 +75,9 @@ const createOrder = async (orderData) => {
   let calculatedTotal = 0;
 
   for (const beatId of validated.beatIds) {
-    const beat = await beatsRepository.getBeatById(beatId);
+    const beat = /^\d+$/.test(String(beatId))
+      ? await beatsRepository.getBeatById(Number(beatId))
+      : await beatsRepository.findByPublicId(String(beatId));
     if (!beat) {
       throw new AppError(`Beat not found: ID ${beatId}`, 404);
     }
@@ -83,7 +85,10 @@ const createOrder = async (orderData) => {
       throw new AppError(`Cannot purchase archived beat: "${beat.title}"`, 400);
     }
     if (beat.status !== "published") {
-      throw new AppError(`Beat "${beat.title}" is no longer available (status: ${beat.status})`, 400);
+      throw new AppError(
+        `Beat "${beat.title}" is no longer available (status: ${beat.status})`,
+        400,
+      );
     }
 
     calculatedTotal += beat.price_amount;
@@ -91,7 +96,7 @@ const createOrder = async (orderData) => {
       beatId: beat.id,
       beatTitle: beat.title,
       price: beat.price_amount,
-      licenseType: "exclusive" // Defaulting to exclusive per requirements
+      licenseType: "exclusive", // Defaulting to exclusive per requirements
     });
   }
 
@@ -105,8 +110,8 @@ const createOrder = async (orderData) => {
     {
       paymentReference: orderData.paymentReference || null,
       transactionId: orderData.transactionId || null,
-      gateway: orderData.gateway || null
-    }
+      gateway: orderData.gateway || null,
+    },
   );
 
   logger.info({
@@ -115,7 +120,7 @@ const createOrder = async (orderData) => {
     customerId: validated.customerId,
     totalAmount: calculatedTotal,
     paymentMethod: validated.paymentMethod,
-    beatCount: items.length
+    beatCount: items.length,
   });
 
   const order = await getOrder(orderId);
@@ -135,12 +140,12 @@ const createOrder = async (orderData) => {
 const getAllOrders = async () => {
   const orders = await repository.getAllOrders();
   const result = [];
-  
+
   for (const order of orders) {
     const items = await repository.getOrderItems(order.id);
     result.push(formatOrderResponse(order, items));
   }
-  
+
   return result;
 };
 
@@ -155,7 +160,10 @@ const validateStatusTransition = (currentStatus, nextStatus) => {
   if (current === "pending") {
     const allowed = ["paid", "failed", "cancelled"];
     if (!allowed.includes(next)) {
-      throw new AppError(`Invalid status transition from '${current}' to '${next}'`, 400);
+      throw new AppError(
+        `Invalid status transition from '${current}' to '${next}'`,
+        400,
+      );
     }
     return;
   }
@@ -163,12 +171,18 @@ const validateStatusTransition = (currentStatus, nextStatus) => {
   if (current === "paid") {
     const allowed = ["refunded"];
     if (!allowed.includes(next)) {
-      throw new AppError(`Invalid status transition from '${current}' to '${next}'`, 400);
+      throw new AppError(
+        `Invalid status transition from '${current}' to '${next}'`,
+        400,
+      );
     }
     return;
   }
 
-  throw new AppError(`Cannot transition status from terminal state '${current}' to '${next}'`, 400);
+  throw new AppError(
+    `Cannot transition status from terminal state '${current}' to '${next}'`,
+    400,
+  );
 };
 
 /**
@@ -177,13 +191,15 @@ const validateStatusTransition = (currentStatus, nextStatus) => {
 const updateOrder = async (id, updates) => {
   const existingOrder = await getOrder(id);
   const cleanUpdates = {};
-  
+
   if (updates.paymentMethod !== undefined) {
     cleanUpdates.payment_method = updates.paymentMethod;
   }
-  
+
   if (updates.status !== undefined) {
-    const { status } = validator.validateStatusUpdate({ status: updates.status });
+    const { status } = validator.validateStatusUpdate({
+      status: updates.status,
+    });
     validateStatusTransition(existingOrder.status, status);
     cleanUpdates.status = status;
   }
@@ -244,13 +260,20 @@ const deleteOrder = async (id) => {
 /**
  * Confirms payment for beats, creating a paid order record and triggering downstream fulfillment
  */
-const confirmPayment = async ({ email, userId, beatIds, paymentReference, paymentMethod }) => {
+const confirmPayment = async ({
+  email,
+  userId,
+  beatIds,
+  paymentReference,
+  paymentMethod,
+}) => {
   if (!paymentReference) {
     throw new AppError("Payment reference is required for confirmation", 400);
   }
 
   // 1. Idempotency Check: check if order with this payment reference already exists
-  const existingOrder = await repository.getOrderByPaymentReference(paymentReference);
+  const existingOrder =
+    await repository.getOrderByPaymentReference(paymentReference);
   if (existingOrder) {
     return getOrder(existingOrder.id);
   }
@@ -259,29 +282,50 @@ const confirmPayment = async ({ email, userId, beatIds, paymentReference, paymen
   let customerId = userId;
   if (!customerId) {
     if (!email) {
-      throw new AppError("Either customerId or email must be provided to confirm payment", 400);
+      throw new AppError(
+        "Either customerId or email must be provided to confirm payment",
+        400,
+      );
     }
-    const user = await usersRepository.findUserByEmail(email.toLowerCase().trim());
+    const user = await usersRepository.findUserByEmail(
+      email.toLowerCase().trim(),
+    );
     if (!user) {
       throw new AppError(`Customer with email ${email} not found`, 404);
     }
     customerId = user.id;
   } else {
-    const user = await usersRepository.getUserById(customerId);
+    const user = /^\d+$/.test(String(customerId))
+      ? await usersRepository.getUserById(Number(customerId))
+      : await usersRepository.findUserByPublicId(customerId);
     if (!user) {
       throw new AppError(`Customer not found (ID: ${customerId})`, 404);
     }
+    customerId = user.id;
+  }
+
+  const internalBeatIds = [];
+  for (const beatId of beatIds) {
+    if (/^\d+$/.test(String(beatId))) {
+      internalBeatIds.push(Number(beatId));
+      continue;
+    }
+    const beat = await beatsRepository.findByPublicId(String(beatId));
+    if (!beat) {
+      throw new AppError(`Beat not found: ID ${beatId}`, 404);
+    }
+    internalBeatIds.push(beat.id);
   }
 
   // 3. Create the paid order using the standard service order creation orchestration
   const order = await createOrder({
     customerId,
-    beatIds,
+    beatIds: internalBeatIds,
     paymentMethod: paymentMethod || "credit_card",
     status: "paid",
     paymentReference,
     transactionId: paymentReference,
-    gateway: "stripe"
+    gateway: "stripe",
   });
 
   logger.info({
@@ -289,7 +333,7 @@ const confirmPayment = async ({ email, userId, beatIds, paymentReference, paymen
     orderId: order.id,
     customerId,
     paymentReference,
-    gateway: "stripe"
+    gateway: "stripe",
   });
 
   return order;
@@ -302,5 +346,5 @@ module.exports = {
   updateOrder,
   updateOrderStatus,
   deleteOrder,
-  confirmPayment
+  confirmPayment,
 };

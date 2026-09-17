@@ -13,14 +13,16 @@ const createCheckoutSession = async (req, res, next) => {
   }
 
   try {
-    const frontendBase = process.env.FRONTEND_URL || `${req.protocol}://${req.get("host")}`;
+    const frontendBase =
+      process.env.FRONTEND_URL || `${req.protocol}://${req.get("host")}`;
     const session = await paymentsService.createCheckoutSession({
       amount,
       currency,
       email,
       beats,
+      userId: req.user.id,
       successUrl: `${frontendBase}/profile?payment=success`,
-      cancelUrl: `${frontendBase}/checkout`
+      cancelUrl: `${frontendBase}/checkout`,
     });
 
     // Return the full session payload so the frontend can open the Razorpay widget
@@ -30,7 +32,7 @@ const createCheckoutSession = async (req, res, next) => {
       orderId: session.orderId,
       amount: session.amount,
       currency: session.currency,
-      keyId: session.keyId
+      keyId: session.keyId,
     });
   } catch (error) {
     next(error);
@@ -54,12 +56,12 @@ const createPaymentIntent = async (req, res, next) => {
       currency,
       email,
       beats,
-      paymentMethodId
+      paymentMethodId,
     });
 
     res.json({
       clientSecret: paymentIntent.clientSecret,
-      paymentIntentId: paymentIntent.paymentIntentId
+      paymentIntentId: paymentIntent.paymentIntentId,
     });
   } catch (error) {
     next(error);
@@ -71,10 +73,33 @@ const createPaymentIntent = async (req, res, next) => {
  * @route POST /api/payments/payment-success
  */
 const paymentSuccess = async (req, res, next) => {
-  return res.status(410).json({
-    success: false,
-    message: "Payment confirmation is now handled exclusively by Stripe webhooks."
-  });
+  const { orderId, paymentId, signature } = req.body;
+  if (!orderId || !paymentId || !signature) {
+    return res
+      .status(400)
+      .json({ error: "Razorpay payment details are required" });
+  }
+
+  try {
+    const expectedSignature = require("crypto")
+      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET || "")
+      .update(`${orderId}|${paymentId}`)
+      .digest("hex");
+    if (expectedSignature !== signature) {
+      return res.status(400).json({ error: "Invalid payment signature" });
+    }
+
+    const payment = await paymentsService.verifyPaymentIntent(orderId);
+    const order = await ordersService.confirmPayment({
+      userId: req.user.id,
+      beatIds: payment.beatIds,
+      paymentReference: payment.paymentReference,
+      paymentMethod: payment.paymentMethod,
+    });
+    res.json({ success: true, data: order });
+  } catch (error) {
+    next(error);
+  }
 };
 
 /**
@@ -96,5 +121,5 @@ module.exports = {
   createCheckoutSession,
   createPaymentIntent,
   paymentSuccess,
-  getPaymentStatus
+  getPaymentStatus,
 };
