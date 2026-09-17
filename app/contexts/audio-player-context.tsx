@@ -1,6 +1,14 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  useCallback,
+} from "react";
+import api from "../../lib/api";
 
 export interface Beat {
   id: string;
@@ -29,10 +37,17 @@ interface AudioPlayerContextValue {
   setIsLooping: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-const AudioPlayerContext = createContext<AudioPlayerContextValue | undefined>(undefined);
-const DEFAULT_PREVIEW_URL = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3";
+const AudioPlayerContext = createContext<AudioPlayerContextValue | undefined>(
+  undefined,
+);
+const DEFAULT_PREVIEW_URL =
+  "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3";
 
-export function AudioPlayerProvider({ children }: { children: React.ReactNode }) {
+export function AudioPlayerProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const [currentBeat, setCurrentBeat] = useState<Beat | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -109,20 +124,29 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       }
 
       if (!(beat.previewUrl || "").trim()) {
-        console.warn("No preview URL available for this beat; using fallback demo preview.");
+        console.warn(
+          "No preview URL available for this beat; using fallback demo preview.",
+        );
       }
 
       audio.src = normalizedBeat.previewUrl;
       audio.currentTime = 0;
       setCurrentBeat(normalizedBeat);
       setCurrentTime(0);
+      api
+        .post(`/beats/${encodeURIComponent(normalizedBeat.id)}/play`)
+        .catch(() => {});
 
       const initialDuration = Number(normalizedBeat.duration);
-      setDuration(Number.isFinite(initialDuration) && initialDuration > 0 ? initialDuration : 0);
+      setDuration(
+        Number.isFinite(initialDuration) && initialDuration > 0
+          ? initialDuration
+          : 0,
+      );
 
       await audio.play().catch(() => {});
     },
-    [currentBeat?.id]
+    [currentBeat?.id],
   );
 
   const playAdjacent = useCallback(
@@ -135,10 +159,11 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
 
       const currentIdx = beatsList.findIndex((b) => b.id === currentBeat.id);
       const baseIndex = currentIdx >= 0 ? currentIdx : 0;
-      const nextIndex = (baseIndex + direction + beatsList.length) % beatsList.length;
+      const nextIndex =
+        (baseIndex + direction + beatsList.length) % beatsList.length;
       await playBeat(beatsList[nextIndex], beatsList);
     },
-    [currentBeat, beatsList, playBeat]
+    [currentBeat, beatsList, playBeat],
   );
 
   const togglePlayback = useCallback(async () => {
@@ -179,7 +204,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       audio.currentTime = Number.isFinite(next) ? next : 0;
       setCurrentTime(Number.isFinite(next) ? next : 0);
     },
-    [duration]
+    [duration],
   );
 
   return (
@@ -206,7 +231,9 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
 export function useAudioPlayer() {
   const context = useContext(AudioPlayerContext);
   if (!context) {
-    throw new Error("useAudioPlayer must be used within an AudioPlayerProvider");
+    throw new Error(
+      "useAudioPlayer must be used within an AudioPlayerProvider",
+    );
   }
   return context;
 }

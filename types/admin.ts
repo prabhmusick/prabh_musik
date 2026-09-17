@@ -2,10 +2,10 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'admin' | 'customer';
+  role: "admin" | "customer";
   avatar?: string;
   createdAt: string;
-  status: 'ACTIVE' | 'BLOCKED';
+  status: "ACTIVE" | "BLOCKED";
   mobile?: string;
   address?: string;
   lastLogin?: string;
@@ -15,11 +15,14 @@ export interface Artist {
   id: string;
   userId: string;
   stageName: string;
+  phone?: string;
+  email?: string;
+  image?: string;
   bio?: string;
   totalBeats: number;
   totalSales: number;
   joinedAt: string;
-  status: 'active' | 'pending' | 'suspended';
+  status: "active" | "pending" | "suspended";
 }
 
 export interface BeatAnalytics {
@@ -42,15 +45,19 @@ export interface Beat {
   artistId: string;
   title: string;
   description?: string;
+  relatedArtistName?: string;
+  relatedArtistImage?: string;
+  isTrending?: boolean;
+  playCount?: number;
   genre: string;
   bpm: number;
   key: string;
   mood: string;
-  type: 'beat' | 'song' | 'vocals';
-  trackType: 'exclusive' | 'non-exclusive';
+  type: "beat" | "song" | "vocals";
+  trackType: "exclusive" | "non-exclusive";
   tags: string[];
   price: number;
-  status: 'DRAFT' | 'AVAILABLE' | 'SOLD';
+  status: "DRAFT" | "AVAILABLE" | "SOLD";
   createdAt: string;
   duration?: number;
   assets: BeatAssetUrls;
@@ -63,7 +70,7 @@ export interface Order {
   customerId: string;
   beatIds: string[];
   totalAmount: number;
-  status: 'PENDING' | 'COMPLETED' | 'FAILED' | 'REFUNDED';
+  status: "PENDING" | "COMPLETED" | "FAILED" | "REFUNDED";
   createdAt: string;
   paymentMethod: string;
 }
@@ -72,14 +79,14 @@ export interface Activity {
   id: string;
   description: string;
   timestamp: string;
-  type: 'order' | 'ownership' | 'beat' | 'system';
+  type: "order" | "ownership" | "beat" | "system";
 }
 
 export interface Ownership {
   id: string;
   beatId: string;
   customerId: string;
-  licenseType: 'exclusive' | 'non-exclusive' | 'basic';
+  licenseType: "exclusive" | "non-exclusive" | "basic";
   purchasedAt: string;
   pricePaid: number;
   transactionId: string;
@@ -93,7 +100,12 @@ export interface DashboardMetrics {
   totalBeats: number;
   revenueOverview: { name: string; total: number }[];
   recentOrders: (Order & { customerName: string })[];
-  topArtists: { id: string; stageName: string; totalSales: number; totalBeats: number }[];
+  topArtists: {
+    id: string;
+    stageName: string;
+    totalSales: number;
+    totalBeats: number;
+  }[];
   recentBeats: Beat[];
   recentActivities: Activity[];
 }

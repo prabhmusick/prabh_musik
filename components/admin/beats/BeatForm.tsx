@@ -1,47 +1,77 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { useRouter } from "next/navigation"
-import { Beat, BeatAssetUrls } from "../../../types/admin"
-import { useArtists } from "../../../hooks/useArtists"
-import { BEAT_GENRES } from "../../../constants/beat-genres"
-import { BEAT_MOODS } from "../../../constants/beat-moods"
-import { BEAT_KEYS } from "../../../constants/beat-keys"
-import { BeatUploadZone } from "./BeatUploadZone"
-import { Button } from "../../ui/button"
-import { Input } from "../../ui/input"
+import * as React from "react";
+import { useRouter } from "next/navigation";
+import { Beat, BeatAssetUrls } from "../../../types/admin";
+import { useArtists } from "../../../hooks/useArtists";
+import { BEAT_GENRES } from "../../../constants/beat-genres";
+import { BEAT_MOODS } from "../../../constants/beat-moods";
+import { BEAT_KEYS } from "../../../constants/beat-keys";
+import { BeatUploadZone } from "./BeatUploadZone";
+import { Button } from "../../ui/button";
+import { Input } from "../../ui/input";
 
 interface BeatFormProps {
   initialValues?: Beat;
-  onSubmit: (data: Omit<Beat, 'id' | 'createdAt' | 'analytics' | 'ownershipsCount'>) => void;
+  onSubmit: (
+    data: Omit<Beat, "id" | "createdAt" | "analytics" | "ownershipsCount">,
+  ) => void;
   isSubmitting: boolean;
   error?: string | null;
 }
 
-export function BeatForm({ initialValues, onSubmit, isSubmitting, error }: BeatFormProps) {
-  const router = useRouter()
-  const { data: artists = [] } = useArtists()
-  const [title, setTitle] = React.useState(initialValues?.title || "")
-  const [artistId, setArtistId] = React.useState(initialValues?.artistId || "")
-  const [duration, setDuration] = React.useState(initialValues?.duration || 0)
-  const [description, setDescription] = React.useState(initialValues?.description || "")
+export function BeatForm({
+  initialValues,
+  onSubmit,
+  isSubmitting,
+  error,
+}: BeatFormProps) {
+  const router = useRouter();
+  const { data: artists = [] } = useArtists();
+  const [title, setTitle] = React.useState(initialValues?.title || "");
+  const [artistId, setArtistId] = React.useState(initialValues?.artistId || "");
+  const [relatedArtistName, setRelatedArtistName] = React.useState(
+    initialValues?.relatedArtistName || "",
+  );
+  const [relatedArtistImage, setRelatedArtistImage] = React.useState(
+    initialValues?.relatedArtistImage || "",
+  );
+  const [isTrending, setIsTrending] = React.useState(
+    initialValues?.isTrending || false,
+  );
+  const [duration, setDuration] = React.useState(initialValues?.duration || 0);
+  const [description, setDescription] = React.useState(
+    initialValues?.description || "",
+  );
 
   React.useEffect(() => {
     if (!artistId && artists.length > 0) {
-      setArtistId(artists[0].id)
+      setArtistId(artists[0].id);
     }
-  }, [artists, artistId])
-  
-  const [type, setType] = React.useState<'beat' | 'song' | 'vocals'>(initialValues?.type || 'beat')
-  const [genre, setGenre] = React.useState(initialValues?.genre || BEAT_GENRES[0])
-  const [bpm, setBpm] = React.useState(initialValues?.bpm?.toString() || "120")
-  const [key, setKey] = React.useState(initialValues?.key || BEAT_KEYS[0])
-  const [mood, setMood] = React.useState(initialValues?.mood || BEAT_MOODS[0])
-  const [trackType, setTrackType] = React.useState<'exclusive' | 'non-exclusive'>(initialValues?.trackType || 'non-exclusive')
-  const [tagsInput, setTagsInput] = React.useState(initialValues?.tags?.join(", ") || "")
-  
-  const [price, setPrice] = React.useState(initialValues?.price?.toString() || "149.99")
-  const [status, setStatus] = React.useState<'DRAFT' | 'AVAILABLE' | 'SOLD'>(initialValues?.status || 'AVAILABLE')
+  }, [artists, artistId]);
+
+  const [type, setType] = React.useState<"beat" | "song" | "vocals">(
+    initialValues?.type || "beat",
+  );
+  const [genre, setGenre] = React.useState(
+    initialValues?.genre || BEAT_GENRES[0],
+  );
+  const [bpm, setBpm] = React.useState(initialValues?.bpm?.toString() || "120");
+  const [key, setKey] = React.useState(initialValues?.key || BEAT_KEYS[0]);
+  const [mood, setMood] = React.useState(initialValues?.mood || BEAT_MOODS[0]);
+  const [trackType, setTrackType] = React.useState<
+    "exclusive" | "non-exclusive"
+  >(initialValues?.trackType || "non-exclusive");
+  const [tagsInput, setTagsInput] = React.useState(
+    initialValues?.tags?.join(", ") || "",
+  );
+
+  const [price, setPrice] = React.useState(
+    initialValues?.price?.toString() || "149.99",
+  );
+  const [status, setStatus] = React.useState<"DRAFT" | "AVAILABLE" | "SOLD">(
+    initialValues?.status || "AVAILABLE",
+  );
 
   const [assets, setAssets] = React.useState<BeatAssetUrls>({
     coverImage: initialValues?.assets?.coverImage || "",
@@ -49,27 +79,30 @@ export function BeatForm({ initialValues, onSubmit, isSubmitting, error }: BeatF
     previewAudio: initialValues?.assets?.previewAudio || "",
     wavFile: initialValues?.assets?.wavFile || "",
     stemsFile: initialValues?.assets?.stemsFile || "",
-  })
+  });
 
   const handleAssetChange = (key: keyof BeatAssetUrls, url: string) => {
-    setAssets(prev => ({
+    setAssets((prev) => ({
       ...prev,
-      [key]: url
-    }))
-  }
+      [key]: url,
+    }));
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!title || !artistId || !bpm || !price) return
+    e.preventDefault();
+    if (!title || !artistId || !bpm || !price) return;
 
     const tags = tagsInput
       .split(",")
-      .map(tag => tag.trim().toLowerCase())
-      .filter(tag => tag.length > 0)
+      .map((tag) => tag.trim().toLowerCase())
+      .filter((tag) => tag.length > 0);
 
     onSubmit({
       title,
       artistId,
+      relatedArtistName,
+      relatedArtistImage,
+      isTrending,
       description,
       type,
       genre,
@@ -82,8 +115,8 @@ export function BeatForm({ initialValues, onSubmit, isSubmitting, error }: BeatF
       status,
       duration,
       assets,
-    } as any)
-  }
+    } as any);
+  };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8 max-w-4xl">
@@ -94,31 +127,41 @@ export function BeatForm({ initialValues, onSubmit, isSubmitting, error }: BeatF
       )}
       {/* Section 1: Basic Information */}
       <div className="rounded-xl border border-card-border bg-card p-6 space-y-6">
-        <h2 className="text-lg font-bold text-white border-b border-card-border pb-3">Section 1: Basic Information</h2>
+        <h2 className="text-lg font-bold text-white border-b border-card-border pb-3">
+          Section 1: Basic Information
+        </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-neutral-300">Beat Name</label>
-            <Input 
+            <label className="text-sm font-semibold text-neutral-300">
+              Beat Name
+            </label>
+            <Input
               required
-              placeholder="e.g. Midnight Drive" 
+              placeholder="e.g. Midnight Drive"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-neutral-300">Artist</label>
+            <label className="text-sm font-semibold text-neutral-300">
+              Artist
+            </label>
             <select
               value={artistId}
               onChange={(e) => setArtistId(e.target.value)}
               className="w-full rounded-md border border-card-border bg-background px-3 py-2 text-sm text-neutral-200 outline-none focus:border-white/[0.12]"
             >
-              {artists.map(artist => (
-                <option key={artist.id} value={artist.id}>{artist.stageName}</option>
+              {artists.map((artist) => (
+                <option key={artist.id} value={artist.id}>
+                  {artist.stageName}
+                </option>
               ))}
             </select>
           </div>
           <div className="space-y-2 md:col-span-2">
-            <label className="text-sm font-semibold text-neutral-300">Description</label>
+            <label className="text-sm font-semibold text-neutral-300">
+              Description
+            </label>
             <textarea
               rows={3}
               placeholder="Enter details about this track..."
@@ -127,15 +170,51 @@ export function BeatForm({ initialValues, onSubmit, isSubmitting, error }: BeatF
               className="w-full rounded-md border border-card-border bg-background p-3 text-sm text-neutral-200 outline-none focus:border-white/[0.12] resize-none"
             />
           </div>
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-neutral-300">
+              Related Artist
+            </label>
+            <Input
+              placeholder="e.g. Karan Aujla"
+              value={relatedArtistName}
+              onChange={(e) => setRelatedArtistName(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-neutral-300">
+              Related Artist Image
+            </label>
+            <BeatUploadZone
+              label="Related Artist Image"
+              accept="image/*"
+              description="JPG or PNG artist image."
+              value={relatedArtistImage}
+              onUploadComplete={(key) => setRelatedArtistImage(key)}
+              type="image"
+            />
+          </div>
+          <label className="flex items-center gap-3 rounded-md border border-card-border bg-background p-3 text-sm text-neutral-300">
+            <input
+              type="checkbox"
+              checked={isTrending}
+              onChange={(e) => setIsTrending(e.target.checked)}
+              className="h-4 w-4 accent-amber-500"
+            />
+            Feature this beat in Trending Beats
+          </label>
         </div>
       </div>
 
       {/* Section 2: Music Information */}
       <div className="rounded-xl border border-card-border bg-card p-6 space-y-6">
-        <h2 className="text-lg font-bold text-white border-b border-card-border pb-3">Section 2: Music Information</h2>
+        <h2 className="text-lg font-bold text-white border-b border-card-border pb-3">
+          Section 2: Music Information
+        </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-neutral-300">Beat Type</label>
+            <label className="text-sm font-semibold text-neutral-300">
+              Beat Type
+            </label>
             <select
               value={type}
               onChange={(e) => setType(e.target.value as any)}
@@ -147,32 +226,42 @@ export function BeatForm({ initialValues, onSubmit, isSubmitting, error }: BeatF
             </select>
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-neutral-300">Genre</label>
+            <label className="text-sm font-semibold text-neutral-300">
+              Genre
+            </label>
             <select
               value={genre}
               onChange={(e) => setGenre(e.target.value)}
               className="w-full rounded-md border border-card-border bg-background px-3 py-2 text-sm text-neutral-200 outline-none focus:border-white/[0.12]"
             >
-              {BEAT_GENRES.map(g => (
-                <option key={g} value={g}>{g}</option>
+              {BEAT_GENRES.map((g) => (
+                <option key={g} value={g}>
+                  {g}
+                </option>
               ))}
             </select>
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-neutral-300">Mood</label>
+            <label className="text-sm font-semibold text-neutral-300">
+              Mood
+            </label>
             <select
               value={mood}
               onChange={(e) => setMood(e.target.value)}
               className="w-full rounded-md border border-card-border bg-background px-3 py-2 text-sm text-neutral-200 outline-none focus:border-white/[0.12]"
             >
-              {BEAT_MOODS.map(m => (
-                <option key={m} value={m}>{m}</option>
+              {BEAT_MOODS.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
               ))}
             </select>
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-neutral-300">BPM</label>
-            <Input 
+            <label className="text-sm font-semibold text-neutral-300">
+              BPM
+            </label>
+            <Input
               required
               type="number"
               value={bpm}
@@ -181,19 +270,25 @@ export function BeatForm({ initialValues, onSubmit, isSubmitting, error }: BeatF
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-neutral-300">Key</label>
+            <label className="text-sm font-semibold text-neutral-300">
+              Key
+            </label>
             <select
               value={key}
               onChange={(e) => setKey(e.target.value)}
               className="w-full rounded-md border border-card-border bg-background px-3 py-2 text-sm text-neutral-200 outline-none focus:border-white/[0.12]"
             >
-              {BEAT_KEYS.map(k => (
-                <option key={k} value={k}>{k}</option>
+              {BEAT_KEYS.map((k) => (
+                <option key={k} value={k}>
+                  {k}
+                </option>
               ))}
             </select>
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-neutral-300">Track Type</label>
+            <label className="text-sm font-semibold text-neutral-300">
+              Track Type
+            </label>
             <select
               value={trackType}
               onChange={(e) => setTrackType(e.target.value as any)}
@@ -204,9 +299,11 @@ export function BeatForm({ initialValues, onSubmit, isSubmitting, error }: BeatF
             </select>
           </div>
           <div className="space-y-2 md:col-span-3">
-            <label className="text-sm font-semibold text-neutral-300">Tags (comma separated)</label>
-            <Input 
-              placeholder="e.g. trap, bounce, dark, heavy" 
+            <label className="text-sm font-semibold text-neutral-300">
+              Tags (comma separated)
+            </label>
+            <Input
+              placeholder="e.g. trap, bounce, dark, heavy"
               value={tagsInput}
               onChange={(e) => setTagsInput(e.target.value)}
             />
@@ -216,11 +313,15 @@ export function BeatForm({ initialValues, onSubmit, isSubmitting, error }: BeatF
 
       {/* Section 3: Pricing & Status */}
       <div className="rounded-xl border border-card-border bg-card p-6 space-y-6">
-        <h2 className="text-lg font-bold text-white border-b border-card-border pb-3">Section 3: Pricing & Status</h2>
+        <h2 className="text-lg font-bold text-white border-b border-card-border pb-3">
+          Section 3: Pricing & Status
+        </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-neutral-300">License Price ($)</label>
-            <Input 
+            <label className="text-sm font-semibold text-neutral-300">
+              License Price ($)
+            </label>
+            <Input
               required
               type="number"
               step="0.01"
@@ -230,7 +331,9 @@ export function BeatForm({ initialValues, onSubmit, isSubmitting, error }: BeatF
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-neutral-300">Selling Status</label>
+            <label className="text-sm font-semibold text-neutral-300">
+              Selling Status
+            </label>
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value as any)}
@@ -246,7 +349,9 @@ export function BeatForm({ initialValues, onSubmit, isSubmitting, error }: BeatF
 
       {/* Section 4: Assets */}
       <div className="rounded-xl border border-card-border bg-card p-6 space-y-6">
-        <h2 className="text-lg font-bold text-white border-b border-card-border pb-3">Section 4: Assets</h2>
+        <h2 className="text-lg font-bold text-white border-b border-card-border pb-3">
+          Section 4: Assets
+        </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <BeatUploadZone
             label="Cover Image"
@@ -270,8 +375,8 @@ export function BeatForm({ initialValues, onSubmit, isSubmitting, error }: BeatF
             description="MP3 or WAV tagged file for site play."
             value={assets.previewAudio}
             onUploadComplete={(key, dur) => {
-              handleAssetChange("previewAudio", key)
-              if (dur) setDuration(dur)
+              handleAssetChange("previewAudio", key);
+              if (dur) setDuration(dur);
             }}
             type="audio"
           />
@@ -305,23 +410,23 @@ export function BeatForm({ initialValues, onSubmit, isSubmitting, error }: BeatF
           )}
         </div>
         <div className="flex justify-end gap-3.5 w-full sm:w-auto">
-          <Button 
-            type="button" 
-            variant="outline" 
+          <Button
+            type="button"
+            variant="outline"
             onClick={() => router.push("/admin/beats")}
             disabled={isSubmitting}
           >
             Cancel
           </Button>
-          <Button 
-            type="submit" 
-            disabled={isSubmitting}
-            className="px-6"
-          >
-            {isSubmitting ? "Saving Beat..." : (initialValues ? "Save Changes" : "Upload Beat")}
+          <Button type="submit" disabled={isSubmitting} className="px-6">
+            {isSubmitting
+              ? "Saving Beat..."
+              : initialValues
+                ? "Save Changes"
+                : "Upload Beat"}
           </Button>
         </div>
       </div>
     </form>
-  )
+  );
 }
