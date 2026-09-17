@@ -112,12 +112,25 @@ export function mapFrontendToBackend(beat: any): any {
   if (beat.assets !== undefined) {
     const getRawKey = (url: string | undefined): string | null => {
       if (!url) return null;
+
+      if (url.includes("/api/media")) {
+        try {
+          const parsed = new URL(url);
+          const keyFromQuery = parsed.searchParams.get("key");
+          if (keyFromQuery) return decodeURIComponent(keyFromQuery);
+        } catch {
+          // fall through to direct URL fallback below
+        }
+      }
+
       if (url.includes("/beats/object/")) {
         return url.split("/beats/object/").pop() || null;
       }
+
       try {
         const parsed = new URL(url);
-        return parsed.pathname.substring(1);
+        const pathname = parsed.pathname.replace(/^\/+|\/+$/g, "");
+        return pathname || null;
       } catch {
         return url;
       }
