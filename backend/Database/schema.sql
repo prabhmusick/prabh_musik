@@ -126,6 +126,14 @@ CREATE TABLE testimonials (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE lyrics (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    genre TEXT NOT NULL,
+    quote TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE beats (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     public_id TEXT UNIQUE NOT NULL,            -- Pattern: bt_<ULID> (Exposed to frontend)

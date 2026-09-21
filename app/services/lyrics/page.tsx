@@ -1,5 +1,30 @@
-'use client';
+"use client";
 import { useState, useEffect, useRef } from "react";
+import { getLyrics } from "../../../services/lyrics.service";
+
+const DEFAULT_COMMISSIONS = [
+  {
+    num: "001",
+    genre: "Pop · Electronic",
+    title: "Neon Soul",
+    quote:
+      "Dancing through the static of a city made of glass, every heartbeat echoing the shadows that we pass—",
+  },
+  {
+    num: "002",
+    genre: "Alternative",
+    title: "Binary Heartbeat",
+    quote:
+      "In the 1s and 0s of the life we left behind, I found the only truth that I could never redefine.",
+  },
+  {
+    num: "003",
+    genre: "R&B · Soul",
+    title: "Midnight Echo",
+    quote:
+      "Soft whispers in the hallway of a house we used to call home, carving names into the silence when I'm alone.",
+  },
+];
 
 const style = `
   @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,700;0,800;1,400;1,500;1,700&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap');
@@ -618,10 +643,7 @@ const VERSES = [
   },
   {
     label: "CHORUS",
-    lines: [
-      "We are the frequency between",
-      "the silence and the scream.",
-    ],
+    lines: ["We are the frequency between", "the silence and the scream."],
     highlighted: true,
   },
   {
@@ -656,21 +678,27 @@ function TypewriterManuscript() {
     const line = verse.lines[lineIdx];
 
     if (charIdx < line.length) {
-      const id = setTimeout(() => setCharIdx(c => c + 1), 36 + Math.random() * 20);
+      const id = setTimeout(
+        () => setCharIdx((c) => c + 1),
+        36 + Math.random() * 20,
+      );
       return () => clearTimeout(id);
     }
 
     // line complete
     if (lineIdx < verse.lines.length - 1) {
-      const id = setTimeout(() => { setLineIdx(l => l + 1); setCharIdx(0); }, 320);
+      const id = setTimeout(() => {
+        setLineIdx((l) => l + 1);
+        setCharIdx(0);
+      }, 320);
       return () => clearTimeout(id);
     }
 
     // verse complete
     if (verseIdx < VERSES.length - 1) {
       const id = setTimeout(() => {
-        setCompletedVerses(cv => [...cv, verse]);
-        setVerseIdx(v => v + 1);
+        setCompletedVerses((cv) => [...cv, verse]);
+        setVerseIdx((v) => v + 1);
         setLineIdx(0);
         setCharIdx(0);
       }, 700);
@@ -697,25 +725,49 @@ function TypewriterManuscript() {
       </div>
 
       {completedVerses.map((v, i) => (
-        <div key={i} className={v.highlighted ? "ms-chorus ms-verse" : "ms-verse"}>
+        <div
+          key={i}
+          className={v.highlighted ? "ms-chorus ms-verse" : "ms-verse"}
+        >
           <div className="ms-section-label">{v.label}</div>
           {v.lines.map((line, j) => (
-            <span key={j} className="ms-line">{line}</span>
+            <span key={j} className="ms-line">
+              {line}
+            </span>
           ))}
         </div>
       ))}
 
       {!done && (
-        <div className={currentVerse.highlighted ? "ms-chorus ms-verse" : "ms-verse"}>
+        <div
+          className={
+            currentVerse.highlighted ? "ms-chorus ms-verse" : "ms-verse"
+          }
+        >
           <div className="ms-section-label">{currentVerse.label}</div>
           {currentVerse.lines.map((line, j) => {
-            if (j < lineIdx) return <span key={j} className="ms-line">{line}</span>;
-            if (j === lineIdx) return (
-              <span key={j} className="ms-line">
-                {line.slice(0, charIdx)}<span className="ms-cursor" />
+            if (j < lineIdx)
+              return (
+                <span key={j} className="ms-line">
+                  {line}
+                </span>
+              );
+            if (j === lineIdx)
+              return (
+                <span key={j} className="ms-line">
+                  {line.slice(0, charIdx)}
+                  <span className="ms-cursor" />
+                </span>
+              );
+            return (
+              <span
+                key={j}
+                className="ms-line muted-line"
+                style={{ opacity: 0 }}
+              >
+                {line}
               </span>
             );
-            return <span key={j} className="ms-line muted-line" style={{ opacity: 0 }}>{line}</span>;
           })}
         </div>
       )}
@@ -727,7 +779,10 @@ function TypewriterManuscript() {
             <span>{Math.round(done ? 100 : progress)}%</span>
           </div>
           <div className="ms-progress-bar">
-            <div className="ms-progress-fill" style={{ width: `${done ? 100 : progress}%` }} />
+            <div
+              className="ms-progress-fill"
+              style={{ width: `${done ? 100 : progress}%` }}
+            />
           </div>
         </div>
         <div className="ms-page">pg. 01 / 04</div>
@@ -739,7 +794,12 @@ function TypewriterManuscript() {
 // ── Capability card visuals ──────────────────────────────────────────────────
 function CapVisStorytellers() {
   return (
-    <svg width="100%" height="190" viewBox="0 0 460 190" style={{ display: "block" }}>
+    <svg
+      width="100%"
+      height="190"
+      viewBox="0 0 460 190"
+      style={{ display: "block" }}
+    >
       <defs>
         <radialGradient id="cv1-bg" cx="50%" cy="100%" r="80%">
           <stop offset="0%" stopColor="#1a1006" />
@@ -748,12 +808,26 @@ function CapVisStorytellers() {
       </defs>
       <rect width="460" height="190" fill="url(#cv1-bg)" />
       {/* Ruled lines — manuscript paper */}
-      {[0,1,2,3,4,5,6,7].map(i => (
-        <line key={i} x1="0" y1={30 + i * 22} x2="460" y2={30 + i * 22}
-          stroke="rgba(240,123,32,0.06)" strokeWidth="1" />
+      {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+        <line
+          key={i}
+          x1="0"
+          y1={30 + i * 22}
+          x2="460"
+          y2={30 + i * 22}
+          stroke="rgba(240,123,32,0.06)"
+          strokeWidth="1"
+        />
       ))}
       {/* Left margin line */}
-      <line x1="60" y1="0" x2="60" y2="190" stroke="rgba(240,123,32,0.12)" strokeWidth="1" />
+      <line
+        x1="60"
+        y1="0"
+        x2="60"
+        y2="190"
+        stroke="rgba(240,123,32,0.12)"
+        strokeWidth="1"
+      />
       {/* Text lines — handwriting style */}
       {[
         { y: 36, w: 260, indent: 80, op: 0.55 },
@@ -764,17 +838,55 @@ function CapVisStorytellers() {
         { y: 146, w: 160, indent: 80, op: 0.28 },
         { y: 168, w: 210, indent: 80, op: 0.4 },
       ].map((l, i) => (
-        <rect key={i} x={l.indent} y={l.y - 7} width={l.w} height={6}
-          rx="3" fill="#f07b20" fillOpacity={l.op} />
+        <rect
+          key={i}
+          x={l.indent}
+          y={l.y - 7}
+          width={l.w}
+          height={6}
+          rx="3"
+          fill="#f07b20"
+          fillOpacity={l.op}
+        />
       ))}
       {/* Section bracket */}
-      <rect x="70" y="26" width="3" height="100" rx="2" fill="#f07b20" fillOpacity="0.4" />
+      <rect
+        x="70"
+        y="26"
+        width="3"
+        height="100"
+        rx="2"
+        fill="#f07b20"
+        fillOpacity="0.4"
+      />
       {/* Label */}
-      <text x="78" y="21" fontFamily="monospace" fontSize="9" fill="#f07b20" fillOpacity="0.5"
-        letterSpacing="3">VERSE I</text>
+      <text
+        x="78"
+        y="21"
+        fontFamily="monospace"
+        fontSize="9"
+        fill="#f07b20"
+        fillOpacity="0.5"
+        letterSpacing="3"
+      >
+        VERSE I
+      </text>
       {/* Cursor */}
-      <rect x="298" y="161" width="2" height="14" rx="1" fill="#f07b20" fillOpacity="0.9">
-        <animate attributeName="opacity" values="1;0;1" dur="0.9s" repeatCount="indefinite" />
+      <rect
+        x="298"
+        y="161"
+        width="2"
+        height="14"
+        rx="1"
+        fill="#f07b20"
+        fillOpacity="0.9"
+      >
+        <animate
+          attributeName="opacity"
+          values="1;0;1"
+          dur="0.9s"
+          repeatCount="indefinite"
+        />
       </rect>
       {/* Decorative orange corner */}
       <path d="M440 0 L460 0 L460 40 Z" fill="#f07b20" fillOpacity="0.05" />
@@ -784,7 +896,12 @@ function CapVisStorytellers() {
 
 function CapVisVisual() {
   return (
-    <svg width="100%" height="190" viewBox="0 0 460 190" style={{ display: "block" }}>
+    <svg
+      width="100%"
+      height="190"
+      viewBox="0 0 460 190"
+      style={{ display: "block" }}
+    >
       <defs>
         <radialGradient id="cv2-bg" cx="60%" cy="40%" r="70%">
           <stop offset="0%" stopColor="#0f0a14" />
@@ -794,55 +911,182 @@ function CapVisVisual() {
       <rect width="460" height="190" fill="url(#cv2-bg)" />
       {/* Social media card mockups */}
       {[
-        { x: 60, y: 30, w: 130, h: 130, rot: -6, title: "NEON SOUL", sub: "Softly · 2024", op: 0.9 },
-        { x: 180, y: 25, w: 140, h: 140, rot: 1, title: "MIDNIGHT ECHO", sub: "Drop incoming", op: 1 },
-        { x: 310, y: 35, w: 120, h: 120, rot: 8, title: "BINARY", sub: "Heartbeat", op: 0.8 },
+        {
+          x: 60,
+          y: 30,
+          w: 130,
+          h: 130,
+          rot: -6,
+          title: "NEON SOUL",
+          sub: "Softly · 2024",
+          op: 0.9,
+        },
+        {
+          x: 180,
+          y: 25,
+          w: 140,
+          h: 140,
+          rot: 1,
+          title: "MIDNIGHT ECHO",
+          sub: "Drop incoming",
+          op: 1,
+        },
+        {
+          x: 310,
+          y: 35,
+          w: 120,
+          h: 120,
+          rot: 8,
+          title: "BINARY",
+          sub: "Heartbeat",
+          op: 0.8,
+        },
       ].map((c, i) => (
-        <g key={i} transform={`rotate(${c.rot}, ${c.x + c.w/2}, ${c.y + c.h/2})`}>
-          <rect x={c.x} y={c.y} width={c.w} height={c.h} rx="8"
-            fill="rgba(240,123,32,0.07)" stroke="rgba(240,123,32,0.22)" strokeWidth="1"
-            opacity={c.op} />
+        <g
+          key={i}
+          transform={`rotate(${c.rot}, ${c.x + c.w / 2}, ${c.y + c.h / 2})`}
+        >
+          <rect
+            x={c.x}
+            y={c.y}
+            width={c.w}
+            height={c.h}
+            rx="8"
+            fill="rgba(240,123,32,0.07)"
+            stroke="rgba(240,123,32,0.22)"
+            strokeWidth="1"
+            opacity={c.op}
+          />
           {/* Card inner gradient */}
-          <rect x={c.x+1} y={c.y+1} width={c.w-2} height={c.h*0.55} rx="7"
-            fill="rgba(240,123,32,0.06)" opacity={c.op} />
+          <rect
+            x={c.x + 1}
+            y={c.y + 1}
+            width={c.w - 2}
+            height={c.h * 0.55}
+            rx="7"
+            fill="rgba(240,123,32,0.06)"
+            opacity={c.op}
+          />
           {/* Title */}
-          <text x={c.x + c.w/2} y={c.y + c.h * 0.52}
-            textAnchor="middle" fontFamily="serif" fontWeight="900"
-            fontSize={c.w > 125 ? 11 : 10} fill="#f07b20" fillOpacity={0.7 * c.op}
-            letterSpacing="1">{c.title}</text>
-          <text x={c.x + c.w/2} y={c.y + c.h * 0.65}
-            textAnchor="middle" fontFamily="monospace"
-            fontSize="7" fill="#f07b20" fillOpacity={0.35 * c.op}
-            letterSpacing="1">{c.sub}</text>
+          <text
+            x={c.x + c.w / 2}
+            y={c.y + c.h * 0.52}
+            textAnchor="middle"
+            fontFamily="serif"
+            fontWeight="900"
+            fontSize={c.w > 125 ? 11 : 10}
+            fill="#f07b20"
+            fillOpacity={0.7 * c.op}
+            letterSpacing="1"
+          >
+            {c.title}
+          </text>
+          <text
+            x={c.x + c.w / 2}
+            y={c.y + c.h * 0.65}
+            textAnchor="middle"
+            fontFamily="monospace"
+            fontSize="7"
+            fill="#f07b20"
+            fillOpacity={0.35 * c.op}
+            letterSpacing="1"
+          >
+            {c.sub}
+          </text>
           {/* Bottom bar */}
-          <rect x={c.x + 12} y={c.y + c.h - 22} width={c.w - 24} height={4} rx="2"
-            fill="#f07b20" fillOpacity={0.18 * c.op} />
-          <rect x={c.x + 12} y={c.y + c.h - 14} width={(c.w - 24) * 0.6} height={4} rx="2"
-            fill="#f07b20" fillOpacity={0.1 * c.op} />
+          <rect
+            x={c.x + 12}
+            y={c.y + c.h - 22}
+            width={c.w - 24}
+            height={4}
+            rx="2"
+            fill="#f07b20"
+            fillOpacity={0.18 * c.op}
+          />
+          <rect
+            x={c.x + 12}
+            y={c.y + c.h - 14}
+            width={(c.w - 24) * 0.6}
+            height={4}
+            rx="2"
+            fill="#f07b20"
+            fillOpacity={0.1 * c.op}
+          />
         </g>
       ))}
       {/* Sparkle */}
       <circle cx="240" cy="95" r="3" fill="#f07b20" fillOpacity="0.6" />
-      <circle cx="240" cy="95" r="8" fill="none" stroke="#f07b20" strokeOpacity="0.15" strokeWidth="1" />
+      <circle
+        cx="240"
+        cy="95"
+        r="8"
+        fill="none"
+        stroke="#f07b20"
+        strokeOpacity="0.15"
+        strokeWidth="1"
+      />
     </svg>
   );
 }
 
 // ── Main page ────────────────────────────────────────────────────────────────
 export default function LyricsPage() {
-  const [form, setForm] = useState({ name: "", email: "", type: "", message: "" });
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    type: "",
+    message: "",
+  });
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+  const [commissions, setCommissions] = useState(DEFAULT_COMMISSIONS);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
-    setForm({ ...form, [e.target.name]: e.target.value });
+  useEffect(() => {
+    let isMounted = true;
+    getLyrics()
+      .then((items) => {
+        if (!isMounted || items.length === 0) return;
+        setCommissions(
+          items.map((item, index) => ({
+            num: String(index + 1).padStart(3, "0"),
+            title: item.title,
+            genre: item.genre,
+            quote: item.quote,
+          })),
+        );
+      })
+      .catch(() => undefined);
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const handleChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
+  ) => setForm({ ...form, [e.target.name]: e.target.value });
 
   const handleSend = () => {
     setSending(true);
-    setTimeout(() => { setSending(false); setSent(true); setTimeout(() => setSent(false), 3500); }, 1400);
+    setTimeout(() => {
+      setSending(false);
+      setSent(true);
+      setTimeout(() => setSent(false), 3500);
+    }, 1400);
   };
 
-  const stripItems = ["Verse Writing", "Hook Craft", "Lyrical Direction", "Full Album", "EP Direction", "Ghostwriting", "Co-writing", "Concept Development"];
+  const stripItems = [
+    "Verse Writing",
+    "Hook Craft",
+    "Lyrical Direction",
+    "Full Album",
+    "EP Direction",
+    "Ghostwriting",
+    "Co-writing",
+    "Concept Development",
+  ];
 
   return (
     <>
@@ -854,7 +1098,9 @@ export default function LyricsPage() {
         <div className="hero-ruled" />
 
         <div className="hero-left">
-          <div className="hero-label fu fu1">Elite Songwriting & Lyrical Direction</div>
+          <div className="hero-label fu fu1">
+            Elite Songwriting & Lyrical Direction
+          </div>
           <h1 className="hero-title fu fu2">Words That</h1>
           <span className="hero-title-italic fu fu2">Move Worlds</span>
           <p className="hero-desc fu fu3">
@@ -863,10 +1109,24 @@ export default function LyricsPage() {
             never have without the right words.
           </p>
           <div className="hero-actions fu fu4">
-            <button className="btn-primary" onClick={() => document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" })}>
+            <button
+              className="btn-primary"
+              onClick={() =>
+                document
+                  .getElementById("contact")
+                  ?.scrollIntoView({ behavior: "smooth" })
+              }
+            >
               Start Your Project
             </button>
-            <button className="btn-ghost" onClick={() => document.getElementById("archive")?.scrollIntoView({ behavior: "smooth" })}>
+            <button
+              className="btn-ghost"
+              onClick={() =>
+                document
+                  .getElementById("archive")
+                  ?.scrollIntoView({ behavior: "smooth" })
+              }
+            >
               View Archive →
             </button>
           </div>
@@ -894,34 +1154,45 @@ export default function LyricsPage() {
         <div className="cap-header">
           <div>
             <div className="section-kicker">What We Offer</div>
-            <div className="section-title">Craft built on<br /><em>narrative truth</em></div>
+            <div className="section-title">
+              Craft built on
+              <br />
+              <em>narrative truth</em>
+            </div>
           </div>
           <p className="cap-intro">
-            Great lyrics aren't decoration. They're the architecture of meaning — the
-            emotional scaffolding that makes a listener feel seen. We build them
-            with intention, from the first syllable to the final refrain.
+            Great lyrics aren't decoration. They're the architecture of meaning
+            — the emotional scaffolding that makes a listener feel seen. We
+            build them with intention, from the first syllable to the final
+            refrain.
           </p>
         </div>
         <div className="cap-grid">
           <div className="cap-card">
-            <div className="cap-vis"><CapVisStorytellers /></div>
+            <div className="cap-vis">
+              <CapVisStorytellers />
+            </div>
             <div className="cap-body">
               <div className="cap-icon-wrap">🎙</div>
               <div className="cap-title">The Storytellers</div>
               <p className="cap-desc">
-                We dive deep into your personal narrative, translating raw emotion into structured,
-                high-impact lyrical masterpieces that feel authentic to your voice — not anyone else's.
+                We dive deep into your personal narrative, translating raw
+                emotion into structured, high-impact lyrical masterpieces that
+                feel authentic to your voice — not anyone else's.
               </p>
             </div>
           </div>
           <div className="cap-card">
-            <div className="cap-vis"><CapVisVisual /></div>
+            <div className="cap-vis">
+              <CapVisVisual />
+            </div>
             <div className="cap-body">
               <div className="cap-icon-wrap">✦</div>
               <div className="cap-title">Visual Lyricism</div>
               <p className="cap-desc">
-                Every hook is designed to be shareable, visually striking, and memorable — lyrics built
-                to resonate across digital formats, physical releases, and live performance alike.
+                Every hook is designed to be shareable, visually striking, and
+                memorable — lyrics built to resonate across digital formats,
+                physical releases, and live performance alike.
               </p>
             </div>
           </div>
@@ -936,16 +1207,16 @@ export default function LyricsPage() {
           <div className="archive-header">
             <div>
               <div className="section-kicker">Archive</div>
-              <div className="section-title">Recent <em>Commissions</em></div>
+              <div className="section-title">
+                Recent <em>Commissions</em>
+              </div>
             </div>
-            <a href="#" className="archive-link">Full Archive →</a>
+            <a href="#" className="archive-link">
+              Full Archive →
+            </a>
           </div>
           <div className="commissions-grid">
-            {[
-              { num: "001", genre: "Pop · Electronic", title: "Neon Soul", quote: "Dancing through the static of a city made of glass, every heartbeat echoing the shadows that we pass—" },
-              { num: "002", genre: "Alternative", title: "Binary Heartbeat", quote: "In the 1s and 0s of the life we left behind, I found the only truth that I could never redefine." },
-              { num: "003", genre: "R&B · Soul", title: "Midnight Echo", quote: "Soft whispers in the hallway of a house we used to call home, carving names into the silence when I'm alone." },
-            ].map((c) => (
+            {commissions.map((c) => (
               <div className="commission-card" key={c.num}>
                 <div className="commission-num">
                   <span>Commission #{c.num}</span>
@@ -955,7 +1226,9 @@ export default function LyricsPage() {
                 <p className="commission-quote">{c.quote}</p>
                 <div className="commission-footer">
                   <span />
-                  <a href="#" className="commission-link">Read Breakdown →</a>
+                  <a href="#" className="commission-link">
+                    Read Breakdown →
+                  </a>
                 </div>
               </div>
             ))}
@@ -971,10 +1244,15 @@ export default function LyricsPage() {
           <div className="section-kicker">The Process</div>
           <div className="workflow-layout">
             <div className="workflow-aside">
-              <div className="workflow-aside-title">From Concept<br /><em>to Soul</em></div>
+              <div className="workflow-aside-title">
+                From Concept
+                <br />
+                <em>to Soul</em>
+              </div>
               <p className="workflow-aside-desc">
-                A structured approach to capturing the intangible essence of your musical vision.
-                Every lyric built through discovery, craft, and precision.
+                A structured approach to capturing the intangible essence of
+                your musical vision. Every lyric built through discovery, craft,
+                and precision.
               </p>
               <div className="workflow-aside-stat">
                 <div className="w-stat">
@@ -990,9 +1268,24 @@ export default function LyricsPage() {
 
             <div className="workflow-steps">
               {[
-                { num: "01", icon: "📍", name: "Ideation",    desc: "Deep-dive sessions to uncover the core theme — the emotional truth your song is actually about. We interview, we listen, we find the thing underneath the thing." },
-                { num: "02", icon: "✏️", name: "Draft",       desc: "Building the lyrical structure: syllabic rhythm, phonetic texture, harmonic fit with the melody. Multiple drafts until the cadence feels inevitable." },
-                { num: "03", icon: "⚙️", name: "Refinement",  desc: "Word-level polishing. Every syllable tested against the emotional peak. Redundancies stripped. Imagery sharpened until each line earns its place." },
+                {
+                  num: "01",
+                  icon: "📍",
+                  name: "Ideation",
+                  desc: "Deep-dive sessions to uncover the core theme — the emotional truth your song is actually about. We interview, we listen, we find the thing underneath the thing.",
+                },
+                {
+                  num: "02",
+                  icon: "✏️",
+                  name: "Draft",
+                  desc: "Building the lyrical structure: syllabic rhythm, phonetic texture, harmonic fit with the melody. Multiple drafts until the cadence feels inevitable.",
+                },
+                {
+                  num: "03",
+                  icon: "⚙️",
+                  name: "Refinement",
+                  desc: "Word-level polishing. Every syllable tested against the emotional peak. Redundancies stripped. Imagery sharpened until each line earns its place.",
+                },
               ].map((s) => (
                 <div className="wf-step" key={s.num}>
                   <div className="wf-step-top">
@@ -1015,14 +1308,23 @@ export default function LyricsPage() {
         <div className="contact-wrap">
           <div className="contact-layout">
             <div className="contact-left">
-              <div className="contact-left-title">Start Your<br /><em>Narrative</em></div>
+              <div className="contact-left-title">
+                Start Your
+                <br />
+                <em>Narrative</em>
+              </div>
               <p className="contact-left-desc">
-                Tell us about your project and let's find the words that will change
-                everything. Every great song starts with a single honest line.
+                Tell us about your project and let's find the words that will
+                change everything. Every great song starts with a single honest
+                line.
               </p>
               <div className="contact-details">
                 {[
-                  { icon: "📍", label: "Studio", val: "sri ganganagar rajasthan" },
+                  {
+                    icon: "📍",
+                    label: "Studio",
+                    val: "sri ganganagar rajasthan",
+                  },
                   { icon: "📧", label: "Email", val: "support@prabhmusik.com" },
                   { icon: "⏱", label: "Turnaround", val: "3–7 business days" },
                 ].map((c, i) => (
@@ -1041,19 +1343,38 @@ export default function LyricsPage() {
               <div className="form-row">
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label">Name</label>
-                  <input className="form-input" type="text" name="name" placeholder="Your name"
-                    value={form.name} onChange={handleChange} />
+                  <input
+                    className="form-input"
+                    type="text"
+                    name="name"
+                    placeholder="Your name"
+                    value={form.name}
+                    onChange={handleChange}
+                  />
                 </div>
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label">Email</label>
-                  <input className="form-input" type="email" name="email" placeholder="your@email.com"
-                    value={form.email} onChange={handleChange} />
+                  <input
+                    className="form-input"
+                    type="email"
+                    name="email"
+                    placeholder="your@email.com"
+                    value={form.email}
+                    onChange={handleChange}
+                  />
                 </div>
               </div>
               <div className="form-group">
                 <label className="form-label">Project Type</label>
-                <select className="form-select" name="type" value={form.type} onChange={handleChange}>
-                  <option value="" disabled>Select a service…</option>
+                <select
+                  className="form-select"
+                  name="type"
+                  value={form.type}
+                  onChange={handleChange}
+                >
+                  <option value="" disabled>
+                    Select a service…
+                  </option>
                   <option>Full Album Lyrical Direction</option>
                   <option>Single Track Lyrics</option>
                   <option>EP Direction</option>
@@ -1065,23 +1386,29 @@ export default function LyricsPage() {
               </div>
               <div className="form-group">
                 <label className="form-label">Your Vision</label>
-                <textarea className="form-textarea" name="message"
+                <textarea
+                  className="form-textarea"
+                  name="message"
                   placeholder="Tell us about the vibe, the story, the feeling you're chasing…"
-                  value={form.message} onChange={handleChange} />
+                  value={form.message}
+                  onChange={handleChange}
+                />
               </div>
               <button
                 className={`btn-send${sent ? " sent" : ""}`}
                 onClick={handleSend}
                 disabled={sending || sent}
               >
-                {sent ? "✓ Request Received" : sending ? "Sending…" : "Send Request →"}
+                {sent
+                  ? "✓ Request Received"
+                  : sending
+                    ? "Sending…"
+                    : "Send Request →"}
               </button>
             </div>
           </div>
         </div>
       </section>
-
-   
     </>
   );
 }
