@@ -28,6 +28,68 @@ const toDto = (artist) => ({
 
 const listArtists = async () => (await repository.list()).map(toDto);
 
+const toWorkedWithDto = (artist) => ({
+  id: artist.id,
+  name: artist.name,
+  image:
+    artist.image?.startsWith("/") || /^https?:\/\//.test(artist.image)
+      ? artist.image
+      : resolveImageUrl(artist.image),
+  popularSong: artist.popular_song || "",
+  musicType: artist.music_type || "",
+  workedYear: artist.worked_year ? String(artist.worked_year) : "",
+});
+
+const listWorkedWithArtists = async () =>
+  (await repository.listWorkedWith()).map(toWorkedWithDto);
+
+const createWorkedWithArtist = async (input) => {
+  const name = typeof input?.name === "string" ? input.name.trim() : "";
+  const image = typeof input?.image === "string" ? input.image.trim() : "";
+  const popularSong =
+    typeof input?.popular_song === "string" ? input.popular_song.trim() : "";
+  const musicType =
+    typeof input?.music_type === "string" ? input.music_type.trim() : "";
+  const workedYear = Number(input?.worked_year);
+
+  if (!name) throw new AppError("Artist name is required.", 400);
+  if (!image) throw new AppError("Artist image is required.", 400);
+  if (!popularSong) throw new AppError("Popular song is required.", 400);
+  if (!musicType) throw new AppError("Music type is required.", 400);
+  if (!Number.isInteger(workedYear) || workedYear < 1900 || workedYear > 2100) {
+    throw new AppError("Worked year is invalid.", 400);
+  }
+
+  try {
+    return toWorkedWithDto(
+      await repository.createWorkedWith({
+        name,
+        image,
+        popularSong,
+        musicType,
+        workedYear,
+      }),
+    );
+  } catch (error) {
+    if (error.message?.includes("UNIQUE constraint failed")) {
+      throw new AppError("This artist is already listed.", 409);
+    }
+    throw error;
+  }
+};
+
+const removeWorkedWithArtist = async (id) => {
+  const numericId = Number(id);
+  if (!Number.isInteger(numericId) || numericId < 1) {
+    throw new AppError("Invalid artist id.", 400);
+  }
+
+  const result = await repository.deleteWorkedWith(numericId);
+  if (!result.meta?.changes) {
+    throw new AppError("Worked-with artist not found.", 404);
+  }
+};
+
 const createArtist = async (input) => {
   const name = typeof input?.name === "string" ? input.name.trim() : "";
   const phone = typeof input?.phone === "string" ? input.phone.trim() : "";
@@ -46,4 +108,11 @@ const createArtist = async (input) => {
   );
 };
 
-module.exports = { listArtists, createArtist, toDto };
+module.exports = {
+  listArtists,
+  listWorkedWithArtists,
+  createWorkedWithArtist,
+  removeWorkedWithArtist,
+  createArtist,
+  toDto,
+};

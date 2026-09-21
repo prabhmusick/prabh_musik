@@ -107,6 +107,25 @@ CREATE TABLE artists (
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE worked_with_artists (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT UNIQUE NOT NULL,
+    image TEXT NOT NULL,
+    popular_song TEXT,
+    music_type TEXT,
+    worked_year INTEGER
+);
+
+CREATE TABLE testimonials (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    image TEXT NOT NULL,
+    rating INTEGER NOT NULL CHECK(rating BETWEEN 1 AND 5),
+    testimonial TEXT NOT NULL,
+    professional TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE beats (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     public_id TEXT UNIQUE NOT NULL,            -- Pattern: bt_<ULID> (Exposed to frontend)

@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { motion } from "framer-motion"
+import * as React from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { motion } from "framer-motion";
 import {
   LayoutDashboard,
   Users,
@@ -12,23 +12,29 @@ import {
   ShoppingCart,
   FileBadge,
   Settings,
+  MessageSquareQuote,
   ChevronLeft,
   ChevronRight,
   X,
-} from "lucide-react"
-import { AnimatePresence } from "framer-motion"
+} from "lucide-react";
+import { AnimatePresence } from "framer-motion";
 
-import { cn } from "../../lib/utils"
+import { cn } from "../../lib/utils";
 
 const navigation = [
   { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
   { name: "Users", href: "/admin/users", icon: Users },
   { name: "Artists", href: "/admin/artists", icon: Music },
+  {
+    name: "Testimonials",
+    href: "/admin/testimonials",
+    icon: MessageSquareQuote,
+  },
   { name: "Beats", href: "/admin/beats", icon: Disc3 },
   { name: "Orders", href: "/admin/orders", icon: ShoppingCart },
   { name: "Ownerships", href: "/admin/ownerships", icon: FileBadge },
   { name: "Settings", href: "/admin/settings", icon: Settings },
-]
+];
 
 interface AdminSidebarProps {
   isCollapsed: boolean;
@@ -43,14 +49,16 @@ export function AdminSidebar({
   isMobileOpen,
   setIsMobileOpen,
 }: AdminSidebarProps) {
-  const pathname = usePathname()
+  const pathname = usePathname();
 
   const renderSidebar = (collapsedMode: boolean) => (
     <>
-      <div className={cn(
-        "flex h-16 items-center border-b border-neutral-800",
-        collapsedMode ? "justify-center px-0" : "justify-between px-6"
-      )}>
+      <div
+        className={cn(
+          "flex h-16 items-center border-b border-neutral-800",
+          collapsedMode ? "justify-center px-0" : "justify-between px-6",
+        )}
+      >
         {!collapsedMode && (
           <span className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-neutral-100 to-neutral-400">
             AdminPanel
@@ -60,7 +68,11 @@ export function AdminSidebar({
           onClick={() => setIsCollapsed(!isCollapsed)}
           className="hidden md:block p-1.5 rounded-md hover:bg-neutral-800 text-neutral-400 transition-colors"
         >
-          {collapsedMode ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+          {collapsedMode ? (
+            <ChevronRight size={20} />
+          ) : (
+            <ChevronLeft size={20} />
+          )}
         </button>
         <button
           onClick={() => setIsMobileOpen(false)}
@@ -70,12 +82,14 @@ export function AdminSidebar({
         </button>
       </div>
 
-      <nav className={cn(
-        "flex-1 space-y-1 overflow-y-auto scrollbar-hide",
-        collapsedMode ? "p-3" : "px-3 py-4"
-      )}>
+      <nav
+        className={cn(
+          "flex-1 space-y-1 overflow-y-auto scrollbar-hide",
+          collapsedMode ? "p-3" : "px-3 py-4",
+        )}
+      >
         {navigation.map((item) => {
-          const isActive = pathname.startsWith(item.href)
+          const isActive = pathname.startsWith(item.href);
           return (
             <Link
               key={item.name}
@@ -86,34 +100,49 @@ export function AdminSidebar({
                 isActive
                   ? "bg-neutral-800 text-primary"
                   : "text-neutral-400 hover:bg-neutral-900 hover:text-neutral-50",
-                collapsedMode && "justify-center px-0"
+                collapsedMode && "justify-center px-0",
               )}
             >
-              <item.icon size={20} className={cn("shrink-0", isActive ? "text-primary" : "text-neutral-400")} />
+              <item.icon
+                size={20}
+                className={cn(
+                  "shrink-0",
+                  isActive ? "text-primary" : "text-neutral-400",
+                )}
+              />
               {!collapsedMode && <span>{item.name}</span>}
             </Link>
-          )
+          );
         })}
       </nav>
-      
-      <div className={cn(
-        "border-t border-neutral-800",
-        collapsedMode ? "p-4 flex justify-center" : "px-6 py-4"
-      )}>
-        <div className={cn("flex items-center gap-3", collapsedMode && "justify-center")}>
+
+      <div
+        className={cn(
+          "border-t border-neutral-800",
+          collapsedMode ? "p-4 flex justify-center" : "px-6 py-4",
+        )}
+      >
+        <div
+          className={cn(
+            "flex items-center gap-3",
+            collapsedMode && "justify-center",
+          )}
+        >
           <div className="h-8 w-8 rounded-full bg-neutral-800 flex items-center justify-center text-sm font-medium shrink-0">
             A
           </div>
           {!collapsedMode && (
             <div className="flex flex-col">
               <span className="text-sm font-medium">Admin User</span>
-              <span className="text-xs text-neutral-500">admin@prabhmusik.com</span>
+              <span className="text-xs text-neutral-500">
+                admin@prabhmusik.com
+              </span>
             </div>
           )}
         </div>
       </div>
     </>
-  )
+  );
 
   return (
     <>
@@ -151,5 +180,5 @@ export function AdminSidebar({
         {renderSidebar(isCollapsed)}
       </motion.aside>
     </>
-  )
+  );
 }

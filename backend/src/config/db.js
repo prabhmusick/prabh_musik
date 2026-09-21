@@ -11,7 +11,7 @@ const fs = require("fs");
 const cloudflareD1Config = {
   accountId: process.env.CLOUDFLARE_ACCOUNT_ID,
   databaseId: process.env.CLOUDFLARE_D1_DATABASE_ID,
-  apiToken: process.env.CLOUDFLARE_API_TOKEN
+  apiToken: process.env.CLOUDFLARE_API_TOKEN,
 };
 
 const isCloudflareD1 = process.env.DB_MODE === "cloudflare";
@@ -34,14 +34,14 @@ class CloudflareD1PreparedStatement {
   async first(column) {
     const response = await this.all();
     const row = response.results[0] || null;
-    return column && row ? row[column] ?? null : row;
+    return column && row ? (row[column] ?? null) : row;
   }
 
   async run() {
     const response = await this.all();
     return {
       success: response.success,
-      meta: response.meta || {}
+      meta: response.meta || {},
     };
   }
 }
@@ -61,14 +61,16 @@ class CloudflareD1Database {
       method: "POST",
       headers: {
         Authorization: `Bearer ${this.config.apiToken}`,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify({ sql, params })
+      body: JSON.stringify({ sql, params }),
     });
 
     const payload = await response.json();
     if (!response.ok || !payload.success) {
-      const message = payload.errors?.map((error) => error.message).join(", ") || response.statusText;
+      const message =
+        payload.errors?.map((error) => error.message).join(", ") ||
+        response.statusText;
       throw new Error(`Cloudflare D1 query failed: ${message}`);
     }
 
@@ -76,7 +78,7 @@ class CloudflareD1Database {
     return {
       success: true,
       results: result.results || [],
-      meta: result.meta || {}
+      meta: result.meta || {},
     };
   }
 
@@ -90,25 +92,38 @@ class CloudflareD1Database {
   run(sql, params, callback) {
     const normalizedSql = sql.trim().toUpperCase();
     if (/^(BEGIN|COMMIT|ROLLBACK)/.test(normalizedSql)) {
-      return process.nextTick(() => callback?.call({ lastID: null, changes: 0 }, null));
+      return process.nextTick(() =>
+        callback?.call({ lastID: null, changes: 0 }, null),
+      );
     }
 
-    this.prepare(sql).bind(...(params || [])).run()
-      .then((result) => callback?.call({
-        lastID: result.meta.last_row_id ?? null,
-        changes: result.meta.changes ?? 0
-      }, null))
+    this.prepare(sql)
+      .bind(...(params || []))
+      .run()
+      .then((result) =>
+        callback?.call(
+          {
+            lastID: result.meta.last_row_id ?? null,
+            changes: result.meta.changes ?? 0,
+          },
+          null,
+        ),
+      )
       .catch((error) => callback?.(error));
   }
 
   get(sql, params, callback) {
-    this.prepare(sql).bind(...(params || [])).first()
+    this.prepare(sql)
+      .bind(...(params || []))
+      .first()
       .then((row) => callback?.(null, row))
       .catch((error) => callback?.(error, null));
   }
 
   all(sql, params, callback) {
-    this.prepare(sql).bind(...(params || [])).all()
+    this.prepare(sql)
+      .bind(...(params || []))
+      .all()
       .then((result) => callback?.(null, result.results))
       .catch((error) => callback?.(error, []));
   }
@@ -116,15 +131,15 @@ class CloudflareD1Database {
   async batch(statements) {
     const queries = statements.map((statement) => ({
       sql: statement.sql,
-      params: statement.params
+      params: statement.params,
     }));
     const response = await fetch(this.endpoint, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${this.config.apiToken}`,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify({ batch: queries })
+      body: JSON.stringify({ batch: queries }),
     });
     const payload = await response.json();
     if (!response.ok || !payload.success) {
@@ -169,7 +184,7 @@ class D1PreparedStatement {
           resolve({
             success: true,
             results: rows || [],
-            meta: { duration: 0 } // Performance metrics are mock in local dev
+            meta: { duration: 0 }, // Performance metrics are mock in local dev
           });
         }
       });
@@ -213,8 +228,8 @@ class D1PreparedStatement {
             meta: {
               changes: this.changes,
               last_row_id: this.lastID,
-              duration: 0
-            }
+              duration: 0,
+            },
           });
         }
       });
@@ -289,7 +304,9 @@ class D1DatabaseMock {
 
 // 2. Initialize the Local Development Driver Instance
 const sqlite3 = require("sqlite3").verbose();
-const dbFile = process.env.DB_FILE || path.join(__dirname, "..", "..", "Database", "beats.db");
+const dbFile =
+  process.env.DB_FILE ||
+  path.join(__dirname, "..", "..", "Database", "beats.db");
 if (isCloudflareD1) {
   const missing = Object.entries(cloudflareD1Config)
     .filter(([, value]) => !value)
@@ -320,7 +337,8 @@ const traceDatabaseCall = (methodName, fn, activeDb) => {
     metrics.increment("databaseQueries");
 
     let callbackIdx = args.length - 1;
-    let actualCallback = typeof args[callbackIdx] === "function" ? args[callbackIdx] : null;
+    let actualCallback =
+      typeof args[callbackIdx] === "function" ? args[callbackIdx] : null;
 
     const wrappedCallback = function (err, ...cbArgs) {
       const end = process.hrtime.bigint();
@@ -337,7 +355,7 @@ const traceDatabaseCall = (methodName, fn, activeDb) => {
           operation: `db.${methodName}`,
           duration: Math.round(durationMs),
           severity: "warning",
-          message: `Slow database operation: db.${methodName} took ${Math.round(durationMs)}ms`
+          message: `Slow database operation: db.${methodName} took ${Math.round(durationMs)}ms`,
         });
       }
 
@@ -359,47 +377,42 @@ const traceDatabaseCall = (methodName, fn, activeDb) => {
 // 3. Setup global JS Proxy to switch between Local and Worker context seamlessly
 let activeTransactionDepth = 0;
 
-const dbProxy = new Proxy({}, {
-  get(target, prop) {
-    // If AsyncLocalStorage contains a bound D1 instance, route to it (production Worker)
-    const context = dbContextStore.getStore();
-    const activeDb = context && context.db ? context.db : localD1Instance;
+const dbProxy = new Proxy(
+  {},
+  {
+    get(target, prop) {
+      // If AsyncLocalStorage contains a bound D1 instance, route to it (production Worker)
+      const context = dbContextStore.getStore();
+      const activeDb = context && context.db ? context.db : localD1Instance;
 
-    if (["get", "run", "all"].includes(prop)) {
-      return function (sql, params, callback) {
-        let actualParams = params;
-        let actualCallback = callback;
-        if (typeof params === "function") {
-          actualCallback = params;
-          actualParams = [];
-        } else if (!actualParams) {
-          actualParams = [];
-        }
-
-        // Intercept raw SQL transaction commands to support nested savepoints/ignores
-        if (prop === "run") {
-          const sqlUpper = sql.trim().toUpperCase();
-          const isBegin = sqlUpper.startsWith("BEGIN");
-          const isCommit = sqlUpper.startsWith("COMMIT");
-          const isRollback = sqlUpper.startsWith("ROLLBACK");
-
-          // Cloudflare D1 rejects SQL transaction statements. D1 automatically
-          // commits each query; leave the legacy transaction callback flow
-          // intact without sending BEGIN/COMMIT/ROLLBACK over the network.
-          if (isCloudflareD1 && (isBegin || isCommit || isRollback)) {
-            if (isBegin) activeTransactionDepth++;
-            if (isCommit || isRollback) activeTransactionDepth = Math.max(0, activeTransactionDepth - 1);
-            if (actualCallback) {
-              process.nextTick(() => {
-                actualCallback.call({ lastID: null, changes: 0 }, null);
-              });
-            }
-            return;
+      if (["get", "run", "all"].includes(prop)) {
+        return function (sql, params, callback) {
+          let actualParams = params;
+          let actualCallback = callback;
+          if (typeof params === "function") {
+            actualCallback = params;
+            actualParams = [];
+          } else if (!actualParams) {
+            actualParams = [];
           }
 
-          if (isBegin) {
-            activeTransactionDepth++;
-            if (activeTransactionDepth > 1) {
+          // Intercept raw SQL transaction commands to support nested savepoints/ignores
+          if (prop === "run") {
+            const sqlUpper = sql.trim().toUpperCase();
+            const isBegin = sqlUpper.startsWith("BEGIN");
+            const isCommit = sqlUpper.startsWith("COMMIT");
+            const isRollback = sqlUpper.startsWith("ROLLBACK");
+
+            // Cloudflare D1 rejects SQL transaction statements. D1 automatically
+            // commits each query; leave the legacy transaction callback flow
+            // intact without sending BEGIN/COMMIT/ROLLBACK over the network.
+            if (isCloudflareD1 && (isBegin || isCommit || isRollback)) {
+              if (isBegin) activeTransactionDepth++;
+              if (isCommit || isRollback)
+                activeTransactionDepth = Math.max(
+                  0,
+                  activeTransactionDepth - 1,
+                );
               if (actualCallback) {
                 process.nextTick(() => {
                   actualCallback.call({ lastID: null, changes: 0 }, null);
@@ -407,107 +420,130 @@ const dbProxy = new Proxy({}, {
               }
               return;
             }
-          } else if (isCommit) {
-            activeTransactionDepth--;
-            if (activeTransactionDepth > 0) {
-              if (actualCallback) {
-                process.nextTick(() => {
-                  actualCallback.call({ lastID: null, changes: 0 }, null);
-                });
+
+            if (isBegin) {
+              activeTransactionDepth++;
+              if (activeTransactionDepth > 1) {
+                if (actualCallback) {
+                  process.nextTick(() => {
+                    actualCallback.call({ lastID: null, changes: 0 }, null);
+                  });
+                }
+                return;
               }
-              return;
-            }
-            if (activeTransactionDepth < 0) {
+            } else if (isCommit) {
+              activeTransactionDepth--;
+              if (activeTransactionDepth > 0) {
+                if (actualCallback) {
+                  process.nextTick(() => {
+                    actualCallback.call({ lastID: null, changes: 0 }, null);
+                  });
+                }
+                return;
+              }
+              if (activeTransactionDepth < 0) {
+                activeTransactionDepth = 0;
+              }
+            } else if (isRollback) {
               activeTransactionDepth = 0;
             }
-          } else if (isRollback) {
-            activeTransactionDepth = 0;
-          }
-        }
-
-        const start = process.hrtime.bigint();
-        metrics.increment("databaseQueries");
-
-        const wrappedCallback = function (err, result) {
-          const end = process.hrtime.bigint();
-          const durationMs = Number(end - start) / 1e6;
-
-          if (err) {
-            metrics.recordError("Database");
           }
 
-          if (durationMs > 200) {
-            logger.warn({
-              event: "SLOW_OPERATION",
-              module: "database",
-              operation: `db.${prop}`,
-              duration: Math.round(durationMs),
-              severity: "warning",
-              message: `Slow database operation: db.${prop} took ${Math.round(durationMs)}ms`
-            });
-          }
+          const start = process.hrtime.bigint();
+          metrics.increment("databaseQueries");
 
-          if (actualCallback) {
-            if (prop === "run") {
-              const runContext = {
-                lastID: result?.meta?.last_row_id ?? result?.lastID ?? null,
-                changes: result?.meta?.changes ?? result?.changes ?? 0
-              };
-              actualCallback.call(runContext, err);
-            } else if (prop === "all") {
-              const rows = result?.results || (Array.isArray(result) ? result : []);
-              actualCallback.call(activeDb, err, rows);
-            } else {
-              // get
-              actualCallback.call(activeDb, err, result);
+          const wrappedCallback = function (err, result) {
+            const end = process.hrtime.bigint();
+            const durationMs = Number(end - start) / 1e6;
+
+            if (err) {
+              metrics.recordError("Database");
             }
-          }
-        };
 
-        const stmt = activeDb.prepare(sql).bind(...actualParams);
-        if (prop === "get") {
-          stmt.first()
-            .then((row) => wrappedCallback(null, row))
-            .catch((err) => wrappedCallback(err, null));
-        } else if (prop === "all") {
-          stmt.all()
-            .then((res) => wrappedCallback(null, res))
-            .catch((err) => wrappedCallback(err, null));
-        } else if (prop === "run") {
-          stmt.run()
-            .then((res) => wrappedCallback(null, res))
-            .catch((err) => wrappedCallback(err, null));
-        }
-      };
-    }
+            if (durationMs > 200) {
+              logger.warn({
+                event: "SLOW_OPERATION",
+                module: "database",
+                operation: `db.${prop}`,
+                duration: Math.round(durationMs),
+                severity: "warning",
+                message: `Slow database operation: db.${prop} took ${Math.round(durationMs)}ms`,
+              });
+            }
 
-    const value = activeDb[prop];
-    if (typeof value === "function") {
-      if (prop === "constructor") {
-        return value;
-      }
-      if (prop === "exec") {
-        return traceDatabaseCall(String(prop), value, activeDb);
-      }
-      if (prop === "prepare") {
-        return function (...args) {
-          const stmt = value.apply(activeDb, args);
-          return new Proxy(stmt, {
-            get(target, stmtProp) {
-              const stmtValue = target[stmtProp];
-              if (typeof stmtValue === "function" && ["all", "first", "run"].includes(stmtProp)) {
-                return trace("database", `DatabasePreparedStatement.${String(stmtProp)}`, stmtValue.bind(target));
+            if (actualCallback) {
+              if (prop === "run") {
+                const runContext = {
+                  lastID: result?.meta?.last_row_id ?? result?.lastID ?? null,
+                  changes: result?.meta?.changes ?? result?.changes ?? 0,
+                };
+                actualCallback.call(runContext, err);
+              } else if (prop === "all") {
+                const rows =
+                  result?.results || (Array.isArray(result) ? result : []);
+                actualCallback.call(activeDb, err, rows);
+              } else {
+                // get
+                actualCallback.call(activeDb, err, result);
               }
-              return stmtValue;
             }
-          });
+          };
+
+          const stmt = activeDb.prepare(sql).bind(...actualParams);
+          if (prop === "get") {
+            stmt
+              .first()
+              .then((row) => wrappedCallback(null, row))
+              .catch((err) => wrappedCallback(err, null));
+          } else if (prop === "all") {
+            stmt
+              .all()
+              .then((res) => wrappedCallback(null, res))
+              .catch((err) => wrappedCallback(err, null));
+          } else if (prop === "run") {
+            stmt
+              .run()
+              .then((res) => wrappedCallback(null, res))
+              .catch((err) => wrappedCallback(err, null));
+          }
         };
       }
-      return value.bind(activeDb);
-    }
-    return value;
-  }
-});
+
+      const value = activeDb[prop];
+      if (typeof value === "function") {
+        if (prop === "constructor") {
+          return value;
+        }
+        if (prop === "exec") {
+          return traceDatabaseCall(String(prop), value, activeDb);
+        }
+        if (prop === "prepare") {
+          return function (...args) {
+            const stmt = value.apply(activeDb, args);
+            return new Proxy(stmt, {
+              get(target, stmtProp) {
+                const stmtValue = target[stmtProp];
+                if (
+                  typeof stmtValue === "function" &&
+                  ["all", "first", "run"].includes(stmtProp)
+                ) {
+                  return trace(
+                    "database",
+                    `DatabasePreparedStatement.${String(stmtProp)}`,
+                    stmtValue.bind(target),
+                  );
+                }
+                return stmtValue;
+              },
+            });
+          };
+        }
+        return value.bind(activeDb);
+      }
+      return value;
+    },
+  },
+);
 
 // 4. Initialisation interface (maintained for application bootstrap compatibility)
 function init() {
@@ -517,7 +553,13 @@ function init() {
 
   return new Promise((resolve, reject) => {
     try {
-      const schemaFile = path.join(__dirname, "..", "..", "Database", "schema.sql");
+      const schemaFile = path.join(
+        __dirname,
+        "..",
+        "..",
+        "Database",
+        "schema.sql",
+      );
       const seedFile = path.join(__dirname, "..", "..", "Database", "seed.sql");
 
       const exists = fs.existsSync(dbFile);
@@ -554,31 +596,164 @@ function init() {
           }
         });
       } else {
-        console.log("Database file exists — skipping destructive re-initialization.");
-        // Ensure revoked_reason column exists in user_sessions (Sprint 6 migration).
-        sqliteDb.get("PRAGMA table_info(user_sessions);", (pragmaErr, pragmaRow) => {
+        console.log(
+          "Database file exists — skipping destructive re-initialization.",
+        );
+        const ensureWorkedWithArtistsTable = () => {
           sqliteDb.run(
-            "ALTER TABLE user_sessions ADD COLUMN revoked_reason TEXT;",
-            (alterErr) => {
-              if (alterErr) {
-                if (
-                  alterErr.message &&
-                  alterErr.message.toLowerCase().includes("duplicate column")
-                ) {
-                  console.log("Column 'revoked_reason' already exists in 'user_sessions'.");
+            `
+              CREATE TABLE IF NOT EXISTS worked_with_artists (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT UNIQUE NOT NULL,
+                image TEXT NOT NULL,
+                popular_song TEXT,
+                music_type TEXT,
+                worked_year INTEGER
+              )
+            `,
+            (createError) => {
+              if (createError) {
+                console.error(
+                  "Migration notice: could not create worked_with_artists:",
+                  createError.message || createError,
+                );
+                return resolve();
+              }
+
+              sqliteDb.all(
+                "PRAGMA table_info(worked_with_artists);",
+                (columnsError, columns = []) => {
+                  if (columnsError) {
+                    console.error(
+                      "Migration notice: could not inspect worked_with_artists:",
+                      columnsError.message || columnsError,
+                    );
+                    return resolve();
+                  }
+
+                  const existingColumns = new Set(
+                    columns.map((column) => column.name),
+                  );
+                  const missingColumns = [
+                    ["popular_song", "TEXT"],
+                    ["music_type", "TEXT"],
+                    ["worked_year", "INTEGER"],
+                  ].filter(([column]) => !existingColumns.has(column));
+
+                  const addMissingColumn = () => {
+                    const [column, type] = missingColumns.shift() || [];
+                    if (!column) {
+                      return sqliteDb.exec(
+                        `
+                          INSERT INTO worked_with_artists (name, image, popular_song, music_type, worked_year)
+                          SELECT 'Karan Aujla', '/karan.png', 'Dont Look 2', 'Punjabi Trap', 2024
+                          WHERE NOT EXISTS (SELECT 1 FROM worked_with_artists WHERE name = 'Karan Aujla');
+                          INSERT INTO worked_with_artists (name, image, popular_song, music_type, worked_year)
+                          SELECT 'Sidhu Moose Wala', '/siddhu.png', 'Dont Look 2', 'Punjabi Trap', 2024
+                          WHERE NOT EXISTS (SELECT 1 FROM worked_with_artists WHERE name = 'Sidhu Moose Wala');
+                          INSERT INTO worked_with_artists (name, image, popular_song, music_type, worked_year)
+                          SELECT 'Ap Dhillon', '/ap.png', 'Dont Look 2', 'Punjabi Trap', 2024
+                          WHERE NOT EXISTS (SELECT 1 FROM worked_with_artists WHERE name = 'Ap Dhillon');
+                          INSERT INTO worked_with_artists (name, image, popular_song, music_type, worked_year)
+                          SELECT 'Diljit Dosanjh', '/karan.png', 'Dont Look 2', 'Punjabi Trap', 2024
+                          WHERE NOT EXISTS (SELECT 1 FROM worked_with_artists WHERE name = 'Diljit Dosanjh');
+                          INSERT INTO worked_with_artists (name, image, popular_song, music_type, worked_year)
+                          SELECT 'Shubh', '/siddhu.png', 'Dont Look 2', 'Punjabi Trap', 2024
+                          WHERE NOT EXISTS (SELECT 1 FROM worked_with_artists WHERE name = 'Shubh');
+                          UPDATE worked_with_artists
+                          SET popular_song = COALESCE(popular_song, 'Dont Look 2'),
+                              music_type = COALESCE(music_type, 'Punjabi Trap'),
+                              worked_year = COALESCE(worked_year, 2024);
+                        `,
+                        (seedError) => {
+                          if (seedError) {
+                            console.error(
+                              "Migration notice: could not seed worked_with_artists:",
+                              seedError.message || seedError,
+                            );
+                            return resolve();
+                          }
+
+                          sqliteDb.run(
+                            `
+                              CREATE TABLE IF NOT EXISTS testimonials (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                name TEXT NOT NULL,
+                                image TEXT NOT NULL,
+                                rating INTEGER NOT NULL CHECK(rating BETWEEN 1 AND 5),
+                                testimonial TEXT NOT NULL,
+                                professional TEXT NOT NULL,
+                                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                              )
+                            `,
+                            (testimonialError) => {
+                              if (testimonialError) {
+                                console.error(
+                                  "Migration notice: could not ensure testimonials:",
+                                  testimonialError.message || testimonialError,
+                                );
+                              } else {
+                                console.log("Ensured testimonials table.");
+                              }
+                              resolve();
+                            },
+                          );
+                        },
+                      );
+                    }
+
+                    sqliteDb.run(
+                      `ALTER TABLE worked_with_artists ADD COLUMN ${column} ${type};`,
+                      (alterError) => {
+                        if (alterError) {
+                          console.error(
+                            `Migration notice: could not add ${column}:`,
+                            alterError.message || alterError,
+                          );
+                        }
+                        addMissingColumn();
+                      },
+                    );
+                  };
+
+                  addMissingColumn();
+                },
+              );
+            },
+          );
+        };
+
+        // Ensure revoked_reason column exists in user_sessions (Sprint 6 migration).
+        sqliteDb.get(
+          "PRAGMA table_info(user_sessions);",
+          (pragmaErr, pragmaRow) => {
+            sqliteDb.run(
+              "ALTER TABLE user_sessions ADD COLUMN revoked_reason TEXT;",
+              (alterErr) => {
+                if (alterErr) {
+                  if (
+                    alterErr.message &&
+                    alterErr.message.toLowerCase().includes("duplicate column")
+                  ) {
+                    console.log(
+                      "Column 'revoked_reason' already exists in 'user_sessions'.",
+                    );
+                  } else {
+                    console.log(
+                      "Migration notice: could not add 'revoked_reason' (non-fatal):",
+                      alterErr.message || alterErr,
+                    );
+                  }
                 } else {
                   console.log(
-                    "Migration notice: could not add 'revoked_reason' (non-fatal):",
-                    alterErr.message || alterErr
+                    "Successfully migrated: Added column 'revoked_reason' to 'user_sessions'.",
                   );
                 }
-              } else {
-                console.log("Successfully migrated: Added column 'revoked_reason' to 'user_sessions'.");
-              }
-              resolve();
-            }
-          );
-        });
+                ensureWorkedWithArtistsTable();
+              },
+            );
+          },
+        );
       }
     } catch (err) {
       console.error("Error during DB file check/read:", err.message || err);
@@ -590,5 +765,5 @@ function init() {
 module.exports = {
   db: dbProxy,
   init,
-  dbContextStore // Exported for request-binding middleware context setup
+  dbContextStore, // Exported for request-binding middleware context setup
 };
