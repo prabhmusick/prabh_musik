@@ -17,6 +17,47 @@ const list = async () => {
   return result.results || result;
 };
 
+const listWorkedWith = async () => {
+  const result = await db
+    .prepare(
+      `
+    SELECT id, name, image, popular_song, music_type, worked_year
+    FROM worked_with_artists
+    ORDER BY id ASC
+  `,
+    )
+    .all();
+  return result.results || result;
+};
+
+const createWorkedWith = async ({
+  name,
+  image,
+  popularSong,
+  musicType,
+  workedYear,
+}) => {
+  const result = await db
+    .prepare(
+      `
+    INSERT INTO worked_with_artists (name, image, popular_song, music_type, worked_year)
+    VALUES (?, ?, ?, ?, ?)
+  `,
+    )
+    .bind(name, image, popularSong, musicType, workedYear)
+    .run();
+
+  return db
+    .prepare(
+      "SELECT id, name, image, popular_song, music_type, worked_year FROM worked_with_artists WHERE id = ?",
+    )
+    .bind(result.meta?.last_row_id)
+    .first();
+};
+
+const deleteWorkedWith = async (id) =>
+  db.prepare("DELETE FROM worked_with_artists WHERE id = ?").bind(id).run();
+
 const findByPublicId = async (publicId) =>
   db
     .prepare(
@@ -39,4 +80,11 @@ const create = async ({ name, phone, email, image_key }) => {
   return findByPublicId(publicId);
 };
 
-module.exports = { list, findByPublicId, create };
+module.exports = {
+  list,
+  listWorkedWith,
+  createWorkedWith,
+  deleteWorkedWith,
+  findByPublicId,
+  create,
+};

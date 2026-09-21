@@ -1,10 +1,10 @@
-import TrustedBrandsBar from './TrustedBrandsBar';
-import ArtistsWorkedWith from './ArtistsWorkedWith';
-import TrendingBeats from './TrendingBeats';
-import HeroSection from './Hero';
-import PopularGenres from './genre';
-import BeatstarsHero from './Beatstar';
-import Testimonials from './testimonials';
+import TrustedBrandsBar from "./TrustedBrandsBar";
+import ArtistsWorkedWith from "./ArtistsWorkedWith";
+import TrendingBeats from "./TrendingBeats";
+import HeroSection from "./Hero";
+import PopularGenres from "./genre";
+import BeatstarsHero from "./Beatstar";
+import Testimonials from "./testimonials";
 
 export default function HomePage() {
   return (
@@ -14,8 +14,8 @@ export default function HomePage() {
       <ArtistsWorkedWith />
       <TrendingBeats />
       <PopularGenres />
-      <Testimonials />
       <BeatstarsHero />
+      <Testimonials />
     </>
   );
 }

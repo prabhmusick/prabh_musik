@@ -1,6 +1,8 @@
 "use client";
 
 import React from "react";
+import { useEffect, useState } from "react";
+import { getTestimonials } from "../services/testimonial.service";
 
 interface TestimonialCardProps {
   text: string;
@@ -8,6 +10,8 @@ interface TestimonialCardProps {
   role: string;
   initials: string;
   color: string;
+  image?: string;
+  rating: number;
   variant: "dark" | "light";
 }
 
@@ -18,6 +22,7 @@ const testimonials = [
     role: "CEO of Apples to Oranges",
     initials: "MG",
     color: "#5b4fcf",
+    rating: 5,
   },
   {
     text: "Absolutely seamless experience from start to finish. The platform exceeded every expectation we had going in.",
@@ -25,6 +30,7 @@ const testimonials = [
     role: "Head of Product at NovaCo",
     initials: "SC",
     color: "#0f7c6e",
+    rating: 5,
   },
   {
     text: "Our team's productivity doubled within the first month. I can't imagine going back to the old way of working.",
@@ -32,6 +38,7 @@ const testimonials = [
     role: "CTO at Linkflow",
     initials: "JO",
     color: "#c0392b",
+    rating: 5,
   },
   {
     text: "The support team is phenomenal. Any question we had was answered swiftly and the onboarding was incredibly smooth.",
@@ -39,6 +46,7 @@ const testimonials = [
     role: "VP Engineering at Stackr",
     initials: "PM",
     color: "#d35400",
+    rating: 5,
   },
   {
     text: "Best investment we made this year. The results speak for themselves — our conversion rate jumped significantly.",
@@ -46,6 +54,7 @@ const testimonials = [
     role: "Founder at PulseMetrics",
     initials: "LF",
     color: "#1a6b9a",
+    rating: 5,
   },
   {
     text: "Incredibly intuitive interface paired with powerful features. It's rare to find software that nails both.",
@@ -53,11 +62,18 @@ const testimonials = [
     role: "Designer at Craft Studio",
     initials: "AN",
     color: "#7d3c98",
+    rating: 5,
   },
 ];
 
 const StarIcon = () => (
-  <svg width="11" height="11" viewBox="0 0 24 24" fill="#f5a623" xmlns="http://www.w3.org/2000/svg">
+  <svg
+    width="11"
+    height="11"
+    viewBox="0 0 24 24"
+    fill="#f5a623"
+    xmlns="http://www.w3.org/2000/svg"
+  >
     <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
   </svg>
 );
@@ -68,6 +84,8 @@ const TestimonialCard: React.FC<TestimonialCardProps> = ({
   role,
   initials,
   color,
+  image,
+  rating,
   variant,
 }) => {
   const isDark = variant === "dark";
@@ -108,7 +126,9 @@ const TestimonialCard: React.FC<TestimonialCardProps> = ({
       <p
         style={{
           fontSize: "13px",
-          color: isDark ? "rgba(200, 205, 220, 0.85)" : "rgba(255, 255, 255, 0.65)",
+          color: isDark
+            ? "rgba(200, 205, 220, 0.85)"
+            : "rgba(255, 255, 255, 0.65)",
           lineHeight: 1.65,
           margin: 0,
           fontFamily: "'DM Sans', sans-serif",
@@ -139,7 +159,20 @@ const TestimonialCard: React.FC<TestimonialCardProps> = ({
             letterSpacing: "0.4px",
           }}
         >
-          {initials}
+          {image ? (
+            <img
+              src={image}
+              alt={name}
+              style={{
+                width: "100%",
+                height: "100%",
+                borderRadius: "50%",
+                objectFit: "cover",
+              }}
+            />
+          ) : (
+            initials
+          )}
         </div>
 
         {/* Name + role */}
@@ -174,7 +207,11 @@ const TestimonialCard: React.FC<TestimonialCardProps> = ({
 
         {/* Stars */}
         <div style={{ display: "flex", gap: "2px", flexShrink: 0 }}>
-          {Array(5).fill(null).map((_, i) => <StarIcon key={i} />)}
+          {Array(rating)
+            .fill(null)
+            .map((_, i) => (
+              <StarIcon key={i} />
+            ))}
         </div>
       </div>
     </div>
@@ -182,7 +219,41 @@ const TestimonialCard: React.FC<TestimonialCardProps> = ({
 };
 
 const TestimonialsMarquee: React.FC = () => {
-  const doubled = [...testimonials, ...testimonials];
+  const [items, setItems] = useState(testimonials);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    getTestimonials()
+      .then((itemsFromApi) => {
+        if (!isMounted || itemsFromApi.length === 0) return;
+        setItems(
+          itemsFromApi.map((item, index) => ({
+            text: item.testimonial,
+            name: item.name,
+            role: item.professional,
+            initials: item.name
+              .split(" ")
+              .map((part) => part[0])
+              .join("")
+              .slice(0, 2)
+              .toUpperCase(),
+            color: ["#5b4fcf", "#0f7c6e", "#c0392b", "#d35400", "#1a6b9a"][
+              index % 5
+            ],
+            image: item.image,
+            rating: item.rating,
+          })),
+        );
+      })
+      .catch(() => undefined);
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const doubled = [...items, ...items];
 
   return (
     <>
@@ -241,8 +312,7 @@ const TestimonialsMarquee: React.FC = () => {
 
       <section
         style={{
-          backgroundImage:
-           "url('/bg.png')",
+          backgroundImage: "url('/bg.png')",
           backgroundSize: "cover",
           backgroundPosition: "center",
           backgroundRepeat: "no-repeat",
@@ -265,7 +335,8 @@ const TestimonialsMarquee: React.FC = () => {
           <h2
             className="testimonial-heading"
             style={{
-              fontFamily: "'Jacques Francois', Georgia, 'Times New Roman', serif",
+              fontFamily:
+                "'Jacques Francois', Georgia, 'Times New Roman', serif",
               fontSize: "65px",
               fontWeight: 400,
               fontStyle: "normal",
@@ -276,8 +347,7 @@ const TestimonialsMarquee: React.FC = () => {
               maxWidth: "640px",
             }}
           >
-            Don't take our word for it,
-            Over 100+ people trust us
+            Don&apos;t take our word for it, Over 100+ people trust us
           </h2>
           <span
             style={{
