@@ -30,6 +30,7 @@ const navigation = [
     href: "/admin/testimonials",
     icon: MessageSquareQuote,
   },
+  { name: "Lyrics", href: "/admin/lyrics", icon: Music },
   { name: "Beats", href: "/admin/beats", icon: Disc3 },
   { name: "Orders", href: "/admin/orders", icon: ShoppingCart },
   { name: "Ownerships", href: "/admin/ownerships", icon: FileBadge },
