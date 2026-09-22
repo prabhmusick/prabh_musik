@@ -35,11 +35,30 @@ const genres: Genre[] = [
 
 function HipHopSVG() {
   return (
-    <svg width="100%" height="100%" viewBox="0 0 320 300" preserveAspectRatio="xMidYMax meet">
+    <svg
+      width="100%"
+      height="100%"
+      viewBox="0 0 320 300"
+      preserveAspectRatio="xMidYMax meet"
+    >
       {/* Stage floor */}
-      <rect x="0" y="260" width="320" height="40" fill="#1a0e04" opacity="0.7" />
+      <rect
+        x="0"
+        y="260"
+        width="320"
+        height="40"
+        fill="#1a0e04"
+        opacity="0.7"
+      />
       {/* Warm spotlight */}
-      <ellipse cx="160" cy="130" rx="120" ry="100" fill="#c8780a" fillOpacity="0.12" />
+      <ellipse
+        cx="160"
+        cy="130"
+        rx="120"
+        ry="100"
+        fill="#c8780a"
+        fillOpacity="0.12"
+      />
 
       {/* ── Dancer 1 (white shirt, left) ── */}
       {/* Head */}
@@ -48,14 +67,26 @@ function HipHopSVG() {
       {/* Neck */}
       <rect x="83" y="100" width="14" height="12" rx="4" fill="#c07840" />
       {/* Torso - white shirt */}
-      <path d="M60 115 Q60 85 78 112 L80 145 L100 145 L102 112 Q120 85 120 115 L118 200 L62 200Z" fill="#f0f0f0" />
+      <path
+        d="M60 115 Q60 85 78 112 L80 145 L100 145 L102 112 Q120 85 120 115 L118 200 L62 200Z"
+        fill="#f0f0f0"
+      />
       {/* Dark pants */}
-      <path d="M62 195 L58 265 L80 265 L90 230 L100 265 L122 265 L118 195Z" fill="#1a1a1a" />
+      <path
+        d="M62 195 L58 265 L80 265 L90 230 L100 265 L122 265 L118 195Z"
+        fill="#1a1a1a"
+      />
       {/* Left arm (raised) */}
-      <path d="M60 120 Q40 105 30 85 Q28 78 35 76 Q42 74 44 82 Q52 100 65 115Z" fill="#f0f0f0" />
+      <path
+        d="M60 120 Q40 105 30 85 Q28 78 35 76 Q42 74 44 82 Q52 100 65 115Z"
+        fill="#f0f0f0"
+      />
       <ellipse cx="32" cy="75" rx="7" ry="6" fill="#c07840" />
       {/* Right arm (down) */}
-      <path d="M120 120 Q138 135 142 158 Q143 164 137 165 Q131 166 129 160 Q126 140 115 125Z" fill="#f0f0f0" />
+      <path
+        d="M120 120 Q138 135 142 158 Q143 164 137 165 Q131 166 129 160 Q126 140 115 125Z"
+        fill="#f0f0f0"
+      />
       <ellipse cx="138" cy="165" rx="7" ry="6" fill="#c07840" />
       {/* Shoes */}
       <ellipse cx="68" cy="265" rx="14" ry="7" fill="#ff4400" />
@@ -71,16 +102,31 @@ function HipHopSVG() {
       {/* Neck */}
       <rect x="223" y="94" width="14" height="12" rx="4" fill="#3a2010" />
       {/* Orange hoodie */}
-      <path d="M200 108 Q200 80 218 106 L220 140 L240 140 L242 106 Q258 80 260 108 L258 195 L202 195Z" fill="#cc5500" />
+      <path
+        d="M200 108 Q200 80 218 106 L220 140 L240 140 L242 106 Q258 80 260 108 L258 195 L202 195Z"
+        fill="#cc5500"
+      />
       {/* Hood */}
       <path d="M210 108 Q230 90 250 108 Q230 100 210 108Z" fill="#aa4400" />
       {/* Dark pants */}
-      <path d="M202 190 L198 260 L220 260 L230 225 L240 260 L262 260 L258 190Z" fill="#0f0f0f" />
+      <path
+        d="M202 190 L198 260 L220 260 L230 225 L240 260 L262 260 L258 190Z"
+        fill="#0f0f0f"
+      />
       {/* Left arm (bent up) */}
-      <path d="M200 115 Q182 108 170 90 Q167 83 174 80 Q181 77 183 84 Q193 100 205 112Z" fill="#cc5500" />
+      <path
+        d="M200 115 Q182 108 170 90 Q167 83 174 80 Q181 77 183 84 Q193 100 205 112Z"
+        fill="#cc5500"
+      />
       <ellipse cx="171" cy="79" rx="7" ry="6" fill="#3a2010" />
       {/* Right arm */}
-      <path d="M258 115 Q275 128 278 152" stroke="#cc5500" strokeWidth="18" strokeLinecap="round" fill="none" />
+      <path
+        d="M258 115 Q275 128 278 152"
+        stroke="#cc5500"
+        strokeWidth="18"
+        strokeLinecap="round"
+        fill="none"
+      />
       <ellipse cx="279" cy="154" rx="7" ry="6" fill="#3a2010" />
       {/* Shoes */}
       <ellipse cx="208" cy="260" rx="13" ry="6" fill="#222" />
@@ -98,9 +144,21 @@ function HipHopSVG() {
 
 function PopSVG() {
   return (
-    <svg width="100%" height="100%" viewBox="0 0 320 300" preserveAspectRatio="xMidYMax meet">
+    <svg
+      width="100%"
+      height="100%"
+      viewBox="0 0 320 300"
+      preserveAspectRatio="xMidYMax meet"
+    >
       {/* Warm reddish glow */}
-      <ellipse cx="160" cy="140" rx="140" ry="120" fill="#8B2020" fillOpacity="0.25" />
+      <ellipse
+        cx="160"
+        cy="140"
+        rx="140"
+        ry="120"
+        fill="#8B2020"
+        fillOpacity="0.25"
+      />
 
       {/* ── Woman (front, blonde) ── */}
       {/* Hair back */}
@@ -108,49 +166,142 @@ function PopSVG() {
       {/* Head */}
       <ellipse cx="110" cy="82" rx="26" ry="28" fill="#d4a070" />
       {/* Hair strands over face */}
-      <path d="M84 70 Q90 95 88 120" stroke="#c89030" strokeWidth="8" fill="none" strokeLinecap="round" />
-      <path d="M88 68 Q92 100 90 130" stroke="#d4a030" strokeWidth="6" fill="none" strokeLinecap="round" />
+      <path
+        d="M84 70 Q90 95 88 120"
+        stroke="#c89030"
+        strokeWidth="8"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <path
+        d="M88 68 Q92 100 90 130"
+        stroke="#d4a030"
+        strokeWidth="6"
+        fill="none"
+        strokeLinecap="round"
+      />
       {/* Neck */}
       <rect x="103" y="107" width="14" height="14" rx="5" fill="#d4a070" />
       {/* Shoulders/top */}
-      <path d="M78 125 Q78 108 100 120 L104 165 L118 165 L122 120 Q140 108 142 125 L138 290 L82 290Z" fill="#c07850" />
+      <path
+        d="M78 125 Q78 108 100 120 L104 165 L118 165 L122 120 Q140 108 142 125 L138 290 L82 290Z"
+        fill="#c07850"
+      />
       {/* Left arm */}
-      <path d="M80 128 Q55 140 45 175" stroke="#d4a070" strokeWidth="20" strokeLinecap="round" fill="none" />
+      <path
+        d="M80 128 Q55 140 45 175"
+        stroke="#d4a070"
+        strokeWidth="20"
+        strokeLinecap="round"
+        fill="none"
+      />
       <ellipse cx="44" cy="178" rx="10" ry="8" fill="#d4a070" />
       {/* Right arm */}
-      <path d="M140 128 Q162 142 168 178" stroke="#c07850" strokeWidth="20" strokeLinecap="round" fill="none" />
+      <path
+        d="M140 128 Q162 142 168 178"
+        stroke="#c07850"
+        strokeWidth="20"
+        strokeLinecap="round"
+        fill="none"
+      />
       <ellipse cx="169" cy="181" rx="10" ry="8" fill="#d4a070" />
       {/* Eyes */}
       <ellipse cx="102" cy="82" rx="3.5" ry="3" fill="#2a1a0a" />
       <ellipse cx="118" cy="82" rx="3.5" ry="3" fill="#2a1a0a" />
       {/* Lashes */}
-      <path d="M98 79 Q102 76 106 79" stroke="#1a0a04" strokeWidth="1.2" fill="none" />
-      <path d="M114 79 Q118 76 122 79" stroke="#1a0a04" strokeWidth="1.2" fill="none" />
+      <path
+        d="M98 79 Q102 76 106 79"
+        stroke="#1a0a04"
+        strokeWidth="1.2"
+        fill="none"
+      />
+      <path
+        d="M114 79 Q118 76 122 79"
+        stroke="#1a0a04"
+        strokeWidth="1.2"
+        fill="none"
+      />
       {/* Nose */}
-      <path d="M108 90 Q110 95 112 90" stroke="#b07040" strokeWidth="1.3" fill="none" strokeLinecap="round" />
+      <path
+        d="M108 90 Q110 95 112 90"
+        stroke="#b07040"
+        strokeWidth="1.3"
+        fill="none"
+        strokeLinecap="round"
+      />
       {/* Lips */}
-      <path d="M104 100 Q110 104 116 100" stroke="#c05040" strokeWidth="2" fill="none" strokeLinecap="round" />
+      <path
+        d="M104 100 Q110 104 116 100"
+        stroke="#c05040"
+        strokeWidth="2"
+        fill="none"
+        strokeLinecap="round"
+      />
 
       {/* ── Man (behind, right) ── */}
       {/* Head */}
       <ellipse cx="210" cy="95" rx="24" ry="26" fill="#c8956a" />
       <ellipse cx="210" cy="78" rx="24" ry="13" fill="#3a2510" />
       {/* Glasses */}
-      <circle cx="202" cy="97" r="9" stroke="#8B6914" strokeWidth="2" fill="none" fillOpacity="0.1" />
-      <circle cx="218" cy="97" r="9" stroke="#8B6914" strokeWidth="2" fill="none" fillOpacity="0.1" />
+      <circle
+        cx="202"
+        cy="97"
+        r="9"
+        stroke="#8B6914"
+        strokeWidth="2"
+        fill="none"
+        fillOpacity="0.1"
+      />
+      <circle
+        cx="218"
+        cy="97"
+        r="9"
+        stroke="#8B6914"
+        strokeWidth="2"
+        fill="none"
+        fillOpacity="0.1"
+      />
       <path d="M211 97 L209 97" stroke="#8B6914" strokeWidth="2" />
-      <path d="M193 97 L185 96" stroke="#8B6914" strokeWidth="1.5" strokeLinecap="round" />
-      <path d="M227 97 L235 96" stroke="#8B6914" strokeWidth="1.5" strokeLinecap="round" />
+      <path
+        d="M193 97 L185 96"
+        stroke="#8B6914"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+      <path
+        d="M227 97 L235 96"
+        stroke="#8B6914"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
       {/* Neck */}
       <rect x="203" y="118" width="14" height="13" rx="4" fill="#c8956a" />
       {/* Jacket */}
-      <path d="M178 135 Q178 115 198 131 L200 175 L220 175 L222 131 Q242 115 242 135 L240 290 L180 290Z" fill="#3a2010" />
+      <path
+        d="M178 135 Q178 115 198 131 L200 175 L220 175 L222 131 Q242 115 242 135 L240 290 L180 290Z"
+        fill="#3a2010"
+      />
       {/* Shirt visible */}
-      <path d="M198 131 L200 160 L210 155 L220 160 L222 131 Q210 140 198 131Z" fill="#f0f0e0" />
+      <path
+        d="M198 131 L200 160 L210 155 L220 160 L222 131 Q210 140 198 131Z"
+        fill="#f0f0e0"
+      />
       {/* Left arm */}
-      <path d="M180 138 Q158 152 150 188" stroke="#3a2010" strokeWidth="22" strokeLinecap="round" fill="none" />
+      <path
+        d="M180 138 Q158 152 150 188"
+        stroke="#3a2010"
+        strokeWidth="22"
+        strokeLinecap="round"
+        fill="none"
+      />
       {/* Right arm (reaching forward) */}
-      <path d="M240 138 Q258 150 262 180" stroke="#3a2010" strokeWidth="22" strokeLinecap="round" fill="none" />
+      <path
+        d="M240 138 Q258 150 262 180"
+        stroke="#3a2010"
+        strokeWidth="22"
+        strokeLinecap="round"
+        fill="none"
+      />
       {/* Eyes */}
       <ellipse cx="202" cy="97" rx="2.5" ry="2.5" fill="#1a0e05" />
       <ellipse cx="218" cy="97" rx="2.5" ry="2.5" fill="#1a0e05" />
@@ -164,9 +315,21 @@ function PopSVG() {
 
 function RnBSVG() {
   return (
-    <svg width="100%" height="100%" viewBox="0 0 320 300" preserveAspectRatio="xMidYMax meet">
+    <svg
+      width="100%"
+      height="100%"
+      viewBox="0 0 320 300"
+      preserveAspectRatio="xMidYMax meet"
+    >
       {/* Cool blue/grey ambient */}
-      <ellipse cx="160" cy="130" rx="130" ry="110" fill="#1a3a6e" fillOpacity="0.2" />
+      <ellipse
+        cx="160"
+        cy="130"
+        rx="130"
+        ry="110"
+        fill="#1a3a6e"
+        fillOpacity="0.2"
+      />
 
       {/* ── Person 1 (left, striped shirt) ── */}
       {/* Head */}
@@ -175,28 +338,73 @@ function RnBSVG() {
       {/* Neck */}
       <rect x="88" y="93" width="14" height="13" rx="4" fill="#5a3520" />
       {/* Striped shirt */}
-      <path d="M65 110 Q65 90 83 107 L85 155 L107 155 L109 107 Q125 90 125 110 L122 290 L68 290Z" fill="#c8920a" />
+      <path
+        d="M65 110 Q65 90 83 107 L85 155 L107 155 L109 107 Q125 90 125 110 L122 290 L68 290Z"
+        fill="#c8920a"
+      />
       {/* Stripes */}
       {[115, 130, 145, 160, 175, 190, 205, 220, 235].map((y, i) => (
-        <rect key={i} x="68" y={y} width="54" height="5" fill={i % 2 === 0 ? "#ffffff22" : "#1a1a1a22"} rx="1" />
+        <rect
+          key={i}
+          x="68"
+          y={y}
+          width="54"
+          height="5"
+          fill={i % 2 === 0 ? "#ffffff22" : "#1a1a1a22"}
+          rx="1"
+        />
       ))}
       {/* Left arm */}
-      <path d="M65 115 Q44 128 38 160" stroke="#c8920a" strokeWidth="20" strokeLinecap="round" fill="none" />
+      <path
+        d="M65 115 Q44 128 38 160"
+        stroke="#c8920a"
+        strokeWidth="20"
+        strokeLinecap="round"
+        fill="none"
+      />
       <ellipse cx="36" cy="163" rx="9" ry="7" fill="#5a3520" />
       {/* Right arm */}
-      <path d="M125 115 Q145 130 152 165" stroke="#c8920a" strokeWidth="20" strokeLinecap="round" fill="none" />
+      <path
+        d="M125 115 Q145 130 152 165"
+        stroke="#c8920a"
+        strokeWidth="20"
+        strokeLinecap="round"
+        fill="none"
+      />
       <ellipse cx="153" cy="168" rx="9" ry="7" fill="#5a3520" />
       {/* Chain */}
-      <path d="M83 110 Q95 118 109 110" stroke="#d4af37" strokeWidth="2" fill="none" />
+      <path
+        d="M83 110 Q95 118 109 110"
+        stroke="#d4af37"
+        strokeWidth="2"
+        fill="none"
+      />
       {/* Eyes */}
       <ellipse cx="87" cy="73" rx="3" ry="3" fill="#0a0604" />
       <ellipse cx="103" cy="73" rx="3" ry="3" fill="#0a0604" />
       {/* Nose */}
-      <path d="M92 80 Q95 86 98 80" stroke="#3a2010" strokeWidth="1.3" fill="none" strokeLinecap="round" />
+      <path
+        d="M92 80 Q95 86 98 80"
+        stroke="#3a2010"
+        strokeWidth="1.3"
+        fill="none"
+        strokeLinecap="round"
+      />
       {/* Mouth */}
-      <path d="M89 90 Q95 94 101 90" stroke="#3a1510" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+      <path
+        d="M89 90 Q95 94 101 90"
+        stroke="#3a1510"
+        strokeWidth="1.5"
+        fill="none"
+        strokeLinecap="round"
+      />
       {/* Tattoo hint on neck */}
-      <path d="M90 96 Q95 92 100 96" stroke="#1a0a0444" strokeWidth="1" fill="none" />
+      <path
+        d="M90 96 Q95 92 100 96"
+        stroke="#1a0a0444"
+        strokeWidth="1"
+        fill="none"
+      />
 
       {/* ── Person 2 (right, darker skin) ── */}
       {/* Head */}
@@ -205,24 +413,56 @@ function RnBSVG() {
       {/* Neck */}
       <rect x="208" y="88" width="14" height="13" rx="4" fill="#3a2010" />
       {/* Dark hoodie */}
-      <path d="M185 105 Q185 85 203 102 L205 148 L227 148 L229 102 Q245 85 245 105 L242 290 L188 290Z" fill="#1a1a2a" />
+      <path
+        d="M185 105 Q185 85 203 102 L205 148 L227 148 L229 102 Q245 85 245 105 L242 290 L188 290Z"
+        fill="#1a1a2a"
+      />
       {/* Hoodie details */}
-      <path d="M203 102 L205 130 L215 125 L225 130 L227 102 Q215 112 203 102Z" fill="#252535" />
+      <path
+        d="M203 102 L205 130 L215 125 L225 130 L227 102 Q215 112 203 102Z"
+        fill="#252535"
+      />
       {/* Left arm (raised, pointing) */}
-      <path d="M185 110 Q162 95 148 72 Q144 65 151 62 Q158 59 161 67 Q174 88 190 106Z" fill="#1a1a2a" />
+      <path
+        d="M185 110 Q162 95 148 72 Q144 65 151 62 Q158 59 161 67 Q174 88 190 106Z"
+        fill="#1a1a2a"
+      />
       <ellipse cx="148" cy="61" rx="8" ry="7" fill="#3a2010" />
       {/* Right arm */}
-      <path d="M245 108 Q264 122 268 155" stroke="#1a1a2a" strokeWidth="22" strokeLinecap="round" fill="none" />
+      <path
+        d="M245 108 Q264 122 268 155"
+        stroke="#1a1a2a"
+        strokeWidth="22"
+        strokeLinecap="round"
+        fill="none"
+      />
       <ellipse cx="269" cy="158" rx="9" ry="7" fill="#3a2010" />
       {/* Chain */}
-      <path d="M203 104 Q215 112 229 104" stroke="#d4af37" strokeWidth="2" fill="none" />
+      <path
+        d="M203 104 Q215 112 229 104"
+        stroke="#d4af37"
+        strokeWidth="2"
+        fill="none"
+      />
       {/* Eyes */}
       <ellipse cx="207" cy="69" rx="3" ry="3" fill="#0a0604" />
       <ellipse cx="223" cy="69" rx="3" ry="3" fill="#0a0604" />
       {/* Nose */}
-      <path d="M212 76 Q215 82 218 76" stroke="#2a1508" strokeWidth="1.3" fill="none" strokeLinecap="round" />
+      <path
+        d="M212 76 Q215 82 218 76"
+        stroke="#2a1508"
+        strokeWidth="1.3"
+        fill="none"
+        strokeLinecap="round"
+      />
       {/* Mouth */}
-      <path d="M208 86 Q215 90 222 86" stroke="#2a1008" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+      <path
+        d="M208 86 Q215 90 222 86"
+        stroke="#2a1008"
+        strokeWidth="1.5"
+        fill="none"
+        strokeLinecap="round"
+      />
 
       {/* Shadow */}
       <ellipse cx="160" cy="292" rx="110" ry="7" fill="#00000055" />
@@ -232,10 +472,29 @@ function RnBSVG() {
 
 function RockSVG() {
   return (
-    <svg width="100%" height="100%" viewBox="0 0 320 300" preserveAspectRatio="xMidYMax meet">
+    <svg
+      width="100%"
+      height="100%"
+      viewBox="0 0 320 300"
+      preserveAspectRatio="xMidYMax meet"
+    >
       {/* Stage spotlight - blue/purple */}
-      <ellipse cx="200" cy="80" rx="80" ry="100" fill="#4040aa" fillOpacity="0.3" />
-      <ellipse cx="200" cy="60" rx="30" ry="40" fill="#8080ff" fillOpacity="0.4" />
+      <ellipse
+        cx="200"
+        cy="80"
+        rx="80"
+        ry="100"
+        fill="#4040aa"
+        fillOpacity="0.3"
+      />
+      <ellipse
+        cx="200"
+        cy="60"
+        rx="30"
+        ry="40"
+        fill="#8080ff"
+        fillOpacity="0.4"
+      />
 
       {/* ── Guitarist (close-up hands on guitar) ── */}
       {/* Guitar body */}
@@ -251,17 +510,41 @@ function RockSVG() {
       <circle cx="160" cy="210" r="15" fill="#0a0603" />
       {/* Guitar strings */}
       {[-18, -11, -4, 4, 11, 18].map((offset, i) => (
-        <line key={i} x1={160 + offset} y1="155" x2={160 + offset} y2="265" stroke="#c0c0c088" strokeWidth="1" />
+        <line
+          key={i}
+          x1={160 + offset}
+          y1="155"
+          x2={160 + offset}
+          y2="265"
+          stroke="#c0c0c088"
+          strokeWidth="1"
+        />
       ))}
       {/* Frets */}
       {[170, 185, 200, 215, 230, 245].map((y, i) => (
-        <line key={i} x1="142" y1={y} x2="178" y2={y} stroke="#ffffff22" strokeWidth="1.5" />
+        <line
+          key={i}
+          x1="142"
+          y1={y}
+          x2="178"
+          y2={y}
+          stroke="#ffffff22"
+          strokeWidth="1.5"
+        />
       ))}
       {/* Guitar neck */}
       <rect x="148" y="80" width="24" height="100" rx="6" fill="#1a1005" />
       {/* Neck frets detail */}
       {[90, 102, 114, 126, 138, 150, 162].map((y, i) => (
-        <line key={i} x1="148" y1={y} x2="172" y2={y} stroke="#3a2a1055" strokeWidth="1" />
+        <line
+          key={i}
+          x1="148"
+          y1={y}
+          x2="172"
+          y2={y}
+          stroke="#3a2a1055"
+          strokeWidth="1"
+        />
       ))}
       {/* Tuning pegs */}
       {[82, 94, 106].map((y, i) => (
@@ -271,7 +554,13 @@ function RockSVG() {
         <circle key={i} cx="176" cy={y} r="4" fill="#4a3a20" />
       ))}
       {/* Guitar strap */}
-      <path d="M110 175 Q60 160 50 120 Q45 90 80 80" stroke="#3a1a08" strokeWidth="8" fill="none" strokeLinecap="round" />
+      <path
+        d="M110 175 Q60 160 50 120 Q45 90 80 80"
+        stroke="#3a1a08"
+        strokeWidth="8"
+        fill="none"
+        strokeLinecap="round"
+      />
 
       {/* ── Hands on guitar ── */}
       {/* Left hand (fretting) */}
@@ -290,7 +579,14 @@ function RockSVG() {
       <path d="M172 205 L180 215 L168 218Z" fill="#ffdd00" />
 
       {/* Guitar shine */}
-      <ellipse cx="130" cy="190" rx="15" ry="25" fill="#ffffff08" transform="rotate(-20 130 190)" />
+      <ellipse
+        cx="130"
+        cy="190"
+        rx="15"
+        ry="25"
+        fill="#ffffff08"
+        transform="rotate(-20 130 190)"
+      />
     </svg>
   );
 }
@@ -309,7 +605,9 @@ function GenreCard({ genre, index }: { genre: Genre; index: number }) {
   return (
     <div
       className="genre-card"
-      onClick={() => router.push(`/beat?genre=${encodeURIComponent(genre.name)}`)}
+      onClick={() =>
+        router.push(`/beat?genre=${encodeURIComponent(genre.name)}`)
+      }
       style={{
         display: "flex",
         flexDirection: "column",
@@ -478,9 +776,10 @@ export default function PopularGenres() {
                 maxWidth: "480px",
               }}
             >
-              Discover the hottest and most popular artists in the industry today. Keep your music
-              library fresh and up-to-date with our curated selection of trending musicians, bands,
-              and singers. From emerging talents to established stars, we've got you covered.
+              Discover the hottest and most popular artists in the industry
+              today. Keep your music library fresh and up-to-date with our
+              curated selection of trending musicians, bands, and singers. From
+              emerging talents to established stars, we've got you covered.
             </p>
           </div>
 
@@ -502,7 +801,8 @@ export default function PopularGenres() {
               cursor: "pointer",
               transform: exploreHov ? "translateY(-2px)" : "translateY(0)",
               boxShadow: exploreHov ? "0 8px 24px #d4820a55" : "none",
-              transition: "background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease",
+              transition:
+                "background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease",
               marginTop: "8px",
             }}
           >

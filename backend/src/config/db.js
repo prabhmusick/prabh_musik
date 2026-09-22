@@ -830,7 +830,7 @@ function init() {
                     const missingBeatColumns = [
                       ["related_artist_name", "TEXT"],
                       ["related_artist_image_key", "TEXT"],
-                          ["mood", "TEXT"],
+                      ["mood", "TEXT"],
                     ].filter(([column]) => !existingBeatColumns.has(column));
 
                     const addBeatColumn = () => {

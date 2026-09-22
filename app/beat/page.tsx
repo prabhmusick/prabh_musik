@@ -18,10 +18,40 @@ async function fetchBeats(
       search: filters.search,
       genre: filters.genre || undefined,
       mood: filters.mood || undefined,
-      minBpm: filters.bpmRange === "Slow (60-90)" ? 60 : filters.bpmRange === "Normal (90-130)" ? 91 : filters.bpmRange === "Fast (130-160)" ? 131 : filters.bpmRange === "Very Fast (160+)" ? 161 : undefined,
-      maxBpm: filters.bpmRange === "Slow (60-90)" ? 90 : filters.bpmRange === "Normal (90-130)" ? 130 : filters.bpmRange === "Fast (130-160)" ? 160 : undefined,
-      minPrice: filters.priceRange === "₹0-500" ? 1 : filters.priceRange === "₹500-1000" ? 501 : filters.priceRange === "₹1000+" ? 1001 : undefined,
-      maxPrice: filters.priceRange === "Free" ? 0 : filters.priceRange === "₹0-500" ? 50000 : filters.priceRange === "₹500-1000" ? 100000 : undefined,
+      minBpm:
+        filters.bpmRange === "Slow (60-90)"
+          ? 60
+          : filters.bpmRange === "Normal (90-130)"
+            ? 91
+            : filters.bpmRange === "Fast (130-160)"
+              ? 131
+              : filters.bpmRange === "Very Fast (160+)"
+                ? 161
+                : undefined,
+      maxBpm:
+        filters.bpmRange === "Slow (60-90)"
+          ? 90
+          : filters.bpmRange === "Normal (90-130)"
+            ? 130
+            : filters.bpmRange === "Fast (130-160)"
+              ? 160
+              : undefined,
+      minPrice:
+        filters.priceRange === "₹0-500"
+          ? 1
+          : filters.priceRange === "₹500-1000"
+            ? 501
+            : filters.priceRange === "₹1000+"
+              ? 1001
+              : undefined,
+      maxPrice:
+        filters.priceRange === "Free"
+          ? 0
+          : filters.priceRange === "₹0-500"
+            ? 50000
+            : filters.priceRange === "₹500-1000"
+              ? 100000
+              : undefined,
       limit: perPage,
       offset: (page - 1) * perPage,
     });
@@ -1207,13 +1237,16 @@ export default function BeatMarketplace() {
   const { isAuthenticated, addToCart } = useAppShell();
   const { currentBeat, isPlaying, playBeat } = useAudioPlayer();
 
-  const load = useCallback(async (p: number) => {
-    setLoading(true);
-    const data = await fetchBeats(p, { ...filters, search });
-    setBeats(data.beats);
-    setTotalPages(data.pages);
-    setLoading(false);
-  }, [filters, search]);
+  const load = useCallback(
+    async (p: number) => {
+      setLoading(true);
+      const data = await fetchBeats(p, { ...filters, search });
+      setBeats(data.beats);
+      setTotalPages(data.pages);
+      setLoading(false);
+    },
+    [filters, search],
+  );
 
   const updateFilters = useCallback((nextFilters: FilterState) => {
     setFilters(nextFilters);

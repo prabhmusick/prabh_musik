@@ -220,7 +220,9 @@ export interface BeatCatalogFilters {
   offset?: number;
 }
 
-export async function getBeatCatalog(filters: BeatCatalogFilters = {}): Promise<{
+export async function getBeatCatalog(
+  filters: BeatCatalogFilters = {},
+): Promise<{
   items: Beat[];
   total: number;
   pages: number;
@@ -235,7 +237,9 @@ export async function getBeatCatalog(filters: BeatCatalogFilters = {}): Promise<
   const response = await api.get(`/beats?${params.toString()}`);
   const data = response?.data?.data || {};
   return {
-    items: Array.isArray(data.items) ? data.items.map(mapBackendToFrontend) : [],
+    items: Array.isArray(data.items)
+      ? data.items.map(mapBackendToFrontend)
+      : [],
     total: Number(data.total || 0),
     pages: Number(data.pages || 0),
   };

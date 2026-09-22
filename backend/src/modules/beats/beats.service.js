@@ -343,8 +343,10 @@ const listPublicBeats = async (options = {}) => {
     mood: options.mood ? String(options.mood).trim() : undefined,
     minBpm: options.minBpm !== undefined ? Number(options.minBpm) : undefined,
     maxBpm: options.maxBpm !== undefined ? Number(options.maxBpm) : undefined,
-    minPrice: options.minPrice !== undefined ? Number(options.minPrice) : undefined,
-    maxPrice: options.maxPrice !== undefined ? Number(options.maxPrice) : undefined,
+    minPrice:
+      options.minPrice !== undefined ? Number(options.minPrice) : undefined,
+    maxPrice:
+      options.maxPrice !== undefined ? Number(options.maxPrice) : undefined,
     limit: Math.floor(limit),
     offset: Math.floor(offset),
     sortBy: options.sortBy,
@@ -366,7 +368,10 @@ const listPublicBeatsPage = async (options = {}) => {
   const offset = Math.max(Number(options.offset) || 0, 0);
   const numericFilters = ["minBpm", "maxBpm", "minPrice", "maxPrice"];
   for (const filter of numericFilters) {
-    if (options[filter] !== undefined && !Number.isFinite(Number(options[filter]))) {
+    if (
+      options[filter] !== undefined &&
+      !Number.isFinite(Number(options[filter]))
+    ) {
       throw new AppError(`${filter} must be a number.`, 400);
     }
   }

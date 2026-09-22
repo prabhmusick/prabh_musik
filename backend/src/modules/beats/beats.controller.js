@@ -93,9 +93,10 @@ const listPublicBeats = async (req, res, next) => {
       sortOrder: req.query.sortOrder,
     };
 
-    const beats = req.query.catalog === "1"
-      ? await service.listPublicBeatsPage(options)
-      : await service.listPublicBeats(options);
+    const beats =
+      req.query.catalog === "1"
+        ? await service.listPublicBeatsPage(options)
+        : await service.listPublicBeats(options);
 
     res.status(200).json({
       success: true,

@@ -304,7 +304,9 @@ const listBeats = async (options = {}) => {
   }
 
   if (search) {
-    whereConditions.push("(title LIKE ? OR genre LIKE ? OR related_artist_name LIKE ?)");
+    whereConditions.push(
+      "(title LIKE ? OR genre LIKE ? OR related_artist_name LIKE ?)",
+    );
     const searchValue = `%${search}%`;
     params.push(searchValue, searchValue, searchValue);
   }
@@ -374,23 +376,50 @@ const listBeats = async (options = {}) => {
 };
 
 const countBeats = async (options = {}) => {
-  const { status, genre, search, mood, minBpm, maxBpm, minPrice, maxPrice } = options;
+  const { status, genre, search, mood, minBpm, maxBpm, minPrice, maxPrice } =
+    options;
   const conditions = [];
   const params = [];
-  if (status) { conditions.push("status = ?"); params.push(status); }
-  if (genre) { conditions.push("genre = ?"); params.push(genre); }
+  if (status) {
+    conditions.push("status = ?");
+    params.push(status);
+  }
+  if (genre) {
+    conditions.push("genre = ?");
+    params.push(genre);
+  }
   if (search) {
-    conditions.push("(title LIKE ? OR genre LIKE ? OR related_artist_name LIKE ?)");
+    conditions.push(
+      "(title LIKE ? OR genre LIKE ? OR related_artist_name LIKE ?)",
+    );
     const value = `%${search}%`;
     params.push(value, value, value);
   }
-  if (mood) { conditions.push("mood = ?"); params.push(mood); }
-  if (minBpm !== undefined) { conditions.push("bpm >= ?"); params.push(minBpm); }
-  if (maxBpm !== undefined) { conditions.push("bpm <= ?"); params.push(maxBpm); }
-  if (minPrice !== undefined) { conditions.push("price_amount >= ?"); params.push(minPrice); }
-  if (maxPrice !== undefined) { conditions.push("price_amount <= ?"); params.push(maxPrice); }
+  if (mood) {
+    conditions.push("mood = ?");
+    params.push(mood);
+  }
+  if (minBpm !== undefined) {
+    conditions.push("bpm >= ?");
+    params.push(minBpm);
+  }
+  if (maxBpm !== undefined) {
+    conditions.push("bpm <= ?");
+    params.push(maxBpm);
+  }
+  if (minPrice !== undefined) {
+    conditions.push("price_amount >= ?");
+    params.push(minPrice);
+  }
+  if (maxPrice !== undefined) {
+    conditions.push("price_amount <= ?");
+    params.push(maxPrice);
+  }
   const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
-  const result = await db.prepare(`SELECT COUNT(*) AS total FROM beats ${where}`).bind(...params).first();
+  const result = await db
+    .prepare(`SELECT COUNT(*) AS total FROM beats ${where}`)
+    .bind(...params)
+    .first();
   return Number(result?.total || 0);
 };
 
