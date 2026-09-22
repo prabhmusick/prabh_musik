@@ -8,6 +8,7 @@ export interface WorkedWithArtist {
   popularSong: string;
   musicType: string;
   workedYear: string;
+  showOnMusicProduction: boolean;
 }
 
 export async function getArtists(): Promise<Artist[]> {
@@ -26,6 +27,7 @@ export async function createWorkedWithArtist(data: {
   popular_song: string;
   music_type: string;
   worked_year: number;
+  show_on_music_production: boolean;
 }): Promise<WorkedWithArtist> {
   const response = await api.post("/artists/worked-with", data);
   return response.data.data;

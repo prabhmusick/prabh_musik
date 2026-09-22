@@ -36,6 +36,8 @@ export default function ArtistsPage() {
   const [workedWithMusicType, setWorkedWithMusicType] =
     React.useState("Punjabi Trap");
   const [workedWithYear, setWorkedWithYear] = React.useState("2024");
+  const [showOnMusicProduction, setShowOnMusicProduction] =
+    React.useState(false);
   const [workedWithSaving, setWorkedWithSaving] = React.useState(false);
   const [workedWithError, setWorkedWithError] = React.useState("");
   const [deletingWorkedWithId, setDeletingWorkedWithId] = React.useState<
@@ -72,6 +74,7 @@ export default function ArtistsPage() {
         popular_song: workedWithSong,
         music_type: workedWithMusicType,
         worked_year: Number(workedWithYear),
+        show_on_music_production: showOnMusicProduction,
       });
       await queryClient.invalidateQueries({
         queryKey: ["admin", "worked-with-artists"],
@@ -81,6 +84,7 @@ export default function ArtistsPage() {
       setWorkedWithSong("Dont Look 2");
       setWorkedWithMusicType("Punjabi Trap");
       setWorkedWithYear("2024");
+      setShowOnMusicProduction(false);
     } catch (err: unknown) {
       setWorkedWithError(
         getApiErrorMessage(err, "Unable to add worked-with artist"),
@@ -234,6 +238,16 @@ export default function ArtistsPage() {
             onUploadComplete={setWorkedWithImage}
             type="image"
           />
+          <label className="flex items-center gap-2 text-sm text-neutral-300 md:col-span-2">
+            <input
+              type="checkbox"
+              checked={showOnMusicProduction}
+              onChange={(event) =>
+                setShowOnMusicProduction(event.target.checked)
+              }
+            />
+            Show on Music Production page
+          </label>
           {workedWithError && (
             <p className="text-sm text-red-400 md:col-span-2">
               {workedWithError}

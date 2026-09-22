@@ -14,6 +14,7 @@ export interface Beat {
   id: string;
   title: string;
   producer: string;
+  artistImage?: string;
   price: number | null;
   cover: string;
   genre: string;

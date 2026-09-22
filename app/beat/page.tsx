@@ -20,7 +20,8 @@ async function fetchBeats(
     const paginatedBeats = allBeats.slice(start, start + perPage).map((b) => ({
       id: String(b.id),
       title: b.title,
-      producer: "Unknown",
+      producer: b.relatedArtistName || "Unknown Artist",
+      artistImage: b.relatedArtistImage || "",
       price: b.price || null,
       cover:
         (b.assets && (b.assets.coverImage || b.assets.bannerImage)) ||
@@ -39,38 +40,6 @@ async function fetchBeats(
 }
 
 // ─── Artist data ──────────────────────────────────────────────────────────────
-
-const ARTISTS = [
-  {
-    name: "KARAN AUJLA",
-    img: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&h=120&fit=crop&crop=face",
-  },
-  {
-    name: "SIDHU MOOSE WALA",
-    img: "https://images.unsplash.com/photo-1463453091185-61582044d556?w=120&h=120&fit=crop&crop=face",
-    active: true,
-  },
-  {
-    name: "DILJIT DOSANTH",
-    img: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&h=120&fit=crop&crop=face",
-  },
-  {
-    name: "AP DHILLON",
-    img: "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=120&h=120&fit=crop&crop=face",
-  },
-  {
-    name: "GURU RANDHAWA",
-    img: "https://images.unsplash.com/photo-1519345182560-3f2917c472ef?w=120&h=120&fit=crop&crop=face",
-  },
-  {
-    name: "SHUBH",
-    img: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=120&h=120&fit=crop&crop=face",
-  },
-  {
-    name: "YO YO HONEY SINGH",
-    img: "https://images.unsplash.com/photo-1542909168-82c3e7fdcd5b?w=120&h=120&fit=crop&crop=face",
-  },
-];
 
 const TAGS = [
   "drake",
@@ -472,6 +441,13 @@ function TrendingHeader({
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const filterOptions = getFilterOptions(beats);
+  const artists = Array.from(
+    new Map(
+      beats
+        .filter((beat) => beat.producer && beat.producer !== "Unknown Artist")
+        .map((beat) => [beat.producer, beat.artistImage || ""]),
+    ),
+  ).map(([name, img]) => ({ name: name.toUpperCase(), img }));
 
   return (
     <div style={{ paddingTop: 36, paddingBottom: 10 }}>
@@ -515,7 +491,7 @@ function TrendingHeader({
           scrollSnapType: "x mandatory",
         }}
       >
-        {ARTISTS.map((a, i) => (
+        {artists.map((a, i) => (
           <div
             key={i}
             onClick={() => setActiveArtist(i)}
@@ -544,7 +520,7 @@ function TrendingHeader({
               }}
             >
               <img
-                src={a.img}
+                src={a.img || "/bg.png"}
                 alt={a.name}
                 style={{
                   width: "100%",
@@ -626,7 +602,11 @@ function TrendingHeader({
             onChange={(e) => {
               const nextValue = e.target.value;
               onSearch(nextValue);
-              window.dispatchEvent(new CustomEvent("app-search-sync", { detail: { value: nextValue } }));
+              window.dispatchEvent(
+                new CustomEvent("app-search-sync", {
+                  detail: { value: nextValue },
+                }),
+              );
             }}
             placeholder="Search for tags"
             style={{
@@ -1164,13 +1144,16 @@ export default function BeatMarketplace() {
       const params = new URLSearchParams(window.location.search);
       const nextValue = params.get("q") ?? "";
       setSearch(nextValue);
-      window.dispatchEvent(new CustomEvent("app-search-sync", { detail: { value: nextValue } }));
+      window.dispatchEvent(
+        new CustomEvent("app-search-sync", { detail: { value: nextValue } }),
+      );
     };
 
     syncFromUrl();
     window.addEventListener("popstate", syncFromUrl);
     const handleSync = (event: Event) => {
-      const nextValue = (event as CustomEvent<{ value?: string }>).detail?.value ?? "";
+      const nextValue =
+        (event as CustomEvent<{ value?: string }>).detail?.value ?? "";
       setSearch(nextValue);
     };
     window.addEventListener("app-search-sync", handleSync);
@@ -1290,7 +1273,7 @@ export default function BeatMarketplace() {
     (beat: Beat) => {
       playBeat(beat, filtered);
     },
-    [filtered, playBeat]
+    [filtered, playBeat],
   );
 
   const hasSearchQuery = search.trim().length > 0;
@@ -1335,7 +1318,8 @@ export default function BeatMarketplace() {
               fontSize: 14,
             }}
           >
-            No beats found for “{search}”. Try another keyword or clear the search.
+            No beats found for “{search}”. Try another keyword or clear the
+            search.
           </div>
         )}
         {/* Subtle top vignette glow */}

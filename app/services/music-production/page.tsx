@@ -1,5 +1,9 @@
-'use client';
+"use client";
 import { useState, useRef, useEffect } from "react";
+import {
+  getWorkedWithArtists,
+  WorkedWithArtist,
+} from "../../../services/artist.service";
 
 const style = `
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700;1,900&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
@@ -659,9 +663,14 @@ function AnimatedEQ({ playing }: { playing: boolean }) {
   const [heights, setHeights] = useState(baseHeights);
 
   useEffect(() => {
-    if (!playing) { setHeights(baseHeights); return; }
+    if (!playing) {
+      setHeights(baseHeights);
+      return;
+    }
     const id = setInterval(() => {
-      setHeights(baseHeights.map(h => Math.max(15, h + (Math.random() - 0.5) * 40)));
+      setHeights(
+        baseHeights.map((h) => Math.max(15, h + (Math.random() - 0.5) * 40)),
+      );
     }, 140);
     return () => clearInterval(id);
   }, [playing]);
@@ -670,7 +679,13 @@ function AnimatedEQ({ playing }: { playing: boolean }) {
     <div className="eq-container">
       {heights.map((h, i) => (
         <div key={i} className="eq-bar-wrap">
-          <div className="eq-bar" style={{ height: `${h}%`, transition: playing ? "height 0.13s ease" : "none" }} />
+          <div
+            className="eq-bar"
+            style={{
+              height: `${h}%`,
+              transition: playing ? "height 0.13s ease" : "none",
+            }}
+          />
           <span className="eq-label">{freqs[i]}</span>
         </div>
       ))}
@@ -678,13 +693,25 @@ function AnimatedEQ({ playing }: { playing: boolean }) {
   );
 }
 
-function Waveform({ playing, progress }: { playing: boolean; progress: number }) {
-  const heights = [30,55,70,45,80,60,40,65,75,50,85,45,60,70,35,55,80,65,40,70,50,60,45,75,55,40,65,80,55,70];
+function Waveform({
+  playing,
+  progress,
+}: {
+  playing: boolean;
+  progress: number;
+}) {
+  const heights = [
+    30, 55, 70, 45, 80, 60, 40, 65, 75, 50, 85, 45, 60, 70, 35, 55, 80, 65, 40,
+    70, 50, 60, 45, 75, 55, 40, 65, 80, 55, 70,
+  ];
   const [activeIdx, setActiveIdx] = useState(0);
 
   useEffect(() => {
     if (!playing) return;
-    const id = setInterval(() => setActiveIdx(i => (i + 1) % heights.length), 120);
+    const id = setInterval(
+      () => setActiveIdx((i) => (i + 1) % heights.length),
+      120,
+    );
     return () => clearInterval(id);
   }, [playing]);
 
@@ -703,9 +730,22 @@ function Waveform({ playing, progress }: { playing: boolean; progress: number })
   );
 }
 
-function ArtistCard({ name, sceneColor, tag, genres, credits, delay }: {
-  name: string; sceneColor: string; tag: string;
-  genres: string[]; credits: number; delay: string;
+function ArtistCard({
+  name,
+  image,
+  sceneColor,
+  tag,
+  genres,
+  credits,
+  delay,
+}: {
+  name: string;
+  image: string;
+  sceneColor: string;
+  tag: string;
+  genres: string[];
+  credits: number;
+  delay: string;
 }) {
   const [playing, setPlaying] = useState(false);
   const [time, setTime] = useState(0);
@@ -713,22 +753,48 @@ function ArtistCard({ name, sceneColor, tag, genres, credits, delay }: {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const toggle = () => {
-    if (playing) { clearInterval(timerRef.current!); setPlaying(false); }
-    else {
+    if (playing) {
+      clearInterval(timerRef.current!);
+      setPlaying(false);
+    } else {
       setPlaying(true);
-      timerRef.current = setInterval(() => setTime(t => (t + 1) % total), 1000);
+      timerRef.current = setInterval(
+        () => setTime((t) => (t + 1) % total),
+        1000,
+      );
     }
   };
   useEffect(() => () => clearInterval(timerRef.current!), []);
-  const fmt = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+  const fmt = (s: number) =>
+    `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 
   return (
-    <div className="artist-card fade-up" style={{ animationDelay: delay, opacity: 0 }}>
+    <div
+      className="artist-card fade-up"
+      style={{ animationDelay: delay, opacity: 0 }}
+    >
       <div className="artist-vis">
         <span className="artist-tag">{tag}</span>
-        {name === "Karan Aujla" ? (
-          <svg width="100%" height="100%" viewBox="0 0 460 220" preserveAspectRatio="xMidYMid slice"
-            style={{ position: "absolute", inset: 0 }}>
+        {image ? (
+          <img
+            src={image}
+            alt={name}
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+            }}
+          />
+        ) : name === "Karan Aujla" ? (
+          <svg
+            width="100%"
+            height="100%"
+            viewBox="0 0 460 220"
+            preserveAspectRatio="xMidYMid slice"
+            style={{ position: "absolute", inset: 0 }}
+          >
             <defs>
               <radialGradient id="ka-bg" cx="38%" cy="0%" r="90%">
                 <stop offset="0%" stopColor="#2a1500" />
@@ -749,26 +815,64 @@ function ArtistCard({ name, sceneColor, tag, genres, credits, delay }: {
             <rect width="460" height="220" fill="url(#ka-bg)" />
             <rect width="460" height="220" fill="url(#ka-spot)" />
             {/* Abstract city/skyline bg */}
-            {[0,1,2,3,4,5,6,7,8].map(i => (
-              <rect key={i} x={i * 58 + 10} y={100 + (i % 3) * 18} width={36 + (i%2)*10} height={120 - (i%3)*18}
-                fill="#f07b20" fillOpacity={0.03 + (i%2)*0.02} />
+            {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+              <rect
+                key={i}
+                x={i * 58 + 10}
+                y={100 + (i % 3) * 18}
+                width={36 + (i % 2) * 10}
+                height={120 - (i % 3) * 18}
+                fill="#f07b20"
+                fillOpacity={0.03 + (i % 2) * 0.02}
+              />
             ))}
             {/* Horizontal lines — studio grid */}
-            {[0,1,2,3].map(i => (
-              <line key={i} x1="0" y1={55 + i * 40} x2="460" y2={55 + i * 40}
-                stroke="#f07b20" strokeOpacity={0.04} strokeWidth="1" />
+            {[0, 1, 2, 3].map((i) => (
+              <line
+                key={i}
+                x1="0"
+                y1={55 + i * 40}
+                x2="460"
+                y2={55 + i * 40}
+                stroke="#f07b20"
+                strokeOpacity={0.04}
+                strokeWidth="1"
+              />
             ))}
             {/* Figure — stylized silhouette with turban */}
             {/* Body */}
-            <ellipse cx="175" cy="310" rx="72" ry="110" fill="#0f0a06" clipPath="url(#ka-clip)" />
+            <ellipse
+              cx="175"
+              cy="310"
+              rx="72"
+              ry="110"
+              fill="#0f0a06"
+              clipPath="url(#ka-clip)"
+            />
             {/* Jacket */}
-            <path d="M130 220 Q140 160 175 150 Q210 160 220 220 L230 230 H120 Z"
-              fill="#1a1008" clipPath="url(#ka-clip)" />
+            <path
+              d="M130 220 Q140 160 175 150 Q210 160 220 220 L230 230 H120 Z"
+              fill="#1a1008"
+              clipPath="url(#ka-clip)"
+            />
             {/* Chain */}
-            <path d="M162 160 Q175 178 188 160" fill="none" stroke="#f07b20" strokeOpacity="0.55" strokeWidth="1.5" />
+            <path
+              d="M162 160 Q175 178 188 160"
+              fill="none"
+              stroke="#f07b20"
+              strokeOpacity="0.55"
+              strokeWidth="1.5"
+            />
             <circle cx="175" cy="178" r="3" fill="#f07b20" fillOpacity="0.6" />
             {/* Neck */}
-            <rect x="168" y="127" width="14" height="26" rx="5" fill="#c08040" />
+            <rect
+              x="168"
+              y="127"
+              width="14"
+              height="26"
+              rx="5"
+              fill="#c08040"
+            />
             {/* Head */}
             <ellipse cx="175" cy="118" rx="22" ry="24" fill="#c08040" />
             {/* Ear */}
@@ -781,56 +885,205 @@ function ArtistCard({ name, sceneColor, tag, genres, credits, delay }: {
             <circle cx="168.5" cy="113" r="1" fill="rgba(255,255,255,0.5)" />
             <circle cx="184.5" cy="113" r="1" fill="rgba(255,255,255,0.5)" />
             {/* Nose */}
-            <path d="M173 118 Q175 124 177 118" fill="none" stroke="#8a5020" strokeWidth="1.2" />
+            <path
+              d="M173 118 Q175 124 177 118"
+              fill="none"
+              stroke="#8a5020"
+              strokeWidth="1.2"
+            />
             {/* Mouth - slight smirk */}
-            <path d="M169 125 Q175 129 181 125" fill="none" stroke="#8a5020" strokeWidth="1.5" strokeLinecap="round" />
+            <path
+              d="M169 125 Q175 129 181 125"
+              fill="none"
+              stroke="#8a5020"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+            />
             {/* Beard */}
-            <path d="M156 124 Q157 138 175 142 Q193 138 194 124" fill="#3a2010" fillOpacity="0.85" />
-            <path d="M163 131 Q175 140 187 131" fill="#2a1608" fillOpacity="0.6" />
+            <path
+              d="M156 124 Q157 138 175 142 Q193 138 194 124"
+              fill="#3a2010"
+              fillOpacity="0.85"
+            />
+            <path
+              d="M163 131 Q175 140 187 131"
+              fill="#2a1608"
+              fillOpacity="0.6"
+            />
             {/* Mustache */}
-            <path d="M165 123 Q175 127 185 123" fill="#2a1608" fillOpacity="0.8" />
+            <path
+              d="M165 123 Q175 127 185 123"
+              fill="#2a1608"
+              fillOpacity="0.8"
+            />
             {/* Turban — Karan's signature */}
-            <path d="M153 103 Q155 75 175 70 Q195 75 197 103 Q185 95 175 96 Q165 95 153 103Z"
-              fill="#1a0f05" />
-            <path d="M153 103 Q160 88 175 85 Q190 88 197 103" fill="none" stroke="#f07b20" strokeOpacity="0.3" strokeWidth="1" />
+            <path
+              d="M153 103 Q155 75 175 70 Q195 75 197 103 Q185 95 175 96 Q165 95 153 103Z"
+              fill="#1a0f05"
+            />
+            <path
+              d="M153 103 Q160 88 175 85 Q190 88 197 103"
+              fill="none"
+              stroke="#f07b20"
+              strokeOpacity="0.3"
+              strokeWidth="1"
+            />
             {/* Turban wrap lines */}
-            {[0,1,2,3].map(i => (
-              <path key={i}
-                d={`M${155+i*2} ${101-i*7} Q175 ${78-i*4} ${195-i*2} ${101-i*7}`}
-                fill="none" stroke="#f07b20" strokeOpacity={0.08 + i*0.04} strokeWidth="0.8" />
+            {[0, 1, 2, 3].map((i) => (
+              <path
+                key={i}
+                d={`M${155 + i * 2} ${101 - i * 7} Q175 ${78 - i * 4} ${195 - i * 2} ${101 - i * 7}`}
+                fill="none"
+                stroke="#f07b20"
+                strokeOpacity={0.08 + i * 0.04}
+                strokeWidth="0.8"
+              />
             ))}
             {/* Tattoos on arm hint */}
-            <path d="M130 175 Q128 180 131 185" stroke="#f07b20" strokeOpacity="0.2" strokeWidth="1.5" fill="none" />
+            <path
+              d="M130 175 Q128 180 131 185"
+              stroke="#f07b20"
+              strokeOpacity="0.2"
+              strokeWidth="1.5"
+              fill="none"
+            />
             {/* Mic in hand */}
-            <rect x="108" y="155" width="10" height="28" rx="5" fill="#2a1a0a" stroke="#f07b20" strokeOpacity="0.3" strokeWidth="1" />
-            <ellipse cx="113" cy="152" rx="8" ry="10" fill="#1e1208" stroke="#f07b20" strokeOpacity="0.4" strokeWidth="1" />
+            <rect
+              x="108"
+              y="155"
+              width="10"
+              height="28"
+              rx="5"
+              fill="#2a1a0a"
+              stroke="#f07b20"
+              strokeOpacity="0.3"
+              strokeWidth="1"
+            />
+            <ellipse
+              cx="113"
+              cy="152"
+              rx="8"
+              ry="10"
+              fill="#1e1208"
+              stroke="#f07b20"
+              strokeOpacity="0.4"
+              strokeWidth="1"
+            />
             {/* Mic grille lines */}
-            {[0,1,2].map(i => (
-              <line key={i} x1="106" y1={147+i*4} x2="120" y2={147+i*4}
-                stroke="#f07b20" strokeOpacity="0.2" strokeWidth="0.8" />
+            {[0, 1, 2].map((i) => (
+              <line
+                key={i}
+                x1="106"
+                y1={147 + i * 4}
+                x2="120"
+                y2={147 + i * 4}
+                stroke="#f07b20"
+                strokeOpacity="0.2"
+                strokeWidth="0.8"
+              />
             ))}
             {/* Stage floor reflection */}
-            <rect x="0" y="215" width="460" height="6" fill="#f07b20" fillOpacity="0.05" />
+            <rect
+              x="0"
+              y="215"
+              width="460"
+              height="6"
+              fill="#f07b20"
+              fillOpacity="0.05"
+            />
             {/* Glow under figure */}
-            <ellipse cx="175" cy="220" rx="80" ry="12" fill="#f07b20" fillOpacity="0.06" />
+            <ellipse
+              cx="175"
+              cy="220"
+              rx="80"
+              ry="12"
+              fill="#f07b20"
+              fillOpacity="0.06"
+            />
             {/* Right side — text/typography art */}
-            <text x="300" y="80" fontFamily="serif" fontSize="56" fontWeight="900"
-              fill="#f07b20" fillOpacity="0.06" letterSpacing="-2">KA</text>
-            <text x="290" y="140" fontFamily="monospace" fontSize="9" fill="#f07b20" fillOpacity="0.25"
-              letterSpacing="3">PUNJABI · HIP HOP</text>
-            <text x="290" y="158" fontFamily="monospace" fontSize="9" fill="#f07b20" fillOpacity="0.18"
-              letterSpacing="3">VANCOUVER · BC</text>
-            <text x="290" y="176" fontFamily="monospace" fontSize="9" fill="#f07b20" fillOpacity="0.18"
-              letterSpacing="3">EST. 2016</text>
+            <text
+              x="300"
+              y="80"
+              fontFamily="serif"
+              fontSize="56"
+              fontWeight="900"
+              fill="#f07b20"
+              fillOpacity="0.06"
+              letterSpacing="-2"
+            >
+              KA
+            </text>
+            <text
+              x="290"
+              y="140"
+              fontFamily="monospace"
+              fontSize="9"
+              fill="#f07b20"
+              fillOpacity="0.25"
+              letterSpacing="3"
+            >
+              PUNJABI · HIP HOP
+            </text>
+            <text
+              x="290"
+              y="158"
+              fontFamily="monospace"
+              fontSize="9"
+              fill="#f07b20"
+              fillOpacity="0.18"
+              letterSpacing="3"
+            >
+              VANCOUVER · BC
+            </text>
+            <text
+              x="290"
+              y="176"
+              fontFamily="monospace"
+              fontSize="9"
+              fill="#f07b20"
+              fillOpacity="0.18"
+              letterSpacing="3"
+            >
+              EST. 2016
+            </text>
             {/* Decorative vertical line */}
-            <line x1="280" y1="60" x2="280" y2="210" stroke="#f07b20" strokeOpacity="0.08" strokeWidth="1" />
+            <line
+              x1="280"
+              y1="60"
+              x2="280"
+              y2="210"
+              stroke="#f07b20"
+              strokeOpacity="0.08"
+              strokeWidth="1"
+            />
             {/* Orange accent bars */}
-            <rect x="290" y="192" width="40" height="2" rx="1" fill="#f07b20" fillOpacity="0.4" />
-            <rect x="290" y="198" width="24" height="2" rx="1" fill="#f07b20" fillOpacity="0.2" />
+            <rect
+              x="290"
+              y="192"
+              width="40"
+              height="2"
+              rx="1"
+              fill="#f07b20"
+              fillOpacity="0.4"
+            />
+            <rect
+              x="290"
+              y="198"
+              width="24"
+              height="2"
+              rx="1"
+              fill="#f07b20"
+              fillOpacity="0.2"
+            />
           </svg>
         ) : (
-          <svg width="100%" height="100%" viewBox="0 0 460 220" preserveAspectRatio="xMidYMid slice"
-            style={{ position: "absolute", inset: 0 }}>
+          <svg
+            width="100%"
+            height="100%"
+            viewBox="0 0 460 220"
+            preserveAspectRatio="xMidYMid slice"
+            style={{ position: "absolute", inset: 0 }}
+          >
             <defs>
               <radialGradient id="sm-bg" cx="38%" cy="0%" r="90%">
                 <stop offset="0%" stopColor="#1a1200" />
@@ -847,28 +1100,61 @@ function ArtistCard({ name, sceneColor, tag, genres, credits, delay }: {
             <rect width="460" height="220" fill="url(#sm-bg)" />
             <rect width="460" height="220" fill="url(#sm-spot)" />
             {/* Punjab landscape hint — wheat fields */}
-            {[0,1,2,3,4,5,6,7].map(i => (
-              <path key={i}
-                d={`M${i*62} 220 Q${i*62+10} ${170+(i%3)*12} ${i*62+20} 220`}
-                fill="#d4902a" fillOpacity={0.04 + (i%2)*0.02} />
+            {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+              <path
+                key={i}
+                d={`M${i * 62} 220 Q${i * 62 + 10} ${170 + (i % 3) * 12} ${i * 62 + 20} 220`}
+                fill="#d4902a"
+                fillOpacity={0.04 + (i % 2) * 0.02}
+              />
             ))}
             {/* Grid lines */}
-            {[0,1,2,3].map(i => (
-              <line key={i} x1="0" y1={50 + i * 45} x2="460" y2={50 + i * 45}
-                stroke="#d4902a" strokeOpacity="0.04" strokeWidth="1" />
+            {[0, 1, 2, 3].map((i) => (
+              <line
+                key={i}
+                x1="0"
+                y1={50 + i * 45}
+                x2="460"
+                y2={50 + i * 45}
+                stroke="#d4902a"
+                strokeOpacity="0.04"
+                strokeWidth="1"
+              />
             ))}
             {/* Body mass */}
-            <ellipse cx="175" cy="310" rx="80" ry="110" fill="#100e08" clipPath="url(#sm-clip)" />
+            <ellipse
+              cx="175"
+              cy="310"
+              rx="80"
+              ry="110"
+              fill="#100e08"
+              clipPath="url(#sm-clip)"
+            />
             {/* Jacket — waistcoat style */}
-            <path d="M125 220 Q138 158 175 148 Q212 158 225 220 L235 230 H115 Z"
-              fill="#1a1608" clipPath="url(#sm-clip)" />
+            <path
+              d="M125 220 Q138 158 175 148 Q212 158 225 220 L235 230 H115 Z"
+              fill="#1a1608"
+              clipPath="url(#sm-clip)"
+            />
             {/* Waistcoat pattern lines */}
-            {[0,1,2].map(i => (
-              <path key={i} d={`M${158+i*6} 165 L${158+i*6} 215`}
-                stroke="#d4902a" strokeOpacity="0.1" strokeWidth="0.8" />
+            {[0, 1, 2].map((i) => (
+              <path
+                key={i}
+                d={`M${158 + i * 6} 165 L${158 + i * 6} 215`}
+                stroke="#d4902a"
+                strokeOpacity="0.1"
+                strokeWidth="0.8"
+              />
             ))}
             {/* Neck */}
-            <rect x="167" y="126" width="16" height="25" rx="5" fill="#b07830" />
+            <rect
+              x="167"
+              y="126"
+              width="16"
+              height="25"
+              rx="5"
+              fill="#b07830"
+            />
             {/* Head — fuller/rounder */}
             <ellipse cx="175" cy="112" rx="26" ry="28" fill="#b07830" />
             {/* Ears */}
@@ -880,57 +1166,187 @@ function ArtistCard({ name, sceneColor, tag, genres, credits, delay }: {
             <circle cx="167.5" cy="107" r="1.2" fill="rgba(255,255,255,0.5)" />
             <circle cx="185.5" cy="107" r="1.2" fill="rgba(255,255,255,0.5)" />
             {/* Nose */}
-            <path d="M172 113 Q175 120 178 113" fill="none" stroke="#7a4a10" strokeWidth="1.5" />
+            <path
+              d="M172 113 Q175 120 178 113"
+              fill="none"
+              stroke="#7a4a10"
+              strokeWidth="1.5"
+            />
             {/* Mouth — serious expression */}
-            <path d="M168 122 Q175 124 182 122" fill="none" stroke="#7a4a10" strokeWidth="1.5" strokeLinecap="round" />
+            <path
+              d="M168 122 Q175 124 182 122"
+              fill="none"
+              stroke="#7a4a10"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+            />
             {/* Dense beard — Sidhu's signature */}
-            <path d="M151 118 Q152 146 175 152 Q198 146 199 118 Q190 125 175 127 Q160 125 151 118Z"
-              fill="#2a1a08" fillOpacity="0.9" />
+            <path
+              d="M151 118 Q152 146 175 152 Q198 146 199 118 Q190 125 175 127 Q160 125 151 118Z"
+              fill="#2a1a08"
+              fillOpacity="0.9"
+            />
             {/* Beard texture */}
-            {[-6,-3,0,3,6].map(i => (
-              <path key={i}
-                d={`M${175+i} 127 L${175+i*1.1} 148`}
-                stroke="#1a1004" strokeWidth="1.2" strokeOpacity="0.5" />
+            {[-6, -3, 0, 3, 6].map((i) => (
+              <path
+                key={i}
+                d={`M${175 + i} 127 L${175 + i * 1.1} 148`}
+                stroke="#1a1004"
+                strokeWidth="1.2"
+                strokeOpacity="0.5"
+              />
             ))}
             {/* Mustache */}
-            <path d="M162 119 Q168 123 175 121 Q182 123 188 119"
-              fill="#2a1808" fillOpacity="0.85" />
+            <path
+              d="M162 119 Q168 123 175 121 Q182 123 188 119"
+              fill="#2a1808"
+              fillOpacity="0.85"
+            />
             {/* Hair — wavy on sides */}
-            <path d="M149 100 Q150 84 160 80 Q175 77 190 80 Q200 84 201 100"
-              fill="#1a1006" />
-            <path d="M149 100 Q146 88 152 82 Q162 75 175 73 Q188 75 198 82 Q204 88 201 100"
-              fill="#120c04" />
+            <path
+              d="M149 100 Q150 84 160 80 Q175 77 190 80 Q200 84 201 100"
+              fill="#1a1006"
+            />
+            <path
+              d="M149 100 Q146 88 152 82 Q162 75 175 73 Q188 75 198 82 Q204 88 201 100"
+              fill="#120c04"
+            />
             {/* Hair detail lines */}
-            {[-2,-1,0,1,2].map(i => (
-              <path key={i}
-                d={`M${155+i*4} 82 Q${158+i*4} 78 ${162+i*4} 80`}
-                fill="none" stroke="#d4902a" strokeOpacity="0.06" strokeWidth="0.8" />
+            {[-2, -1, 0, 1, 2].map((i) => (
+              <path
+                key={i}
+                d={`M${155 + i * 4} 82 Q${158 + i * 4} 78 ${162 + i * 4} 80`}
+                fill="none"
+                stroke="#d4902a"
+                strokeOpacity="0.06"
+                strokeWidth="0.8"
+              />
             ))}
             {/* Patka / bandana */}
-            <path d="M149 96 Q155 82 175 79 Q195 82 201 96 Q190 90 175 91 Q160 90 149 96Z"
-              fill="#8B0000" fillOpacity="0.6" />
+            <path
+              d="M149 96 Q155 82 175 79 Q195 82 201 96 Q190 90 175 91 Q160 90 149 96Z"
+              fill="#8B0000"
+              fillOpacity="0.6"
+            />
             {/* Bandana knot at back */}
-            <path d="M195 90 Q205 86 208 92 Q205 96 198 94Z" fill="#8B0000" fillOpacity="0.5" />
+            <path
+              d="M195 90 Q205 86 208 92 Q205 96 198 94Z"
+              fill="#8B0000"
+              fillOpacity="0.5"
+            />
             {/* Gold chain */}
-            <path d="M160 152 Q175 170 190 152" fill="none" stroke="#d4902a" strokeOpacity="0.65" strokeWidth="2" />
+            <path
+              d="M160 152 Q175 170 190 152"
+              fill="none"
+              stroke="#d4902a"
+              strokeOpacity="0.65"
+              strokeWidth="2"
+            />
             <circle cx="175" cy="170" r="4" fill="#d4902a" fillOpacity="0.7" />
-            <circle cx="160" cy="152" r="2.5" fill="#d4902a" fillOpacity="0.5" />
-            <circle cx="190" cy="152" r="2.5" fill="#d4902a" fillOpacity="0.5" />
+            <circle
+              cx="160"
+              cy="152"
+              r="2.5"
+              fill="#d4902a"
+              fillOpacity="0.5"
+            />
+            <circle
+              cx="190"
+              cy="152"
+              r="2.5"
+              fill="#d4902a"
+              fillOpacity="0.5"
+            />
             {/* Glow */}
-            <ellipse cx="175" cy="220" rx="85" ry="14" fill="#d4902a" fillOpacity="0.05" />
-            <rect x="0" y="214" width="460" height="6" fill="#d4902a" fillOpacity="0.04" />
+            <ellipse
+              cx="175"
+              cy="220"
+              rx="85"
+              ry="14"
+              fill="#d4902a"
+              fillOpacity="0.05"
+            />
+            <rect
+              x="0"
+              y="214"
+              width="460"
+              height="6"
+              fill="#d4902a"
+              fillOpacity="0.04"
+            />
             {/* Right side info art */}
-            <text x="298" y="82" fontFamily="serif" fontSize="56" fontWeight="900"
-              fill="#d4902a" fillOpacity="0.06" letterSpacing="-2">SM</text>
-            <text x="288" y="142" fontFamily="monospace" fontSize="9" fill="#d4902a" fillOpacity="0.28"
-              letterSpacing="3">DESI POP · RAP</text>
-            <text x="288" y="160" fontFamily="monospace" fontSize="9" fill="#d4902a" fillOpacity="0.2"
-              letterSpacing="3">MOOSA · PUNJAB</text>
-            <text x="288" y="178" fontFamily="monospace" fontSize="9" fill="#d4902a" fillOpacity="0.2"
-              letterSpacing="3">EST. 2017</text>
-            <line x1="278" y1="60" x2="278" y2="210" stroke="#d4902a" strokeOpacity="0.08" strokeWidth="1" />
-            <rect x="288" y="194" width="44" height="2" rx="1" fill="#d4902a" fillOpacity="0.4" />
-            <rect x="288" y="200" width="26" height="2" rx="1" fill="#d4902a" fillOpacity="0.2" />
+            <text
+              x="298"
+              y="82"
+              fontFamily="serif"
+              fontSize="56"
+              fontWeight="900"
+              fill="#d4902a"
+              fillOpacity="0.06"
+              letterSpacing="-2"
+            >
+              SM
+            </text>
+            <text
+              x="288"
+              y="142"
+              fontFamily="monospace"
+              fontSize="9"
+              fill="#d4902a"
+              fillOpacity="0.28"
+              letterSpacing="3"
+            >
+              DESI POP · RAP
+            </text>
+            <text
+              x="288"
+              y="160"
+              fontFamily="monospace"
+              fontSize="9"
+              fill="#d4902a"
+              fillOpacity="0.2"
+              letterSpacing="3"
+            >
+              MOOSA · PUNJAB
+            </text>
+            <text
+              x="288"
+              y="178"
+              fontFamily="monospace"
+              fontSize="9"
+              fill="#d4902a"
+              fillOpacity="0.2"
+              letterSpacing="3"
+            >
+              EST. 2017
+            </text>
+            <line
+              x1="278"
+              y1="60"
+              x2="278"
+              y2="210"
+              stroke="#d4902a"
+              strokeOpacity="0.08"
+              strokeWidth="1"
+            />
+            <rect
+              x="288"
+              y="194"
+              width="44"
+              height="2"
+              rx="1"
+              fill="#d4902a"
+              fillOpacity="0.4"
+            />
+            <rect
+              x="288"
+              y="200"
+              width="26"
+              height="2"
+              rx="1"
+              fill="#d4902a"
+              fillOpacity="0.2"
+            />
           </svg>
         )}
         <div className="artist-overlay" />
@@ -944,17 +1360,26 @@ function ArtistCard({ name, sceneColor, tag, genres, credits, delay }: {
           </div>
         </div>
         <div className="artist-genres">
-          {genres.map(g => <span key={g} className="genre-tag">{g}</span>)}
+          {genres.map((g) => (
+            <span key={g} className="genre-tag">
+              {g}
+            </span>
+          ))}
         </div>
         <p className="artist-desc">
-          Precision-crafted productions bridging raw artistry and commercial polish.
-          From tracking to final master, every element placed with intention.
+          Precision-crafted productions bridging raw artistry and commercial
+          polish. From tracking to final master, every element placed with
+          intention.
         </p>
         <div className="audio-player">
           <button className="play-btn" onClick={toggle}>
-            {playing
-              ? <span className="play-icon-pause">⏸</span>
-              : <span className="play-icon" style={{ marginLeft: 2 }}>▶</span>}
+            {playing ? (
+              <span className="play-icon-pause">⏸</span>
+            ) : (
+              <span className="play-icon" style={{ marginLeft: 2 }}>
+                ▶
+              </span>
+            )}
           </button>
           <Waveform playing={playing} progress={time / total} />
           <span className="audio-time">{fmt(time)}&thinsp;/&thinsp;3:45</span>
@@ -969,18 +1394,41 @@ function ArtistCard({ name, sceneColor, tag, genres, credits, delay }: {
 }
 
 export default function MusicProductionPage() {
-  const [form, setForm] = useState({ name: "", email: "", type: "", details: "" });
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    type: "",
+    details: "",
+  });
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [workedWithArtists, setWorkedWithArtists] = useState<
+    WorkedWithArtist[]
+  >([]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
-    setForm({ ...form, [e.target.name]: e.target.value });
+  useEffect(() => {
+    getWorkedWithArtists()
+      .then((artists) =>
+        setWorkedWithArtists(
+          artists.filter((artist) => artist.showOnMusicProduction),
+        ),
+      )
+      .catch(() => setWorkedWithArtists([]));
+  }, []);
+
+  const handleChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
+  ) => setForm({ ...form, [e.target.name]: e.target.value });
 
   const handleSend = () => {
     // open user's mail client with prefilled message to support@prabhmusik.com
     try {
-      const subject = encodeURIComponent(`Project enquiry: ${form.type || "General"}`);
+      const subject = encodeURIComponent(
+        `Project enquiry: ${form.type || "General"}`,
+      );
       const bodyLines = [
         `Name: ${form.name}`,
         `Email: ${form.email}`,
@@ -1000,11 +1448,19 @@ export default function MusicProductionPage() {
       }
       // provide UX feedback
       setSending(true);
-      setTimeout(() => { setSending(false); setSent(true); setTimeout(() => setSent(false), 3500); }, 800);
+      setTimeout(() => {
+        setSending(false);
+        setSent(true);
+        setTimeout(() => setSent(false), 3500);
+      }, 800);
     } catch (err) {
       // fallback to simulated send
       setSending(true);
-      setTimeout(() => { setSending(false); setSent(true); setTimeout(() => setSent(false), 3500); }, 1400);
+      setTimeout(() => {
+        setSending(false);
+        setSent(true);
+        setTimeout(() => setSent(false), 3500);
+      }, 1400);
     }
   };
 
@@ -1019,7 +1475,6 @@ export default function MusicProductionPage() {
     <>
       <style>{style}</style>
 
-
       {/* HERO */}
       <section className="hero" id="services">
         <div className="hero-bg" />
@@ -1028,31 +1483,52 @@ export default function MusicProductionPage() {
         <div className="hero-left">
           <div className="hero-eyebrow fade-up d1">
             <div className="hero-eyebrow-dot" />
-            <span className="hero-eyebrow-text">Professional Music Production</span>
+            <span className="hero-eyebrow-text">
+              Professional Music Production
+            </span>
           </div>
           <h1 className="hero-title fade-up d2">
             <span>Where Sound</span>
             <em>Becomes Art</em>
           </h1>
           <p className="hero-desc fade-up d3">
-            From beatmaking to full orchestrations — we craft industry-ready tracks
-            that carry emotional weight, commercial clarity, and a sound uniquely yours.
+            From beatmaking to full orchestrations — we craft industry-ready
+            tracks that carry emotional weight, commercial clarity, and a sound
+            uniquely yours.
           </p>
           <div className="hero-actions fade-up d4">
-            <button className="btn-primary" onClick={() => document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" })}>
+            <button
+              className="btn-primary"
+              onClick={() =>
+                document
+                  .getElementById("contact")
+                  ?.scrollIntoView({ behavior: "smooth" })
+              }
+            >
               Start Your Project →
             </button>
-            <button className="btn-ghost" onClick={() => document.getElementById("artists")?.scrollIntoView({ behavior: "smooth" })}>
+            <button
+              className="btn-ghost"
+              onClick={() =>
+                document
+                  .getElementById("artists")
+                  ?.scrollIntoView({ behavior: "smooth" })
+              }
+            >
               Hear Our Work
             </button>
           </div>
           <div className="hero-stats fade-up d5">
             <div className="hero-stat">
-              <div className="hero-stat-num">12<span>k+</span></div>
+              <div className="hero-stat-num">
+                12<span>k+</span>
+              </div>
               <div className="hero-stat-label">Tracks Delivered</div>
             </div>
             <div className="hero-stat" style={{ paddingLeft: 28 }}>
-              <div className="hero-stat-num">340<span>+</span></div>
+              <div className="hero-stat-num">
+                340<span>+</span>
+              </div>
               <div className="hero-stat-label">Artist Credits</div>
             </div>
             <div className="hero-stat" style={{ paddingLeft: 28 }}>
@@ -1075,15 +1551,21 @@ export default function MusicProductionPage() {
               <AnimatedEQ playing={activeTrack >= 0} />
               <div className="track-list">
                 {tracks.map((t, i) => (
-                  <div key={i}
+                  <div
+                    key={i}
                     className={`track-item${activeTrack === i ? " playing" : ""}`}
-                    onClick={() => setActiveTrack(i)}>
+                    onClick={() => setActiveTrack(i)}
+                  >
                     <span className="track-num">
-                      {activeTrack === i
-                        ? <span className="track-wave">
-                            {[1,2,3,4].map(j => <span key={j} className="track-wave-bar" />)}
-                          </span>
-                        : String(i + 1).padStart(2, "0")}
+                      {activeTrack === i ? (
+                        <span className="track-wave">
+                          {[1, 2, 3, 4].map((j) => (
+                            <span key={j} className="track-wave-bar" />
+                          ))}
+                        </span>
+                      ) : (
+                        String(i + 1).padStart(2, "0")
+                      )}
                     </span>
                     <div className="track-info">
                       <div className="track-name">{t.name}</div>
@@ -1100,7 +1582,14 @@ export default function MusicProductionPage() {
 
       {/* STRIP */}
       <div className="services-strip">
-        {["Beat Production", "Mixing & Mastering", "Song Marketing", "Film Scoring", "Vocal Production", "Sound Design"].map((s, i) => (
+        {[
+          "Beat Production",
+          "Mixing & Mastering",
+          "Song Marketing",
+          "Film Scoring",
+          "Vocal Production",
+          "Sound Design",
+        ].map((s, i) => (
           <div key={i} className="strip-item">
             <span className="strip-dot">✦</span>
             <span className="strip-text">{s}</span>
@@ -1114,27 +1603,27 @@ export default function MusicProductionPage() {
           <div className="section-header">
             <div>
               <div className="section-kicker">Featured Collaborations</div>
-              <div className="section-title">Artists We've <em>Worked With</em></div>
+              <div className="section-title">
+                Artists We've <em>Worked With</em>
+              </div>
             </div>
-            <a href="#" className="section-link">View All →</a>
+            <a href="#" className="section-link">
+              View All →
+            </a>
           </div>
           <div className="artists-grid">
-            <ArtistCard
-              name="Karan Aujla"
-              sceneColor="#f07b20"
-              tag="Punjabi Hip-Hop"
-              genres={["Hip-Hop", "Trap", "Drill"]}
-              credits={80}
-              delay="0.05s"
-            />
-            <ArtistCard
-              name="Sidhu Moose Wala"
-              sceneColor="#c87a30"
-              tag="Desi Pop"
-              genres={["Pop", "Folk Fusion", "Rap"]}
-              credits={120}
-              delay="0.18s"
-            />
+            {workedWithArtists.map((artist, index) => (
+              <ArtistCard
+                key={artist.id}
+                name={artist.name}
+                image={artist.image}
+                sceneColor={index % 2 === 0 ? "#f07b20" : "#c87a30"}
+                tag={artist.musicType}
+                genres={artist.musicType.split(/\s*[·,/]\s*/).filter(Boolean)}
+                credits={artist.workedYear ? Number(artist.workedYear) : 0}
+                delay={`${0.05 + index * 0.13}s`}
+              />
+            ))}
           </div>
         </div>
       </section>
@@ -1147,15 +1636,37 @@ export default function MusicProductionPage() {
           <div className="section-header">
             <div>
               <div className="section-kicker">Our Process</div>
-              <div className="section-title">From Concept <em>to Master</em></div>
+              <div className="section-title">
+                From Concept <em>to Master</em>
+              </div>
             </div>
           </div>
           <div className="workflow-grid">
             {[
-              { icon: "🎵", name: "Composition", step: "Step 01", desc: "Developing themes, melodies, and harmonic structures that define your unique creative signature." },
-              { icon: "🎸", name: "Arrangement", step: "Step 02", desc: "Orchestrating instrumentation and song structure for maximum emotional impact and flow." },
-              { icon: "🎙", name: "Tracking",    step: "Step 03", desc: "High-fidelity recording of vocals and live instruments using world-class preamps and microphones." },
-              { icon: "✦",  name: "Final Polish",step: "Step 04", desc: "Meticulous editing and refinement — preparing your tracks for the mixing and mastering stage." },
+              {
+                icon: "🎵",
+                name: "Composition",
+                step: "Step 01",
+                desc: "Developing themes, melodies, and harmonic structures that define your unique creative signature.",
+              },
+              {
+                icon: "🎸",
+                name: "Arrangement",
+                step: "Step 02",
+                desc: "Orchestrating instrumentation and song structure for maximum emotional impact and flow.",
+              },
+              {
+                icon: "🎙",
+                name: "Tracking",
+                step: "Step 03",
+                desc: "High-fidelity recording of vocals and live instruments using world-class preamps and microphones.",
+              },
+              {
+                icon: "✦",
+                name: "Final Polish",
+                step: "Step 04",
+                desc: "Meticulous editing and refinement — preparing your tracks for the mixing and mastering stage.",
+              },
             ].map((s, i) => (
               <div className="wf-step" key={i}>
                 <div className="wf-num">{s.step}</div>
@@ -1176,14 +1687,31 @@ export default function MusicProductionPage() {
           <div className="contact-layout">
             <div className="contact-left">
               <div className="section-kicker">Get in Touch</div>
-              <div className="section-title">Let's Build<br /><em>Something</em></div>
-              <p style={{ color: "var(--text-2)", fontSize: 14, lineHeight: 1.8, marginTop: 16, maxWidth: 340 }}>
-                Ready to start your next project? Whether it's one track or a full album,
-                we're here to make your vision sound exactly as you imagined it.
+              <div className="section-title">
+                Let's Build
+                <br />
+                <em>Something</em>
+              </div>
+              <p
+                style={{
+                  color: "var(--text-2)",
+                  fontSize: 14,
+                  lineHeight: 1.8,
+                  marginTop: 16,
+                  maxWidth: 340,
+                }}
+              >
+                Ready to start your next project? Whether it's one track or a
+                full album, we're here to make your vision sound exactly as you
+                imagined it.
               </p>
               <div className="contact-details">
                 {[
-                  { icon: "📍", label: "Studio", val: "sri ganganagar rajasthan" },
+                  {
+                    icon: "📍",
+                    label: "Studio",
+                    val: "sri ganganagar rajasthan",
+                  },
                   { icon: "📧", label: "Email", val: "support@prabhmusik.com" },
                   { icon: "📞", label: "Phone", val: "+91 94612 09922" },
                 ].map((c, i) => (
@@ -1202,19 +1730,38 @@ export default function MusicProductionPage() {
               <div className="form-row">
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label">Name</label>
-                  <input className="form-input" type="text" name="name" placeholder="Your name"
-                    value={form.name} onChange={handleChange} />
+                  <input
+                    className="form-input"
+                    type="text"
+                    name="name"
+                    placeholder="Your name"
+                    value={form.name}
+                    onChange={handleChange}
+                  />
                 </div>
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label">Email</label>
-                  <input className="form-input" type="email" name="email" placeholder="your@email.com"
-                    value={form.email} onChange={handleChange} />
+                  <input
+                    className="form-input"
+                    type="email"
+                    name="email"
+                    placeholder="your@email.com"
+                    value={form.email}
+                    onChange={handleChange}
+                  />
                 </div>
               </div>
               <div className="form-group">
                 <label className="form-label">Project Type</label>
-                <select className="form-select" name="type" value={form.type} onChange={handleChange}>
-                  <option value="" disabled>Select a service…</option>
+                <select
+                  className="form-select"
+                  name="type"
+                  value={form.type}
+                  onChange={handleChange}
+                >
+                  <option value="" disabled>
+                    Select a service…
+                  </option>
                   <option value="beat">Beat Production</option>
                   <option value="mix">Mixing & Mastering</option>
                   <option value="record">Song Marketing</option>
@@ -1224,21 +1771,36 @@ export default function MusicProductionPage() {
               </div>
               <div className="form-group">
                 <label className="form-label">Project Details</label>
-                <textarea className="form-textarea" name="details" placeholder="Tell us about your project — genre, timeline, references…"
-                  value={form.details} onChange={handleChange} />
+                <textarea
+                  className="form-textarea"
+                  name="details"
+                  placeholder="Tell us about your project — genre, timeline, references…"
+                  value={form.details}
+                  onChange={handleChange}
+                />
               </div>
               <button
                 className={`btn-send${sent ? " success" : ""}`}
                 onClick={handleSend}
                 disabled={sending || sent}
               >
-                {sent ? "✓  Message Received" : sending ? "Sending…" : "Send Message →"}
+                {sent
+                  ? "✓  Message Received"
+                  : sending
+                    ? "Sending…"
+                    : "Send Message →"}
               </button>
               <div>
                 <button
                   type="button"
                   onClick={() => setShowModal(true)}
-                  style={{ marginTop: 12, background: 'transparent', border: 'none', color: 'var(--orange)', cursor: 'pointer' }}
+                  style={{
+                    marginTop: 12,
+                    background: "transparent",
+                    border: "none",
+                    color: "var(--orange)",
+                    cursor: "pointer",
+                  }}
                 >
                   Open in Email Composer
                 </button>
@@ -1249,29 +1811,79 @@ export default function MusicProductionPage() {
       </section>
 
       {showModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
-          <div style={{ background: '#0a0a0a', padding: 24, borderRadius: 8, width: 'min(720px, 96%)' }}>
-            <h3 style={{ marginTop: 0, color: '#fff' }}>Contact Support</h3>
-            <p style={{ color: '#ccc' }}>We'll open your mail client (Gmail preferred) with the message prefilled. Confirm to proceed.</p>
-            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 18 }}>
-              <button onClick={() => setShowModal(false)} style={{ padding: '10px 16px', background: 'transparent', border: '1px solid #333', color: '#fff' }}>Cancel</button>
-              <button onClick={() => {
-                const subject = encodeURIComponent(`Project enquiry: ${form.type || 'General'}`);
-                const body = encodeURIComponent(`Name: ${form.name || ''}%0AEmail: ${form.email || ''}%0AProject Type: ${form.type || ''}%0A%0ADetails:%0A${form.details || ''}`);
-                const gmail = `https://mail.google.com/mail/?view=cm&fs=1&to=support@prabhmusik.com&su=${subject}&body=${body}`;
-                const win = window.open(gmail, '_blank');
-                if (!win) {
-                  window.location.href = `mailto:support@prabhmusik.com?subject=${subject}&body=${body}`;
-                }
-                setShowModal(false);
-              }} style={{ padding: '10px 16px', background: '#d4a017', border: 'none', color: '#080808' }}>Open Composer</button>
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+          }}
+        >
+          <div
+            style={{
+              background: "#0a0a0a",
+              padding: 24,
+              borderRadius: 8,
+              width: "min(720px, 96%)",
+            }}
+          >
+            <h3 style={{ marginTop: 0, color: "#fff" }}>Contact Support</h3>
+            <p style={{ color: "#ccc" }}>
+              We'll open your mail client (Gmail preferred) with the message
+              prefilled. Confirm to proceed.
+            </p>
+            <div
+              style={{
+                display: "flex",
+                gap: 12,
+                justifyContent: "flex-end",
+                marginTop: 18,
+              }}
+            >
+              <button
+                onClick={() => setShowModal(false)}
+                style={{
+                  padding: "10px 16px",
+                  background: "transparent",
+                  border: "1px solid #333",
+                  color: "#fff",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  const subject = encodeURIComponent(
+                    `Project enquiry: ${form.type || "General"}`,
+                  );
+                  const body = encodeURIComponent(
+                    `Name: ${form.name || ""}%0AEmail: ${form.email || ""}%0AProject Type: ${form.type || ""}%0A%0ADetails:%0A${form.details || ""}`,
+                  );
+                  const gmail = `https://mail.google.com/mail/?view=cm&fs=1&to=support@prabhmusik.com&su=${subject}&body=${body}`;
+                  const win = window.open(gmail, "_blank");
+                  if (!win) {
+                    window.location.href = `mailto:support@prabhmusik.com?subject=${subject}&body=${body}`;
+                  }
+                  setShowModal(false);
+                }}
+                style={{
+                  padding: "10px 16px",
+                  background: "#d4a017",
+                  border: "none",
+                  color: "#080808",
+                }}
+              >
+                Open Composer
+              </button>
             </div>
           </div>
         </div>
       )}
 
       {/* FOOTER */}
-      
     </>
   );
 }
