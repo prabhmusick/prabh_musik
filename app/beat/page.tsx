@@ -1,38 +1,50 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { getBeats } from "@/services/beat.service";
+import { getBeatCatalog } from "@/services/beat.service";
 import { useAppShell } from "../contexts/app-shell-context";
 import { useAudioPlayer, Beat } from "../contexts/audio-player-context";
 import { useRouter } from "next/navigation";
+import { BEAT_GENRES } from "@/constants/beat-genres";
 
 // ─── API Integration ──────────────────────────────────────────────────────────
 
 async function fetchBeats(
   page: number,
+  filters: FilterState & { search: string },
 ): Promise<{ beats: Beat[]; total: number; pages: number }> {
   try {
-    const allBeats = await getBeats();
-    // allBeats are already mapped to frontend Beat shape by services/beat.service
     const perPage = 20;
-    const total = allBeats.length;
-    const pages = Math.ceil(total / perPage);
-    const start = (page - 1) * perPage;
-    const paginatedBeats = allBeats.slice(start, start + perPage).map((b) => ({
-      id: String(b.id),
-      title: b.title,
-      producer: b.relatedArtistName || "Unknown Artist",
-      artistImage: b.relatedArtistImage || "",
-      price: b.price || null,
-      cover:
-        (b.assets && (b.assets.coverImage || b.assets.bannerImage)) ||
-        "https://via.placeholder.com/400?text=No+Cover",
-      genre: b.genre || "Music",
-      bpm: b.bpm || 120,
-      duration: b.duration || 0,
-      previewUrl: (b.assets && b.assets.previewAudio) || "",
-      plays: Math.floor(Math.random() * 5000),
-    }));
-    return { beats: paginatedBeats, total, pages };
+    const data = await getBeatCatalog({
+      search: filters.search,
+      genre: filters.genre || undefined,
+      mood: filters.mood || undefined,
+      minBpm: filters.bpmRange === "Slow (60-90)" ? 60 : filters.bpmRange === "Normal (90-130)" ? 91 : filters.bpmRange === "Fast (130-160)" ? 131 : filters.bpmRange === "Very Fast (160+)" ? 161 : undefined,
+      maxBpm: filters.bpmRange === "Slow (60-90)" ? 90 : filters.bpmRange === "Normal (90-130)" ? 130 : filters.bpmRange === "Fast (130-160)" ? 160 : undefined,
+      minPrice: filters.priceRange === "₹0-500" ? 1 : filters.priceRange === "₹500-1000" ? 501 : filters.priceRange === "₹1000+" ? 1001 : undefined,
+      maxPrice: filters.priceRange === "Free" ? 0 : filters.priceRange === "₹0-500" ? 50000 : filters.priceRange === "₹500-1000" ? 100000 : undefined,
+      limit: perPage,
+      offset: (page - 1) * perPage,
+    });
+    return {
+      beats: data.items.map((beat) => ({
+        id: beat.id,
+        title: beat.title,
+        producer: beat.relatedArtistName || "Unknown Artist",
+        artistImage: beat.relatedArtistImage || "",
+        price: beat.price || null,
+        cover:
+          beat.assets.coverImage ||
+          beat.assets.bannerImage ||
+          "https://via.placeholder.com/400?text=No+Cover",
+        genre: beat.genre || "Music",
+        bpm: beat.bpm || 120,
+        duration: beat.duration || 0,
+        previewUrl: beat.assets.previewAudio || "",
+        plays: beat.playCount || 0,
+      })),
+      total: data.total,
+      pages: data.pages,
+    };
   } catch (error) {
     console.error("Failed to fetch beats from API:", error);
     return { beats: [], total: 0, pages: 0 };
@@ -53,9 +65,7 @@ const TAGS = [
 
 function getFilterOptions(beats: Beat[]) {
   return {
-    genres: Array.from(
-      new Set(beats.map((b) => b.genre).filter(Boolean)),
-    ).sort(),
+    genres: [...BEAT_GENRES],
     moods: ["Energetic", "Chill", "Dark", "Uplifting", "Aggressive"],
     priceRanges: ["Free", "₹0-500", "₹500-1000", "₹1000+"],
     bpmRanges: [
@@ -624,7 +634,11 @@ function TrendingHeader({
         {TAGS.map((tag) => (
           <button
             key={tag}
-            onClick={() => setActiveTag(activeTag === tag ? null : tag)}
+            onClick={() => {
+              const nextTag = activeTag === tag ? "" : tag;
+              setActiveTag(nextTag || null);
+              onSearch(nextTag);
+            }}
             style={{
               padding: "8px 16px",
               borderRadius: 24,
@@ -1144,6 +1158,12 @@ export default function BeatMarketplace() {
       const params = new URLSearchParams(window.location.search);
       const nextValue = params.get("q") ?? "";
       setSearch(nextValue);
+      setFilters({
+        genre: params.get("genre"),
+        mood: params.get("mood"),
+        priceRange: params.get("priceRange"),
+        bpmRange: params.get("bpmRange"),
+      });
       window.dispatchEvent(
         new CustomEvent("app-search-sync", { detail: { value: nextValue } }),
       );
@@ -1172,23 +1192,32 @@ export default function BeatMarketplace() {
     } else {
       params.delete("q");
     }
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value) params.set(key, value);
+      else params.delete(key);
+    });
 
     const nextUrl = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}`;
     const currentUrl = `${window.location.pathname}${window.location.search}`;
     if (nextUrl !== currentUrl) {
       window.history.replaceState({}, "", nextUrl);
     }
-  }, [search]);
+  }, [search, filters]);
   const router = useRouter();
   const { isAuthenticated, addToCart } = useAppShell();
   const { currentBeat, isPlaying, playBeat } = useAudioPlayer();
 
   const load = useCallback(async (p: number) => {
     setLoading(true);
-    const data = await fetchBeats(p);
+    const data = await fetchBeats(p, { ...filters, search });
     setBeats(data.beats);
     setTotalPages(data.pages);
     setLoading(false);
+  }, [filters, search]);
+
+  const updateFilters = useCallback((nextFilters: FilterState) => {
+    setFilters(nextFilters);
+    setPage(1);
   }, []);
 
   useEffect(() => {
@@ -1218,45 +1247,7 @@ export default function BeatMarketplace() {
     return () => window.removeEventListener("popstate", onPop);
   }, []);
 
-  const filtered = beats.filter((b) => {
-    const normalizedQuery = search.trim().toLowerCase();
-    const matchesSearch =
-      !normalizedQuery ||
-      b.title.toLowerCase().includes(normalizedQuery) ||
-      b.genre.toLowerCase().includes(normalizedQuery) ||
-      b.producer.toLowerCase().includes(normalizedQuery);
-
-    const matchesGenre = !filters.genre || b.genre === filters.genre;
-
-    const matchesMood = true; // Mood filter can be added when API data includes it
-
-    let matchesBpm = true;
-    if (filters.bpmRange) {
-      if (filters.bpmRange.includes("60-90"))
-        matchesBpm = b.bpm >= 60 && b.bpm <= 90;
-      else if (filters.bpmRange.includes("90-130"))
-        matchesBpm = b.bpm > 90 && b.bpm <= 130;
-      else if (filters.bpmRange.includes("130-160"))
-        matchesBpm = b.bpm > 130 && b.bpm <= 160;
-      else if (filters.bpmRange.includes("160+")) matchesBpm = b.bpm > 160;
-    }
-
-    let matchesPrice = true;
-    if (filters.priceRange) {
-      if (filters.priceRange === "Free")
-        matchesPrice = !b.price || b.price === 0;
-      else if (filters.priceRange === "₹0-500")
-        matchesPrice = (b.price || 0) > 0 && (b.price || 0) <= 500;
-      else if (filters.priceRange === "₹500-1000")
-        matchesPrice = (b.price || 0) > 500 && (b.price || 0) <= 1000;
-      else if (filters.priceRange === "₹1000+")
-        matchesPrice = (b.price || 0) > 1000;
-    }
-
-    return (
-      matchesSearch && matchesGenre && matchesMood && matchesBpm && matchesPrice
-    );
-  });
+  const filtered = beats;
 
   const handlePurchase = useCallback(
     (beat: Beat) => {
@@ -1453,11 +1444,14 @@ export default function BeatMarketplace() {
           {/* ── NEW: Trending Beat Types header ── */}
           <TrendingHeader
             search={search}
-            onSearch={setSearch}
+            onSearch={(value) => {
+              setSearch(value);
+              setPage(1);
+            }}
             isMobile={isMobile}
             beats={beats}
             filters={filters}
-            onFilterChange={setFilters}
+            onFilterChange={updateFilters}
           />
 
           {/* ── Grid ── */}

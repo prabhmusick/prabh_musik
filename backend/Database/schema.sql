@@ -143,6 +143,7 @@ CREATE TABLE beats (
     price_amount INTEGER NOT NULL DEFAULT 0,
     currency_code TEXT NOT NULL DEFAULT 'INR', -- ISO-4217 Currency representation
     genre TEXT,
+    mood TEXT,
     bpm INTEGER,
     musical_key TEXT,                          -- Catalog metadata (e.g. 'Cmin', 'Amaj')
     description TEXT,

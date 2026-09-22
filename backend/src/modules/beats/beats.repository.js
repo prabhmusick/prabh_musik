@@ -17,6 +17,7 @@ const BEAT_COLUMNS = `
   price_amount,
   currency_code,
   genre,
+  mood,
   bpm,
   musical_key,
   description,
@@ -67,6 +68,7 @@ const UPDATABLE_COLUMNS = {
   description: "description",
   related_artist_name: "related_artist_name",
   related_artist_image_key: "related_artist_image_key",
+  mood: "mood",
   is_trending: "is_trending",
   audio_key: "audio_key",
   cover_key: "cover_key",
@@ -91,6 +93,7 @@ const createBeat = async (beatData) => {
       price_amount,
       currency_code,
       genre,
+      mood,
       bpm,
       musical_key,
       description,
@@ -105,7 +108,7 @@ const createBeat = async (beatData) => {
       duration,
       status,
       created_by
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
   const params = [
@@ -115,6 +118,7 @@ const createBeat = async (beatData) => {
     beatData.price_amount,
     beatData.currency_code,
     beatData.genre,
+    beatData.mood,
     beatData.bpm,
     beatData.musical_key,
     beatData.description,
@@ -273,6 +277,12 @@ const listBeats = async (options = {}) => {
   const {
     status,
     genre,
+    search,
+    mood,
+    minBpm,
+    maxBpm,
+    minPrice,
+    maxPrice,
     limit = 20,
     offset = 0,
     sortBy = "created_at",
@@ -291,6 +301,32 @@ const listBeats = async (options = {}) => {
   if (genre !== undefined && genre !== null) {
     whereConditions.push("genre = ?");
     params.push(genre);
+  }
+
+  if (search) {
+    whereConditions.push("(title LIKE ? OR genre LIKE ? OR related_artist_name LIKE ?)");
+    const searchValue = `%${search}%`;
+    params.push(searchValue, searchValue, searchValue);
+  }
+  if (mood) {
+    whereConditions.push("mood = ?");
+    params.push(mood);
+  }
+  if (minBpm !== undefined) {
+    whereConditions.push("bpm >= ?");
+    params.push(minBpm);
+  }
+  if (maxBpm !== undefined) {
+    whereConditions.push("bpm <= ?");
+    params.push(maxBpm);
+  }
+  if (minPrice !== undefined) {
+    whereConditions.push("price_amount >= ?");
+    params.push(minPrice);
+  }
+  if (maxPrice !== undefined) {
+    whereConditions.push("price_amount <= ?");
+    params.push(maxPrice);
   }
 
   const whereClause =
@@ -335,6 +371,27 @@ const listBeats = async (options = {}) => {
     }
     throw new RepositoryError(`Failed to list beats: ${err.message}`, err);
   }
+};
+
+const countBeats = async (options = {}) => {
+  const { status, genre, search, mood, minBpm, maxBpm, minPrice, maxPrice } = options;
+  const conditions = [];
+  const params = [];
+  if (status) { conditions.push("status = ?"); params.push(status); }
+  if (genre) { conditions.push("genre = ?"); params.push(genre); }
+  if (search) {
+    conditions.push("(title LIKE ? OR genre LIKE ? OR related_artist_name LIKE ?)");
+    const value = `%${search}%`;
+    params.push(value, value, value);
+  }
+  if (mood) { conditions.push("mood = ?"); params.push(mood); }
+  if (minBpm !== undefined) { conditions.push("bpm >= ?"); params.push(minBpm); }
+  if (maxBpm !== undefined) { conditions.push("bpm <= ?"); params.push(maxBpm); }
+  if (minPrice !== undefined) { conditions.push("price_amount >= ?"); params.push(minPrice); }
+  if (maxPrice !== undefined) { conditions.push("price_amount <= ?"); params.push(maxPrice); }
+  const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+  const result = await db.prepare(`SELECT COUNT(*) AS total FROM beats ${where}`).bind(...params).first();
+  return Number(result?.total || 0);
 };
 
 /**
@@ -548,6 +605,7 @@ module.exports = {
   findBySlug,
   existsBySlug,
   listBeats,
+  countBeats,
   updateBeat,
   updateStatus,
   archiveBeat,

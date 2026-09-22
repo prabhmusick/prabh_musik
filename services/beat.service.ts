@@ -75,7 +75,7 @@ export function mapBackendToFrontend(beat: any): Beat {
     genre: beat.genre || "",
     bpm: beat.bpm || 0,
     key: beat.musical_key || "",
-    mood: "",
+    mood: beat.mood || "",
     type: "beat",
     trackType: "non-exclusive",
     tags: [],
@@ -109,6 +109,7 @@ export function mapFrontendToBackend(beat: any): any {
   if (beat.title !== undefined) data.title = beat.title;
   if (beat.description !== undefined) data.description = beat.description;
   if (beat.genre !== undefined) data.genre = beat.genre;
+  if (beat.mood !== undefined) data.mood = beat.mood || null;
   if (beat.bpm !== undefined) data.bpm = Number(beat.bpm);
   if (beat.duration !== undefined) data.duration = Number(beat.duration);
   if (beat.key !== undefined) data.musical_key = beat.key;
@@ -205,6 +206,39 @@ export async function getBeats(): Promise<Beat[]> {
     console.error("Error fetching beats:", error);
     return [];
   }
+}
+
+export interface BeatCatalogFilters {
+  search?: string;
+  genre?: string;
+  mood?: string;
+  minBpm?: number;
+  maxBpm?: number;
+  minPrice?: number;
+  maxPrice?: number;
+  limit?: number;
+  offset?: number;
+}
+
+export async function getBeatCatalog(filters: BeatCatalogFilters = {}): Promise<{
+  items: Beat[];
+  total: number;
+  pages: number;
+}> {
+  const params = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") {
+      params.set(key, String(value));
+    }
+  });
+  params.set("catalog", "1");
+  const response = await api.get(`/beats?${params.toString()}`);
+  const data = response?.data?.data || {};
+  return {
+    items: Array.isArray(data.items) ? data.items.map(mapBackendToFrontend) : [],
+    total: Number(data.total || 0),
+    pages: Number(data.pages || 0),
+  };
 }
 
 export async function getTrendingBeats(): Promise<Beat[]> {

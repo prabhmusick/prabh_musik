@@ -564,6 +564,16 @@ function init() {
             "UPDATE worked_with_artists SET show_on_music_production = 1 WHERE name IN ('Karan Aujla', 'Sidhu Moose Wala')",
           )
           .run(),
+      )
+      .then(() =>
+        localD1Instance
+          .prepare("ALTER TABLE beats ADD COLUMN mood TEXT")
+          .run()
+          .catch((error) => {
+            if (!/duplicate column name/i.test(error.message || "")) {
+              throw error;
+            }
+          }),
       );
   }
 
@@ -820,6 +830,7 @@ function init() {
                     const missingBeatColumns = [
                       ["related_artist_name", "TEXT"],
                       ["related_artist_image_key", "TEXT"],
+                          ["mood", "TEXT"],
                     ].filter(([column]) => !existingBeatColumns.has(column));
 
                     const addBeatColumn = () => {

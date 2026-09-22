@@ -139,6 +139,7 @@ const toPublicBeatDto = (beatEntity) => {
     currency_code: beatEntity.currency_code || "INR",
     formatted_price: formattedPrice,
     genre: beatEntity.genre || null,
+    mood: beatEntity.mood || null,
     bpm:
       beatEntity.bpm !== null && beatEntity.bpm !== undefined
         ? Number(beatEntity.bpm)
@@ -240,6 +241,7 @@ const createBeat = async (beatInput, creatorUserId) => {
     price_amount: Math.floor(priceAmount),
     currency_code: (beatInput.currency_code || "INR").toUpperCase().trim(),
     genre: beatInput.genre ? String(beatInput.genre).trim() : null,
+    mood: beatInput.mood ? String(beatInput.mood).trim() : null,
     bpm: beatInput.bpm ? Number(beatInput.bpm) : null,
     musical_key: beatInput.musical_key
       ? String(beatInput.musical_key).trim()
@@ -337,6 +339,12 @@ const listPublicBeats = async (options = {}) => {
   // Enforce status = "published" and override any client-supplied status
   const repositoryOptions = {
     genre: options.genre ? String(options.genre).trim() : undefined,
+    search: options.search ? String(options.search).trim() : undefined,
+    mood: options.mood ? String(options.mood).trim() : undefined,
+    minBpm: options.minBpm !== undefined ? Number(options.minBpm) : undefined,
+    maxBpm: options.maxBpm !== undefined ? Number(options.maxBpm) : undefined,
+    minPrice: options.minPrice !== undefined ? Number(options.minPrice) : undefined,
+    maxPrice: options.maxPrice !== undefined ? Number(options.maxPrice) : undefined,
     limit: Math.floor(limit),
     offset: Math.floor(offset),
     sortBy: options.sortBy,
@@ -351,6 +359,34 @@ const listPublicBeats = async (options = {}) => {
   }
 
   return entities.map(toPublicBeatDto);
+};
+
+const listPublicBeatsPage = async (options = {}) => {
+  const limit = Math.min(Math.max(Number(options.limit) || 20, 1), 100);
+  const offset = Math.max(Number(options.offset) || 0, 0);
+  const numericFilters = ["minBpm", "maxBpm", "minPrice", "maxPrice"];
+  for (const filter of numericFilters) {
+    if (options[filter] !== undefined && !Number.isFinite(Number(options[filter]))) {
+      throw new AppError(`${filter} must be a number.`, 400);
+    }
+  }
+  const filters = {
+    ...options,
+    limit: Math.floor(limit),
+    offset: Math.floor(offset),
+    status: "published",
+  };
+  const [entities, total] = await Promise.all([
+    repository.listBeats(filters),
+    repository.countBeats(filters),
+  ]);
+  return {
+    items: entities.map(toPublicBeatDto),
+    total,
+    limit,
+    offset,
+    pages: Math.ceil(total / limit),
+  };
 };
 
 const listTrendingBeats = async (limit = 4) => {
@@ -742,6 +778,7 @@ module.exports = {
   getBeatByPublicId,
   getBeatBySlug,
   listPublicBeats,
+  listPublicBeatsPage,
   listTrendingBeats,
   recordPlay,
   listAdminBeats,

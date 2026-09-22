@@ -81,13 +81,21 @@ const listPublicBeats = async (req, res, next) => {
   try {
     const options = {
       genre: req.query.genre,
+      search: req.query.q,
+      mood: req.query.mood,
+      minBpm: req.query.minBpm,
+      maxBpm: req.query.maxBpm,
+      minPrice: req.query.minPrice,
+      maxPrice: req.query.maxPrice,
       limit: req.query.limit,
       offset: req.query.offset,
       sortBy: req.query.sortBy,
       sortOrder: req.query.sortOrder,
     };
 
-    const beats = await service.listPublicBeats(options);
+    const beats = req.query.catalog === "1"
+      ? await service.listPublicBeatsPage(options)
+      : await service.listPublicBeats(options);
 
     res.status(200).json({
       success: true,

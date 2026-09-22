@@ -309,7 +309,7 @@ function GenreCard({ genre, index }: { genre: Genre; index: number }) {
   return (
     <div
       className="genre-card"
-      onClick={() => router.push("/beat")}
+      onClick={() => router.push(`/beat?genre=${encodeURIComponent(genre.name)}`)}
       style={{
         display: "flex",
         flexDirection: "column",
