@@ -113,7 +113,8 @@ CREATE TABLE worked_with_artists (
     image TEXT NOT NULL,
     popular_song TEXT,
     music_type TEXT,
-    worked_year INTEGER
+    worked_year INTEGER,
+    show_on_music_production INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE testimonials (

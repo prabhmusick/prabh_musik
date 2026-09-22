@@ -38,6 +38,7 @@ const toWorkedWithDto = (artist) => ({
   popularSong: artist.popular_song || "",
   musicType: artist.music_type || "",
   workedYear: artist.worked_year ? String(artist.worked_year) : "",
+  showOnMusicProduction: Boolean(artist.show_on_music_production),
 });
 
 const listWorkedWithArtists = async () =>
@@ -51,6 +52,7 @@ const createWorkedWithArtist = async (input) => {
   const musicType =
     typeof input?.music_type === "string" ? input.music_type.trim() : "";
   const workedYear = Number(input?.worked_year);
+  const showOnMusicProduction = input?.show_on_music_production === true;
 
   if (!name) throw new AppError("Artist name is required.", 400);
   if (!image) throw new AppError("Artist image is required.", 400);
@@ -68,6 +70,7 @@ const createWorkedWithArtist = async (input) => {
         popularSong,
         musicType,
         workedYear,
+        showOnMusicProduction,
       }),
     );
   } catch (error) {

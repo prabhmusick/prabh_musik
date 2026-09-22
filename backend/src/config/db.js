@@ -548,7 +548,23 @@ const dbProxy = new Proxy(
 // 4. Initialisation interface (maintained for application bootstrap compatibility)
 function init() {
   if (isCloudflareD1) {
-    return Promise.resolve();
+    return localD1Instance
+      .prepare(
+        "ALTER TABLE worked_with_artists ADD COLUMN show_on_music_production INTEGER NOT NULL DEFAULT 0",
+      )
+      .run()
+      .catch((error) => {
+        if (!/duplicate column name/i.test(error.message || "")) {
+          throw error;
+        }
+      })
+      .then(() =>
+        localD1Instance
+          .prepare(
+            "UPDATE worked_with_artists SET show_on_music_production = 1 WHERE name IN ('Karan Aujla', 'Sidhu Moose Wala')",
+          )
+          .run(),
+      );
   }
 
   return new Promise((resolve, reject) => {
@@ -608,7 +624,8 @@ function init() {
                 image TEXT NOT NULL,
                 popular_song TEXT,
                 music_type TEXT,
-                worked_year INTEGER
+                worked_year INTEGER,
+                show_on_music_production INTEGER NOT NULL DEFAULT 0
               )
             `,
             (createError) => {
@@ -638,6 +655,7 @@ function init() {
                     ["popular_song", "TEXT"],
                     ["music_type", "TEXT"],
                     ["worked_year", "INTEGER"],
+                    ["show_on_music_production", "INTEGER NOT NULL DEFAULT 0"],
                   ].filter(([column]) => !existingColumns.has(column));
 
                   const addMissingColumn = () => {
@@ -664,6 +682,9 @@ function init() {
                           SET popular_song = COALESCE(popular_song, 'Dont Look 2'),
                               music_type = COALESCE(music_type, 'Punjabi Trap'),
                               worked_year = COALESCE(worked_year, 2024);
+                            UPDATE worked_with_artists
+                            SET show_on_music_production = 1
+                            WHERE name IN ('Karan Aujla', 'Sidhu Moose Wala');
                         `,
                         (seedError) => {
                           if (seedError) {
@@ -782,7 +803,45 @@ function init() {
                     "Successfully migrated: Added column 'revoked_reason' to 'user_sessions'.",
                   );
                 }
-                ensureWorkedWithArtistsTable();
+                sqliteDb.all(
+                  "PRAGMA table_info(beats);",
+                  (beatsColumnsError, beatsColumns = []) => {
+                    if (beatsColumnsError) {
+                      console.error(
+                        "Migration notice: could not inspect beats:",
+                        beatsColumnsError.message || beatsColumnsError,
+                      );
+                      return ensureWorkedWithArtistsTable();
+                    }
+
+                    const existingBeatColumns = new Set(
+                      beatsColumns.map((column) => column.name),
+                    );
+                    const missingBeatColumns = [
+                      ["related_artist_name", "TEXT"],
+                      ["related_artist_image_key", "TEXT"],
+                    ].filter(([column]) => !existingBeatColumns.has(column));
+
+                    const addBeatColumn = () => {
+                      const [column, type] = missingBeatColumns.shift() || [];
+                      if (!column) return ensureWorkedWithArtistsTable();
+                      sqliteDb.run(
+                        `ALTER TABLE beats ADD COLUMN ${column} ${type};`,
+                        (beatColumnError) => {
+                          if (beatColumnError) {
+                            console.error(
+                              `Migration notice: could not add ${column}:`,
+                              beatColumnError.message || beatColumnError,
+                            );
+                          }
+                          addBeatColumn();
+                        },
+                      );
+                    };
+
+                    addBeatColumn();
+                  },
+                );
               },
             );
           },

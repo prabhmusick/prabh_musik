@@ -43,13 +43,14 @@ VALUES
 );
 
 -- Seed Beats (with generated public_id)
-INSERT INTO worked_with_artists (name, image, popular_song, music_type, worked_year)
+INSERT INTO worked_with_artists
+    (name, image, popular_song, music_type, worked_year, show_on_music_production)
 VALUES
-    ('Karan Aujla', '/karan.png', 'Dont Look 2', 'Punjabi Trap', 2024),
-    ('Sidhu Moose Wala', '/siddhu.png', 'Dont Look 2', 'Punjabi Trap', 2024),
-    ('Ap Dhillon', '/ap.png', 'Dont Look 2', 'Punjabi Trap', 2024),
-    ('Diljit Dosanjh', '/karan.png', 'Dont Look 2', 'Punjabi Trap', 2024),
-    ('Shubh', '/siddhu.png', 'Dont Look 2', 'Punjabi Trap', 2024);
+    ('Karan Aujla', '/karan.png', 'Dont Look 2', 'Punjabi Trap', 2024, 1),
+    ('Sidhu Moose Wala', '/siddhu.png', 'Dont Look 2', 'Punjabi Trap', 2024, 1),
+    ('Ap Dhillon', '/ap.png', 'Dont Look 2', 'Punjabi Trap', 2024, 0),
+    ('Diljit Dosanjh', '/karan.png', 'Dont Look 2', 'Punjabi Trap', 2024, 0),
+    ('Shubh', '/siddhu.png', 'Dont Look 2', 'Punjabi Trap', 2024, 0);
 
 INSERT INTO beats (id, public_id, title, slug, genre, audio_key, status, price_amount, duration, created_by)
 VALUES 

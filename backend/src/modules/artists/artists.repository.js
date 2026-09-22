@@ -21,7 +21,8 @@ const listWorkedWith = async () => {
   const result = await db
     .prepare(
       `
-    SELECT id, name, image, popular_song, music_type, worked_year
+        SELECT id, name, image, popular_song, music_type, worked_year,
+          show_on_music_production
     FROM worked_with_artists
     ORDER BY id ASC
   `,
@@ -36,20 +37,29 @@ const createWorkedWith = async ({
   popularSong,
   musicType,
   workedYear,
+  showOnMusicProduction,
 }) => {
   const result = await db
     .prepare(
       `
-    INSERT INTO worked_with_artists (name, image, popular_song, music_type, worked_year)
-    VALUES (?, ?, ?, ?, ?)
+      INSERT INTO worked_with_artists
+        (name, image, popular_song, music_type, worked_year, show_on_music_production)
+      VALUES (?, ?, ?, ?, ?, ?)
   `,
     )
-    .bind(name, image, popularSong, musicType, workedYear)
+    .bind(
+      name,
+      image,
+      popularSong,
+      musicType,
+      workedYear,
+      showOnMusicProduction ? 1 : 0,
+    )
     .run();
 
   return db
     .prepare(
-      "SELECT id, name, image, popular_song, music_type, worked_year FROM worked_with_artists WHERE id = ?",
+      "SELECT id, name, image, popular_song, music_type, worked_year, show_on_music_production FROM worked_with_artists WHERE id = ?",
     )
     .bind(result.meta?.last_row_id)
     .first();
