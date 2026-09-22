@@ -14,8 +14,9 @@ export default function HomePage() {
       <ArtistsWorkedWith />
       <TrendingBeats />
       <PopularGenres />
+       <Testimonials />
       <BeatstarsHero />
-      <Testimonials />
+     
     </>
   );
 }

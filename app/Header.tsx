@@ -46,7 +46,16 @@ export default function Header() {
     router.push(`/beat?q=${encodeURIComponent(query)}`);
   };
 
-  if (pathname?.startsWith("/admin")) return null;
+  // Don't render the global header on admin or auth pages that provide their
+  // own header UI to avoid duplicate headers (e.g. /login, /signup).
+  if (
+    pathname?.startsWith("/admin") ||
+    pathname === "/login" ||
+    pathname === "/signup" ||
+    pathname === "/forgot-password" ||
+    pathname === "/reset-password"
+  )
+    return null;
 
   const getActiveLink = () => {
     if (pathname === "/") return "Home";
@@ -56,6 +65,7 @@ export default function Header() {
     return "";
   };
   const activeLink = getActiveLink();
+  const hasPageSearch = pathname === "/beat" || pathname?.startsWith("/beat/");
 
   return (
     <>
@@ -99,7 +109,7 @@ export default function Header() {
         }
 
         .desktop-search-row {
-          padding: 10px 28px 16px;
+          padding: 10px 20px 12px;
           width: 100%;
           margin-top: 4px;
         }
@@ -107,8 +117,8 @@ export default function Header() {
         .desktop-search-row .search-container {
           width: 100%;
           max-width: 100%;
-          min-height: 48px;
-          padding: 10px 18px;
+          min-height: 44px;
+          padding: 8px 14px;
         }
 
         .desktop-search-row .search-input {
@@ -343,14 +353,16 @@ export default function Header() {
 
         @media (max-width: 768px) {
           .desktop-nav, .desktop-header-content { display: none !important; }
-          .mobile-header-content { display: flex !important; flex-direction: column; width: 100%; padding: 10px 12px 12px !important; }
+          /* Hide entire desktop header on small screens to avoid duplicate header */
+          .desktop-header-top, .desktop-header-actions, .desktop-search-row { display: none !important; }
+          .mobile-header-content { display: flex !important; flex-direction: column; width: 100%; padding: 8px 10px 10px !important; }
           .mobile-header-top { display: flex !important; align-items: center; justify-content: space-between; width: 100%; gap: 8px; }
           .mobile-logo { display: flex !important; align-items: center; gap: 4px; flex-shrink: 0; }
           .mobile-auth-actions { display: flex !important; align-items: center; gap: 6px; margin-left: auto; }
           .mobile-menu-btn { display: flex !important; }
-          .mobile-search-row { display: flex !important; width: 100%; margin-top: 10px; }
-          .mobile-search-row .search-container { width: 100%; padding: 6px 12px; }
-          .mobile-search-row .search-input { width: 100%; font-size: 12px; }
+          .mobile-search-row { display: flex !important; width: 100%; margin-top: 8px; }
+          .mobile-search-row .search-container { width: 100%; padding: 6px 10px; min-height: 40px; }
+          .mobile-search-row .search-input { width: 100%; font-size: 13px; padding: 6px 0; min-height: 34px; }
           .header-wrapper { margin: 12px 12px 16px; width: calc(100% - 24px); }
         }
         @media (min-width: 769px) {

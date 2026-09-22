@@ -26,6 +26,9 @@ const playfair = Playfair_Display({
 export const metadata: Metadata = {
   title: "PrabhMusik",
   description: "PrabhMusik - Your Beats Hub",
+  icons: {
+    icon: '/hero.png',
+  },
 };
 
 export default function RootLayout({
