@@ -341,22 +341,54 @@ export default function Header() {
           letter-spacing: 0.3px;
         }
 
-        @media (max-width: 768px) {
-          .desktop-nav, .desktop-header-content { display: none !important; }
-          .mobile-header-content { display: flex !important; flex-direction: column; width: 100%; padding: 10px 12px 12px !important; }
-          .mobile-header-top { display: flex !important; align-items: center; justify-content: space-between; width: 100%; gap: 8px; }
-          .mobile-logo { display: flex !important; align-items: center; gap: 4px; flex-shrink: 0; }
-          .mobile-auth-actions { display: flex !important; align-items: center; gap: 6px; margin-left: auto; }
-          .mobile-menu-btn { display: flex !important; }
-          .mobile-search-row { display: flex !important; width: 100%; margin-top: 10px; }
-          .mobile-search-row .search-container { width: 100%; padding: 6px 12px; }
-          .mobile-search-row .search-input { width: 100%; font-size: 12px; }
-          .header-wrapper { margin: 12px 12px 16px; width: calc(100% - 24px); }
+        .mobile-menu-btn {
+          display: none;
+          align-items: center;
+          justify-content: center;
+          background: transparent;
+          border: none;
+          color: #ffffff;
+          cursor: pointer;
+          padding: 4px;
         }
+
+        .auth-helper-text {
+          display: inline;
+        }
+
+        @media (max-width: 768px) {
+          .desktop-nav { display: none !important; }
+          .auth-helper-text { display: none !important; }
+          .mobile-menu-btn { display: flex !important; flex-shrink: 0; }
+          .header-wrapper { margin: 10px 8px 14px; width: calc(100% - 16px); max-width: 100%; box-sizing: border-box; }
+          .desktop-header-top { padding: 10px 10px 6px; gap: 6px; width: 100%; max-width: 100%; box-sizing: border-box; }
+          .desktop-header-actions { gap: 6px; margin-left: auto; flex-shrink: 0; }
+          .logo-text-accent, .logo-text-white { font-size: 17px; }
+          .desktop-search-row { padding: 4px 10px 10px; margin-top: 2px; width: 100%; max-width: 100%; box-sizing: border-box; }
+          .desktop-search-row .search-container { width: 100%; max-width: 100%; box-sizing: border-box; min-height: 40px; padding: 6px 12px; }
+          .desktop-search-row .search-input { width: 100%; min-width: 0; flex: 1; font-size: 13px; min-height: 24px; }
+          .desktop-search-row .search-input:focus { width: 100%; }
+          .cart-btn { padding: 5px 8px; font-size: 11px; gap: 4px; flex-shrink: 0; white-space: nowrap; }
+          .cart-badge { padding: 1px 5px; font-size: 10px; }
+          .profile-btn { padding: 5px 8px; font-size: 11px; gap: 4px; flex-shrink: 0; white-space: nowrap; }
+          .login-btn { padding: 5px 10px; font-size: 11px; flex-shrink: 0; white-space: nowrap; margin-right: 0 !important; }
+          .signup-btn { padding: 5px 12px; font-size: 11px; flex-shrink: 0; white-space: nowrap; }
+        }
+
+        @media (max-width: 360px) {
+          .header-wrapper { margin: 8px 4px 12px; width: calc(100% - 8px); }
+          .desktop-header-top { padding: 8px 6px 4px; gap: 4px; }
+          .desktop-header-actions { gap: 4px; }
+          .logo-text-accent, .logo-text-white { font-size: 15px; }
+          .cart-btn { padding: 4px 6px; font-size: 10px; gap: 3px; }
+          .profile-btn { padding: 4px 6px; font-size: 10px; gap: 3px; }
+          .login-btn { padding: 4px 7px; font-size: 10px; }
+          .signup-btn { padding: 4px 8px; font-size: 10px; }
+        }
+
         @media (min-width: 769px) {
-          .mobile-header-content, .mobile-header-top, .mobile-auth-actions, .mobile-menu-btn, .mobile-search-row { display: none !important; }
+          .mobile-menu-btn { display: none !important; }
           .mobile-nav { display: none !important; }
-          .desktop-header-content { display: flex !important; }
         }
       `}</style>
 
@@ -436,7 +468,7 @@ export default function Header() {
             ) : (
               <>
                 {pathname === "/login" && (
-                  <span style={{ color: "rgba(255,255,255,0.5)", fontFamily: "'Inter', sans-serif", fontSize: "13px", marginRight: "4px" }}>
+                  <span className="auth-helper-text" style={{ color: "rgba(255,255,255,0.5)", fontFamily: "'Inter', sans-serif", fontSize: "13px", marginRight: "4px" }}>
                     Need an account?
                   </span>
                 )}
@@ -453,7 +485,7 @@ export default function Header() {
                 )}
 
                 {pathname === "/signup" && (
-                  <span style={{ color: "rgba(255,255,255,0.5)", fontFamily: "'Inter', sans-serif", fontSize: "13px", marginRight: "4px" }}>
+                  <span className="auth-helper-text" style={{ color: "rgba(255,255,255,0.5)", fontFamily: "'Inter', sans-serif", fontSize: "13px", marginRight: "4px" }}>
                     Already a member?
                   </span>
                 )}
@@ -467,30 +499,21 @@ export default function Header() {
                 )}
               </>
             )}
-          </div>
 
-          <button
-            className="mobile-menu-btn"
-            onClick={() => setMobileOpen((v) => !v)}
-            style={{
-              display: "none",
-              alignItems: "center",
-              justifyContent: "center",
-              background: "transparent",
-              border: "none",
-              color: "#ffffff",
-              cursor: "pointer",
-              padding: "4px",
-            }}
-          >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-              {mobileOpen ? (
-                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
-              ) : (
-                <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" />
-              )}
-            </svg>
-          </button>
+            <button
+              className="mobile-menu-btn"
+              onClick={() => setMobileOpen((v) => !v)}
+              aria-label="Toggle navigation menu"
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                {mobileOpen ? (
+                  <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+                ) : (
+                  <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" />
+                )}
+              </svg>
+            </button>
+          </div>
         </div>
 
         <div className="desktop-search-row">
@@ -520,118 +543,6 @@ export default function Header() {
                 }
               }}
             />
-          </div>
-        </div>
-
-        <div className="mobile-header-content" style={{ display: "none", padding: "12px 16px 14px", width: "100%" }}>
-          <div className="mobile-header-top" style={{ display: "none", alignItems: "center", justifyContent: "space-between", gap: "10px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
-              <button
-                className="mobile-menu-btn"
-                onClick={() => setMobileOpen((v) => !v)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  background: "transparent",
-                  border: "none",
-                  color: "#ffffff",
-                  cursor: "pointer",
-                  padding: "4px",
-                  flexShrink: 0,
-                }}
-              >
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-                  {mobileOpen ? (
-                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
-                  ) : (
-                    <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" />
-                  )}
-                </svg>
-              </button>
-
-              <div
-                className="mobile-logo"
-                onClick={() => router.push("/")}
-                style={{
-                  display: "none",
-                  alignItems: "center",
-                  gap: "4px",
-                  cursor: "pointer",
-                  flexShrink: 0,
-                }}
-              >
-                <span className="logo-text-accent" style={{ fontSize: "18px" }}>
-                  Prabh
-                </span>
-                <span className="logo-text-white" style={{ fontSize: "18px" }}>
-                  Musik
-                </span>
-              </div>
-            </div>
-
-            <div className="mobile-auth-actions" style={{ display: "flex", alignItems: "center", gap: "6px", marginLeft: "auto" }}>
-              {isAuthenticated ? (
-                <button
-                  className="profile-btn"
-                  onClick={() => router.push("/profile")}
-                  style={{ padding: "8px 12px", fontSize: "11px", borderRadius: "7px" }}
-                >
-                  <span style={{ width: 20, height: 20, borderRadius: "50%", background: "linear-gradient(135deg, rgba(245, 158, 11, 0.4), rgba(217, 119, 6, 0.2))", border: "1px solid rgba(245, 158, 11, 0.4)", color: "#ffb84d", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 700, marginRight: 6 }}>
-                    {user?.fullName?.charAt(0) || "P"}
-                  </span>
-                  Profile
-                </button>
-              ) : (
-                <>
-                  <button
-                    className="login-btn"
-                    onClick={() => router.push("/login")}
-                    style={{ padding: "6px 10px", fontSize: "11px", borderRadius: "7px" }}
-                  >
-                    Sign in
-                  </button>
-                  <button
-                    className="signup-btn"
-                    onClick={() => router.push("/signup")}
-                    style={{ padding: "6px 10px", fontSize: "11px", borderRadius: "7px" }}
-                  >
-                    Sign up
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-
-          <div className="mobile-search-row" style={{ display: "none", width: "100%" }}>
-            <div className={`search-container${searchFocused ? " focused" : ""}`} style={{ width: "100%" }}>
-              <svg className="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="rgba(255,255,255,0.45)">
-                <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
-              </svg>
-              <input
-                className="search-input"
-                type="text"
-                placeholder="Search beats, artists..."
-                value={searchVal}
-                onChange={(e) => {
-                  const nextValue = e.target.value;
-                  setSearchVal(nextValue);
-                  window.dispatchEvent(new CustomEvent("app-search-sync", { detail: { value: nextValue } }));
-                }}
-                onFocus={() => setSearchFocused(true)}
-                onBlur={() => {
-                  setSearchFocused(false);
-                  if (searchVal.trim()) submitSearch();
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    submitSearch();
-                  }
-                }}
-                style={{ width: "100%" }}
-              />
-            </div>
           </div>
         </div>
 
