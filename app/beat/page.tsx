@@ -648,7 +648,7 @@ function TrendingHeader({
                 }),
               );
             }}
-            placeholder="Search for tags"
+            placeholder="Search beats, artists, genres..."
             style={{
               flex: 1,
               background: "none",
@@ -1174,6 +1174,8 @@ export default function BeatMarketplace() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const requestIdRef = useRef(0);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [isMobile, setIsMobile] = useState(false);
   const [filters, setFilters] = useState<FilterState>({
@@ -1183,11 +1185,24 @@ export default function BeatMarketplace() {
     bpmRange: null,
   });
 
+  const handleSearchChange = useCallback((nextQuery: string) => {
+    setSearch(nextQuery);
+    setPage(1);
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
   useEffect(() => {
     const syncFromUrl = () => {
       const params = new URLSearchParams(window.location.search);
       const nextValue = params.get("q") ?? "";
       setSearch(nextValue);
+      setDebouncedSearch(nextValue);
       setFilters({
         genre: params.get("genre"),
         mood: params.get("mood"),
@@ -1205,6 +1220,7 @@ export default function BeatMarketplace() {
       const nextValue =
         (event as CustomEvent<{ value?: string }>).detail?.value ?? "";
       setSearch(nextValue);
+      setPage(1);
     };
     window.addEventListener("app-search-sync", handleSync);
 
@@ -1238,14 +1254,17 @@ export default function BeatMarketplace() {
   const { currentBeat, isPlaying, playBeat } = useAudioPlayer();
 
   const load = useCallback(
-    async (p: number) => {
+    async (p: number, currentSearch: string, currentFilters: FilterState) => {
+      const currentRequestId = ++requestIdRef.current;
       setLoading(true);
-      const data = await fetchBeats(p, { ...filters, search });
-      setBeats(data.beats);
-      setTotalPages(data.pages);
-      setLoading(false);
+      const data = await fetchBeats(p, { ...currentFilters, search: currentSearch });
+      if (currentRequestId === requestIdRef.current) {
+        setBeats(data.beats);
+        setTotalPages(data.pages);
+        setLoading(false);
+      }
     },
-    [filters, search],
+    [],
   );
 
   const updateFilters = useCallback((nextFilters: FilterState) => {
@@ -1254,8 +1273,8 @@ export default function BeatMarketplace() {
   }, []);
 
   useEffect(() => {
-    load(page);
-  }, [page, load]);
+    load(page, debouncedSearch, filters);
+  }, [page, debouncedSearch, filters, load]);
 
   useEffect(() => {
     const update = () => setIsMobile(window.innerWidth <= 900);

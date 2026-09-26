@@ -81,7 +81,7 @@ const listPublicBeats = async (req, res, next) => {
   try {
     const options = {
       genre: req.query.genre,
-      search: req.query.q,
+      search: req.query.search || req.query.q,
       mood: req.query.mood,
       minBpm: req.query.minBpm,
       maxBpm: req.query.maxBpm,
