@@ -305,10 +305,17 @@ const listBeats = async (options = {}) => {
 
   if (search) {
     whereConditions.push(
-      "(title LIKE ? OR genre LIKE ? OR related_artist_name LIKE ?)",
+      "(title LIKE ? OR related_artist_name LIKE ? OR genre LIKE ? OR mood LIKE ? OR description LIKE ? OR musical_key LIKE ?)",
     );
     const searchValue = `%${search}%`;
-    params.push(searchValue, searchValue, searchValue);
+    params.push(
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+      searchValue,
+    );
   }
   if (mood) {
     whereConditions.push("mood = ?");
@@ -390,10 +397,10 @@ const countBeats = async (options = {}) => {
   }
   if (search) {
     conditions.push(
-      "(title LIKE ? OR genre LIKE ? OR related_artist_name LIKE ?)",
+      "(title LIKE ? OR related_artist_name LIKE ? OR genre LIKE ? OR mood LIKE ? OR description LIKE ? OR musical_key LIKE ?)",
     );
     const value = `%${search}%`;
-    params.push(value, value, value);
+    params.push(value, value, value, value, value, value);
   }
   if (mood) {
     conditions.push("mood = ?");

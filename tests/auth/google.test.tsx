@@ -8,7 +8,7 @@ function TestComponent({
   onCredential,
   onError,
 }: {
-  onCredential: (token: string) => void;
+  onCredential: (token: any) => void;
   onError: (err: any) => void;
 }) {
   const { requestGoogleCredential } = useGoogle();
