@@ -83,15 +83,6 @@ async function fetchBeats(
 
 // ─── Artist data ──────────────────────────────────────────────────────────────
 
-const TAGS = [
-  "drake",
-  "trap",
-  "guitar",
-  "travis scott",
-  "lil baby",
-  "rnb",
-  "gunna",
-];
 
 function getFilterOptions(beats: Beat[]) {
   return {
@@ -660,87 +651,10 @@ function TrendingHeader({
           />
         </div>
 
-        {/* Tag pills — dark filled, no border */}
-        {TAGS.map((tag) => (
-          <button
-            key={tag}
-            onClick={() => {
-              const nextTag = activeTag === tag ? "" : tag;
-              setActiveTag(nextTag || null);
-              onSearch(nextTag);
-            }}
-            style={{
-              padding: "8px 16px",
-              borderRadius: 24,
-              border: "none",
-              background:
-                activeTag === tag
-                  ? "rgba(251,191,36,0.22)"
-                  : "rgba(255,255,255,0.1)",
-              color: activeTag === tag ? "#fbbf24" : "rgba(255,255,255,0.75)",
-              fontSize: 13.5,
-              fontWeight: 500,
-              cursor: "pointer",
-              fontFamily: "'DM Sans', sans-serif",
-              transition: "background 0.15s, color 0.15s",
-              whiteSpace: "nowrap",
-              flexShrink: 0,
-            }}
-            onMouseEnter={(e) => {
-              if (activeTag !== tag)
-                e.currentTarget.style.background = "rgba(255,255,255,0.16)";
-            }}
-            onMouseLeave={(e) => {
-              if (activeTag !== tag)
-                e.currentTarget.style.background = "rgba(255,255,255,0.1)";
-            }}
-          >
-            {tag}
-          </button>
-        ))}
+   
 
         {/* Refresh pill */}
-        <button
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 7,
-            padding: "8px 16px",
-            borderRadius: 24,
-            border: "none",
-            background: "rgba(255,255,255,0.1)",
-            color: "rgba(255,255,255,0.75)",
-            fontSize: 13.5,
-            fontWeight: 500,
-            cursor: "pointer",
-            fontFamily: "'DM Sans', sans-serif",
-            transition: "background 0.15s",
-            flexShrink: 0,
-          }}
-          onMouseEnter={(e) =>
-            (e.currentTarget.style.background = "rgba(255,255,255,0.16)")
-          }
-          onMouseLeave={(e) =>
-            (e.currentTarget.style.background = "rgba(255,255,255,0.1)")
-          }
-          onClick={() => {}}
-        >
-          <svg
-            width="13"
-            height="13"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M23 4v6h-6" />
-            <path d="M1 20v-6h6" />
-            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-          </svg>
-          Refresh
-        </button>
+      
       </div>
 
       {/* ── Row 2: Filter dropdowns ── */}
