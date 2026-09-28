@@ -637,21 +637,27 @@ const VERSES = [
   {
     label: "VERSE I",
     lines: [
-      "Dancing through the static of a city made of glass,",
-      "every heartbeat echoing the shadows that we pass—",
+      "Tainu tars ni aya minu shadky.",
+      "Ae soch soch digdi ty mera dil ghat je.",
+      "Mai tere lyi lad pyi si saary beeba jag na.",
+      "Ty teri si ae zimedari chdna hi faraz ae.",
+      "Gham ny bady mera dil na lgy.",
+      "Dil cheer gya jo jo tu si keha.",
     ],
   },
   {
     label: "CHORUS",
-    lines: ["We are the frequency between", "the silence and the scream."],
-    highlighted: true,
-  },
-  {
-    label: "BRIDGE",
     lines: [
-      "In the 1s and 0s of the life we left behind,",
-      "I found the only truth that I could never redefine.",
+      "Tu na reha.",
+      "Ro mai leya.",
+      "Ki de gya.",
+      "Taynu kho mai leya.",
+      "Tu na reha.",
+      "Ro mai leya.",
+      "Ki de gya.",
+      "Taynu kho mai leya.",
     ],
+    highlighted: true,
   },
 ];
 
@@ -715,8 +721,8 @@ function TypewriterManuscript() {
     <div className="manuscript">
       <div className="ms-header">
         <div className="ms-title-group">
-          <div className="ms-song-name">Neon Soul</div>
-          <div className="ms-artist">Commission · Pop / Electronic</div>
+          <div className="ms-song-name">Original Verse</div>
+          <div className="ms-artist">Prabh Musik</div>
         </div>
         <div className="ms-status">
           <div className="ms-status-dot" />
