@@ -747,27 +747,6 @@ function ArtistCard({
   credits: number;
   delay: string;
 }) {
-  const [playing, setPlaying] = useState(false);
-  const [time, setTime] = useState(0);
-  const total = 225;
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const toggle = () => {
-    if (playing) {
-      clearInterval(timerRef.current!);
-      setPlaying(false);
-    } else {
-      setPlaying(true);
-      timerRef.current = setInterval(
-        () => setTime((t) => (t + 1) % total),
-        1000,
-      );
-    }
-  };
-  useEffect(() => () => clearInterval(timerRef.current!), []);
-  const fmt = (s: number) =>
-    `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
-
   return (
     <div
       className="artist-card fade-up"
@@ -1371,23 +1350,6 @@ function ArtistCard({
           polish. From tracking to final master, every element placed with
           intention.
         </p>
-        <div className="audio-player">
-          <button className="play-btn" onClick={toggle}>
-            {playing ? (
-              <span className="play-icon-pause">⏸</span>
-            ) : (
-              <span className="play-icon" style={{ marginLeft: 2 }}>
-                ▶
-              </span>
-            )}
-          </button>
-          <Waveform playing={playing} progress={time / total} />
-          <span className="audio-time">{fmt(time)}&thinsp;/&thinsp;3:45</span>
-        </div>
-        <div className="card-actions">
-          <button className="card-btn">Portfolio</button>
-          <button className="card-btn-primary">Book Session →</button>
-        </div>
       </div>
     </div>
   );
@@ -1612,7 +1574,7 @@ export default function MusicProductionPage() {
             </a>
           </div>
           <div className="artists-grid">
-            {workedWithArtists.map((artist, index) => (
+            {workedWithArtists.slice(0, 2).map((artist, index) => (
               <ArtistCard
                 key={artist.id}
                 name={artist.name}
