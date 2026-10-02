@@ -12,22 +12,22 @@ const genres: Genre[] = [
   {
     id: 1,
     name: "Hip Hop",
-    image: "/hip-hop.png",
+    image: "/hip-hop.webp",
   },
   {
     id: 2,
     name: "POP",
-    image: "/pop.png",
+    image: "/pop.webp",
   },
   {
     id: 3,
     name: "R&B",
-    image: "/r%26b.png",
+    image: "/r%26b.webp",
   },
   {
     id: 4,
     name: "Rock",
-    image: "/rock.png",
+    image: "/rock.webp",
   },
 ];
 

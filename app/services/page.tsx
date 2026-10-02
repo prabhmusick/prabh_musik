@@ -1,4 +1,4 @@
-'use client';
+"use client";
 import { JSX, useState } from "react";
 import Link from "next/link";
 
@@ -9,7 +9,7 @@ interface ServiceCard {
   description: string;
   learnMore: string;
   slug: string;
-//   icon: JSX.Element;
+  //   icon: JSX.Element;
   imagePlaceholder: string;
 }
 
@@ -21,75 +21,167 @@ interface ProcessStep {
 
 // ─── SVG Icons ────────────────────────────────────────────────────────────────
 const WaveformIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M2 12h2l2-8 4 16 4-10 2 4h6"/>
+  <svg
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M2 12h2l2-8 4 16 4-10 2 4h6" />
   </svg>
 );
 
 const SlidersIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/>
-    <line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/>
-    <line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/>
-    <line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/>
-    <line x1="17" y1="16" x2="23" y2="16"/>
+  <svg
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <line x1="4" y1="21" x2="4" y2="14" />
+    <line x1="4" y1="10" x2="4" y2="3" />
+    <line x1="12" y1="21" x2="12" y2="12" />
+    <line x1="12" y1="8" x2="12" y2="3" />
+    <line x1="20" y1="21" x2="20" y2="16" />
+    <line x1="20" y1="12" x2="20" y2="3" />
+    <line x1="1" y1="14" x2="7" y2="14" />
+    <line x1="9" y1="8" x2="15" y2="8" />
+    <line x1="17" y1="16" x2="23" y2="16" />
   </svg>
 );
 
 const PenIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+  <svg
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M12 20h9" />
+    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
   </svg>
 );
 
 const GlobeIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="10"/>
-    <line x1="2" y1="12" x2="22" y2="12"/>
-    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+  <svg
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <circle cx="12" cy="12" r="10" />
+    <line x1="2" y1="12" x2="22" y2="12" />
+    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
   </svg>
 );
 
 const SearchIcon = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+  <svg
+    width="22"
+    height="22"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <circle cx="11" cy="11" r="8" />
+    <line x1="21" y1="21" x2="16.65" y2="16.65" />
   </svg>
 );
 
 const SparkleIcon = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/>
+  <svg
+    width="22"
+    height="22"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z" />
   </svg>
 );
 
 const WandIcon = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M15 4V2m0 2v2m0-2h-2m2 0h2M3 10l9 9 9-9-9-9-9 9z"/>
+  <svg
+    width="22"
+    height="22"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M15 4V2m0 2v2m0-2h-2m2 0h2M3 10l9 9 9-9-9-9-9 9z" />
   </svg>
 );
 
 const RocketIcon = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/>
-    <path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/>
-    <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/>
-    <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/>
+  <svg
+    width="22"
+    height="22"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z" />
+    <path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z" />
+    <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0" />
+    <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5" />
   </svg>
 );
 
 const ArrowRightIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M5 12h14M12 5l7 7-7 7"/>
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M5 12h14M12 5l7 7-7 7" />
   </svg>
 );
 
 // ─── Service Card Images (photo + gradient fallback) ─────────────────────────
-const serviceImageFiles = ["/img_1.png", "/img_2.png", "/img_3.png", "/img_4.png"];
+const serviceImageFiles = [
+  "/img_1.webp",
+  "/img_2.webp",
+  "/img_3.webp",
+  "/img_4.webp",
+];
 
 const serviceImageFallbacks = [
   // Music Production – purple/pink studio feel
   "linear-gradient(135deg, #1a0a2e 0%, #2d1060 40%, #4a1080 70%, #1a0a2e 100%)",
-  // Mix n Master – dark teal board feel  
+  // Mix n Master – dark teal board feel
   "linear-gradient(135deg, #0a1628 0%, #0d2040 40%, #1a3060 70%, #0a1628 100%)",
   // Lyrics – warm amber/brown spotlight feel
   "linear-gradient(135deg, #1a0f00 0%, #3d2200 40%, #6b3d00 70%, #1a0f00 100%)",
@@ -102,7 +194,8 @@ const services: ServiceCard[] = [
   {
     number: "01",
     title: "Music Production",
-    description: "From beatmaking to full arrangements, we craft high-quality, industry-ready tracks that bring your sound to life.",
+    description:
+      "From beatmaking to full arrangements, we craft high-quality, industry-ready tracks that bring your sound to life.",
     learnMore: "Learn more",
     slug: "music-production",
     // icon: <WaveformIcon />,
@@ -111,7 +204,8 @@ const services: ServiceCard[] = [
   {
     number: "02",
     title: "Mix n Master",
-    description: "We deliver clean, balanced mixes and loud, professional masters ready for all major streaming platforms.",
+    description:
+      "We deliver clean, balanced mixes and loud, professional masters ready for all major streaming platforms.",
     learnMore: "Learn more",
     slug: "mix-n-master",
     // icon: <SlidersIcon />,
@@ -120,7 +214,8 @@ const services: ServiceCard[] = [
   {
     number: "03",
     title: "Lyrics",
-    description: "Powerful words, real emotion. We write lyrics that connect, inspire, and make your music unforgettable.",
+    description:
+      "Powerful words, real emotion. We write lyrics that connect, inspire, and make your music unforgettable.",
     learnMore: "Learn more",
     slug: "lyrics",
     // icon: <PenIcon />,
@@ -129,7 +224,8 @@ const services: ServiceCard[] = [
   {
     number: "04",
     title: "Marketing & Distribution",
-    description: "We help you reach the right audience and get your music on all major platforms worldwide.",
+    description:
+      "We help you reach the right audience and get your music on all major platforms worldwide.",
     learnMore: "Learn more",
     slug: "marketing-distribution",
     // icon: <GlobeIcon />,
@@ -356,7 +452,7 @@ export default function ServicesPage() {
           style={{
             position: "absolute",
             inset: 0,
-            backgroundImage: "url('/bg_1.png')",
+            backgroundImage: "url('/bg_1.webp')",
             backgroundSize: "cover",
             backgroundPosition: "center",
             backgroundRepeat: "no-repeat",
@@ -367,7 +463,8 @@ export default function ServicesPage() {
           style={{
             position: "absolute",
             inset: 0,
-            background: "linear-gradient(to bottom, rgba(10,10,10,0.55) 0%, rgba(10,10,10,0.72) 100%)",
+            background:
+              "linear-gradient(to bottom, rgba(10,10,10,0.55) 0%, rgba(10,10,10,0.72) 100%)",
           }}
         />
 
@@ -398,7 +495,8 @@ export default function ServicesPage() {
             }}
           >
             Everything You Need To{" "}
-            <em style={{ fontStyle: "italic", color: "#f59e0b" }}>Build</em> Your Sound
+            <em style={{ fontStyle: "italic", color: "#f59e0b" }}>Build</em>{" "}
+            Your Sound
           </h1>
 
           <p
@@ -411,13 +509,18 @@ export default function ServicesPage() {
               margin: "0 auto 36px",
             }}
           >
-            End-to-end music production, mixing, lyrics, and distribution services
-            designed for the elite tier of sound creation.
+            End-to-end music production, mixing, lyrics, and distribution
+            services designed for the elite tier of sound creation.
           </p>
 
           <div
             className="fade-up-3"
-            style={{ display: "flex", gap: "20px", justifyContent: "center", flexWrap: "wrap" }}
+            style={{
+              display: "flex",
+              gap: "20px",
+              justifyContent: "center",
+              flexWrap: "wrap",
+            }}
           >
             <Link
               href="https://wa.me/919461209922?text=Hi%20Prabh%20Musik%2C%20I%20want%20to%20start%20my%20project."
@@ -427,7 +530,9 @@ export default function ServicesPage() {
             >
               Start Your Project <ArrowRightIcon />
             </Link>
-            <Link href="/about" className="hero-secondary-btn">View Portfolio</Link>
+            <Link href="/about" className="hero-secondary-btn">
+              View Portfolio
+            </Link>
           </div>
         </div>
       </section>
@@ -473,7 +578,14 @@ export default function ServicesPage() {
               />
 
               {/* Text content */}
-              <div style={{ padding: "24px", display: "flex", flexDirection: "column", flex: 1 }}>
+              <div
+                style={{
+                  padding: "24px",
+                  display: "flex",
+                  flexDirection: "column",
+                  flex: 1,
+                }}
+              >
                 <span
                   style={{
                     fontSize: "0.8rem",
@@ -512,7 +624,7 @@ export default function ServicesPage() {
                   {svc.description}
                 </p>
 
-                <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+                <div style={{ display: "flex", justifyContent: "flex-start" }}>
                   <span className="learn-more-btn">
                     {svc.learnMore} <ArrowRightIcon />
                   </span>
@@ -544,7 +656,13 @@ export default function ServicesPage() {
           >
             Our Process
           </h2>
-          <p style={{ color: "#6b7280", fontSize: "0.95rem", marginBottom: "64px" }}>
+          <p
+            style={{
+              color: "#6b7280",
+              fontSize: "0.95rem",
+              marginBottom: "64px",
+            }}
+          >
             The path from an idea to a global release.
           </p>
 
@@ -558,7 +676,7 @@ export default function ServicesPage() {
             }}
           >
             <img
-              src="/process.png"
+              src="/process.webp"
               alt="Our process"
               style={{
                 display: "block",
@@ -595,7 +713,8 @@ export default function ServicesPage() {
               right: "-80px",
               width: "360px",
               height: "360px",
-              background: "radial-gradient(circle, rgba(245,158,11,0.18) 0%, transparent 70%)",
+              background:
+                "radial-gradient(circle, rgba(245,158,11,0.18) 0%, transparent 70%)",
               pointerEvents: "none",
             }}
           />
@@ -607,7 +726,8 @@ export default function ServicesPage() {
               left: 0,
               width: "200px",
               height: "100%",
-              background: "linear-gradient(to right, #0d0d0d 0%, transparent 100%)",
+              background:
+                "linear-gradient(to right, #0d0d0d 0%, transparent 100%)",
               pointerEvents: "none",
             }}
           />
@@ -632,8 +752,8 @@ export default function ServicesPage() {
                 margin: "0 auto 36px",
               }}
             >
-              Let's collaborate on your next masterpiece. Join the elite network of producers
-              and artists using Prabh Music.
+              Let's collaborate on your next masterpiece. Join the elite network
+              of producers and artists using Prabh Music.
             </p>
 
             <div
@@ -649,11 +769,21 @@ export default function ServicesPage() {
                 target="_blank"
                 rel="noreferrer"
                 className="cta-primary"
-                style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  textDecoration: "none",
+                }}
               >
                 Get Started Now
               </a>
-              <a className="cta-secondary" href="https://mail.google.com/mail/?view=cm&fs=1&to=support@prabhmusik.com&su=Support%20Request">Contact Support</a>
+              <a
+                className="cta-secondary"
+                href="https://mail.google.com/mail/?view=cm&fs=1&to=support@prabhmusik.com&su=Support%20Request"
+              >
+                Contact Support
+              </a>
             </div>
           </div>
         </div>

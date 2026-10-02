@@ -222,6 +222,7 @@ export interface BeatCatalogFilters {
 
 export async function getBeatCatalog(
   filters: BeatCatalogFilters = {},
+  signal?: AbortSignal,
 ): Promise<{
   items: Beat[];
   total: number;
@@ -234,7 +235,7 @@ export async function getBeatCatalog(
     }
   });
   params.set("catalog", "1");
-  const response = await api.get(`/beats?${params.toString()}`);
+  const response = await api.get(`/beats?${params.toString()}`, { signal });
   const data = response?.data?.data || {};
   return {
     items: Array.isArray(data.items)

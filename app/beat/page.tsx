@@ -1,5 +1,6 @@
 "use client";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { getBeatCatalog } from "@/services/beat.service";
 import { useAppShell } from "../contexts/app-shell-context";
 import { useAudioPlayer, Beat } from "../contexts/audio-player-context";
@@ -11,50 +12,54 @@ import { BEAT_GENRES } from "@/constants/beat-genres";
 async function fetchBeats(
   page: number,
   filters: FilterState & { search: string },
+  signal?: AbortSignal,
 ): Promise<{ beats: Beat[]; total: number; pages: number }> {
   try {
     const perPage = 20;
-    const data = await getBeatCatalog({
-      search: filters.search,
-      genre: filters.genre || undefined,
-      mood: filters.mood || undefined,
-      minBpm:
-        filters.bpmRange === "Slow (60-90)"
-          ? 60
-          : filters.bpmRange === "Normal (90-130)"
-            ? 91
-            : filters.bpmRange === "Fast (130-160)"
-              ? 131
-              : filters.bpmRange === "Very Fast (160+)"
-                ? 161
+    const data = await getBeatCatalog(
+      {
+        search: filters.search,
+        genre: filters.genre || undefined,
+        mood: filters.mood || undefined,
+        minBpm:
+          filters.bpmRange === "Slow (60-90)"
+            ? 60
+            : filters.bpmRange === "Normal (90-130)"
+              ? 91
+              : filters.bpmRange === "Fast (130-160)"
+                ? 131
+                : filters.bpmRange === "Very Fast (160+)"
+                  ? 161
+                  : undefined,
+        maxBpm:
+          filters.bpmRange === "Slow (60-90)"
+            ? 90
+            : filters.bpmRange === "Normal (90-130)"
+              ? 130
+              : filters.bpmRange === "Fast (130-160)"
+                ? 160
                 : undefined,
-      maxBpm:
-        filters.bpmRange === "Slow (60-90)"
-          ? 90
-          : filters.bpmRange === "Normal (90-130)"
-            ? 130
-            : filters.bpmRange === "Fast (130-160)"
-              ? 160
-              : undefined,
-      minPrice:
-        filters.priceRange === "₹0-500"
-          ? 1
-          : filters.priceRange === "₹500-1000"
-            ? 501
-            : filters.priceRange === "₹1000+"
-              ? 1001
-              : undefined,
-      maxPrice:
-        filters.priceRange === "Free"
-          ? 0
-          : filters.priceRange === "₹0-500"
-            ? 50000
+        minPrice:
+          filters.priceRange === "₹0-500"
+            ? 1
             : filters.priceRange === "₹500-1000"
-              ? 100000
-              : undefined,
-      limit: perPage,
-      offset: (page - 1) * perPage,
-    });
+              ? 501
+              : filters.priceRange === "₹1000+"
+                ? 1001
+                : undefined,
+        maxPrice:
+          filters.priceRange === "Free"
+            ? 0
+            : filters.priceRange === "₹0-500"
+              ? 50000
+              : filters.priceRange === "₹500-1000"
+                ? 100000
+                : undefined,
+        limit: perPage,
+        offset: (page - 1) * perPage,
+      },
+      signal,
+    );
     return {
       beats: data.items.map((beat) => ({
         id: beat.id,
@@ -76,13 +81,14 @@ async function fetchBeats(
       pages: data.pages,
     };
   } catch (error) {
-    console.error("Failed to fetch beats from API:", error);
-    return { beats: [], total: 0, pages: 0 };
+    if (!signal?.aborted) {
+      console.error("Failed to fetch beats from API:", error);
+    }
+    throw error;
   }
 }
 
 // ─── Artist data ──────────────────────────────────────────────────────────────
-
 
 function getFilterOptions(beats: Beat[]) {
   return {
@@ -225,6 +231,8 @@ function BeatCard({
         <img
           src={beat.cover}
           alt={beat.title}
+          loading="lazy"
+          decoding="async"
           onLoad={() => setImgLoaded(true)}
           style={{
             width: "100%",
@@ -551,8 +559,10 @@ function TrendingHeader({
               }}
             >
               <img
-                src={a.img || "/bg.png"}
+                src={a.img || "/bg.webp"}
                 alt={a.name}
+                loading="lazy"
+                decoding="async"
                 style={{
                   width: "100%",
                   height: "100%",
@@ -651,10 +661,7 @@ function TrendingHeader({
           />
         </div>
 
-   
-
         {/* Refresh pill */}
-      
       </div>
 
       {/* ── Row 2: Filter dropdowns ── */}
@@ -1083,13 +1090,10 @@ function TrendingHeader({
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function BeatMarketplace() {
-  const [beats, setBeats] = useState<Beat[]>([]);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const requestIdRef = useRef(0);
+  const [urlSynced, setUrlSynced] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [isMobile, setIsMobile] = useState(false);
   const [filters, setFilters] = useState<FilterState>({
@@ -1098,6 +1102,17 @@ export default function BeatMarketplace() {
     priceRange: null,
     bpmRange: null,
   });
+  const catalogQuery = useQuery({
+    queryKey: ["public-beat-catalog", page, debouncedSearch, filters],
+    queryFn: ({ signal }) =>
+      fetchBeats(page, { ...filters, search: debouncedSearch }, signal),
+    enabled: urlSynced,
+    placeholderData: keepPreviousData,
+    retry: false,
+  });
+  const beats = catalogQuery.data?.beats ?? [];
+  const loading = catalogQuery.isPending;
+  const totalPages = catalogQuery.data?.pages ?? 1;
 
   const handleSearchChange = useCallback((nextQuery: string) => {
     setSearch(nextQuery);
@@ -1126,6 +1141,7 @@ export default function BeatMarketplace() {
       window.dispatchEvent(
         new CustomEvent("app-search-sync", { detail: { value: nextValue } }),
       );
+      setUrlSynced(true);
     };
 
     syncFromUrl();
@@ -1167,28 +1183,10 @@ export default function BeatMarketplace() {
   const { isAuthenticated, addToCart } = useAppShell();
   const { currentBeat, isPlaying, playBeat } = useAudioPlayer();
 
-  const load = useCallback(
-    async (p: number, currentSearch: string, currentFilters: FilterState) => {
-      const currentRequestId = ++requestIdRef.current;
-      setLoading(true);
-      const data = await fetchBeats(p, { ...currentFilters, search: currentSearch });
-      if (currentRequestId === requestIdRef.current) {
-        setBeats(data.beats);
-        setTotalPages(data.pages);
-        setLoading(false);
-      }
-    },
-    [],
-  );
-
   const updateFilters = useCallback((nextFilters: FilterState) => {
     setFilters(nextFilters);
     setPage(1);
   }, []);
-
-  useEffect(() => {
-    load(page, debouncedSearch, filters);
-  }, [page, debouncedSearch, filters, load]);
 
   useEffect(() => {
     const update = () => setIsMobile(window.innerWidth <= 900);
@@ -1238,7 +1236,6 @@ export default function BeatMarketplace() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;1,500&family=Jacques+Francois:wght@400&display=swap');
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         body { background: #120e06; }
         @keyframes fadeUp {
@@ -1265,20 +1262,23 @@ export default function BeatMarketplace() {
           overflowX: "hidden",
         }}
       >
-        {hasSearchQuery && !loading && filtered.length === 0 && (
-          <div
-            style={{
-              maxWidth: 1360,
-              margin: "20px auto 0",
-              padding: isMobile ? "0 16px" : "0 32px",
-              color: "rgba(255,255,255,0.75)",
-              fontSize: 14,
-            }}
-          >
-            No beats found for “{search}”. Try another keyword or clear the
-            search.
-          </div>
-        )}
+        {hasSearchQuery &&
+          !loading &&
+          !catalogQuery.isError &&
+          filtered.length === 0 && (
+            <div
+              style={{
+                maxWidth: 1360,
+                margin: "20px auto 0",
+                padding: isMobile ? "0 16px" : "0 32px",
+                color: "rgba(255,255,255,0.75)",
+                fontSize: 14,
+              }}
+            >
+              No beats found for “{search}”. Try another keyword or clear the
+              search.
+            </div>
+          )}
         {/* Subtle top vignette glow */}
         <div
           style={{
@@ -1322,8 +1322,10 @@ export default function BeatMarketplace() {
               style={{ position: "relative", height: 360, overflow: "hidden" }}
             >
               <img
-                src="/beats_bg.png"
+                src="/beats_bg.webp"
                 alt="Beats background"
+                fetchPriority="high"
+                decoding="async"
                 style={{
                   position: "absolute",
                   inset: 0,
@@ -1421,6 +1423,38 @@ export default function BeatMarketplace() {
           />
 
           {/* ── Grid ── */}
+          {catalogQuery.isError && (
+            <div
+              role="alert"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 16,
+                margin: "20px 0",
+                padding: "14px 16px",
+                border: "1px solid rgba(248,113,113,0.35)",
+                borderRadius: 8,
+                color: "#fecaca",
+              }}
+            >
+              <span>Beats could not be loaded.</span>
+              <button
+                onClick={() => catalogQuery.refetch()}
+                style={{
+                  padding: "7px 12px",
+                  border: "1px solid rgba(255,255,255,0.25)",
+                  borderRadius: 6,
+                  background: "transparent",
+                  color: "inherit",
+                  cursor: "pointer",
+                }}
+              >
+                Retry
+              </button>
+            </div>
+          )}
+
           {viewMode === "grid" ? (
             <div
               style={{
@@ -1494,6 +1528,8 @@ export default function BeatMarketplace() {
                       <img
                         src={beat.cover}
                         alt={beat.title}
+                        loading="lazy"
+                        decoding="async"
                         style={{
                           width: isMobile ? "100%" : 46,
                           height: isMobile ? 180 : 46,

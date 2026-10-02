@@ -312,7 +312,7 @@ const TestimonialsMarquee: React.FC = () => {
 
       <section
         style={{
-          backgroundImage: "url('/bg.png')",
+          backgroundImage: "url('/bg.webp')",
           backgroundSize: "cover",
           backgroundPosition: "center",
           backgroundRepeat: "no-repeat",

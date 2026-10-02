@@ -1,10 +1,15 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import Link from "next/link";
 import { useAppShell } from "./contexts/app-shell-context";
 
-const navLinks = ["Home", "Beat", "Services", "About"];
-
+const navLinks = [
+  { label: "Home", href: "/" },
+  { label: "Beat", href: "/beat" },
+  { label: "Services", href: "/services" },
+  { label: "About", href: "/about" },
+];
 
 export default function Header() {
   const router = useRouter();
@@ -24,7 +29,8 @@ export default function Header() {
     syncFromUrl();
     window.addEventListener("popstate", syncFromUrl);
     const handleSync = (event: Event) => {
-      const nextValue = (event as CustomEvent<{ value?: string }>).detail?.value ?? "";
+      const nextValue =
+        (event as CustomEvent<{ value?: string }>).detail?.value ?? "";
       setSearchVal(nextValue);
     };
     window.addEventListener("app-search-sync", handleSync);
@@ -38,7 +44,9 @@ export default function Header() {
   const submitSearch = (value?: string) => {
     const query = (value ?? searchVal).trim();
     setSearchVal(query);
-    window.dispatchEvent(new CustomEvent("app-search-sync", { detail: { value: query } }));
+    window.dispatchEvent(
+      new CustomEvent("app-search-sync", { detail: { value: query } }),
+    );
     if (!query) {
       router.push("/beat");
       return;
@@ -405,12 +413,8 @@ export default function Header() {
               cursor: "pointer",
             }}
           >
-            <span className="logo-text-accent">
-              Prabh
-            </span>
-            <span className="logo-text-white">
-              Musik
-            </span>
+            <span className="logo-text-accent">Prabh</span>
+            <span className="logo-text-white">Musik</span>
           </div>
 
           {/* ── Desktop Nav ── */}
@@ -425,32 +429,43 @@ export default function Header() {
             }}
           >
             {navLinks.map((link) => (
-              <button
-                key={link}
-                onClick={() => {
-                  if (link === "About") {
-                    router.push("/about");
-                  } else if (link === "Home") {
-                    router.push("/");
-                  } else if (link === "Services") {
-                    router.push("/services");
-                  } else if (link === "Beat") {
-                    router.push("/beat");
-                  }
-                }}
-                className={`nav-link${activeLink === link ? " active" : ""}`}
+              <Link
+                key={link.label}
+                href={link.href}
+                prefetch
+                aria-current={activeLink === link.label ? "page" : undefined}
+                className={`nav-link${activeLink === link.label ? " active" : ""}`}
               >
-                {link}
-              </button>
+                {link.label}
+              </Link>
             ))}
           </nav>
 
           <div className="desktop-header-actions">
             <button
               className="cart-btn"
-              onClick={() => { if (isAuthenticated) { openCart(); } else { router.push("/login"); } }}
+              onClick={() => {
+                if (isAuthenticated) {
+                  openCart();
+                } else {
+                  router.push("/login");
+                }
+              }}
             >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3h2l.4 2M7 13h10l3-8H6.4" /><circle cx="9" cy="20" r="1.5" /><circle cx="18" cy="20" r="1.5" /></svg>
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M3 3h2l.4 2M7 13h10l3-8H6.4" />
+                <circle cx="9" cy="20" r="1.5" />
+                <circle cx="18" cy="20" r="1.5" />
+              </svg>
               <span>Cart</span>
               <span className="cart-badge">{cart.length}</span>
             </button>
@@ -460,7 +475,22 @@ export default function Header() {
                 className="profile-btn"
                 onClick={() => router.push("/profile")}
               >
-                <span style={{ width: 24, height: 24, borderRadius: "50%", background: "linear-gradient(135deg, rgba(245, 158, 11, 0.4), rgba(217, 119, 6, 0.2))", border: "1px solid rgba(245, 158, 11, 0.4)", color: "#ffb84d", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700 }}>
+                <span
+                  style={{
+                    width: 24,
+                    height: 24,
+                    borderRadius: "50%",
+                    background:
+                      "linear-gradient(135deg, rgba(245, 158, 11, 0.4), rgba(217, 119, 6, 0.2))",
+                    border: "1px solid rgba(245, 158, 11, 0.4)",
+                    color: "#ffb84d",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 11,
+                    fontWeight: 700,
+                  }}
+                >
                   {user?.fullName?.charAt(0) || "P"}
                 </span>
                 Profile
@@ -468,7 +498,15 @@ export default function Header() {
             ) : (
               <>
                 {pathname === "/login" && (
-                  <span className="auth-helper-text" style={{ color: "rgba(255,255,255,0.5)", fontFamily: "'Inter', sans-serif", fontSize: "13px", marginRight: "4px" }}>
+                  <span
+                    className="auth-helper-text"
+                    style={{
+                      color: "rgba(255,255,255,0.5)",
+                      fontFamily: "'Inter', sans-serif",
+                      fontSize: "13px",
+                      marginRight: "4px",
+                    }}
+                  >
                     Need an account?
                   </span>
                 )}
@@ -477,7 +515,7 @@ export default function Header() {
                     className="login-btn"
                     onClick={() => router.push("/login")}
                     style={{
-                      marginRight: pathname === "/signup" ? "8px" : "0"
+                      marginRight: pathname === "/signup" ? "8px" : "0",
                     }}
                   >
                     Log in
@@ -485,7 +523,15 @@ export default function Header() {
                 )}
 
                 {pathname === "/signup" && (
-                  <span className="auth-helper-text" style={{ color: "rgba(255,255,255,0.5)", fontFamily: "'Inter', sans-serif", fontSize: "13px", marginRight: "4px" }}>
+                  <span
+                    className="auth-helper-text"
+                    style={{
+                      color: "rgba(255,255,255,0.5)",
+                      fontFamily: "'Inter', sans-serif",
+                      fontSize: "13px",
+                      marginRight: "4px",
+                    }}
+                  >
                     Already a member?
                   </span>
                 )}
@@ -505,7 +551,12 @@ export default function Header() {
               onClick={() => setMobileOpen((v) => !v)}
               aria-label="Toggle navigation menu"
             >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
                 {mobileOpen ? (
                   <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
                 ) : (
@@ -518,7 +569,13 @@ export default function Header() {
 
         <div className="desktop-search-row">
           <div className={`search-container${searchFocused ? " focused" : ""}`}>
-            <svg className="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="rgba(255,255,255,0.45)">
+            <svg
+              className="search-icon"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="rgba(255,255,255,0.45)"
+            >
               <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
             </svg>
             <input
@@ -529,7 +586,11 @@ export default function Header() {
               onChange={(e) => {
                 const nextValue = e.target.value;
                 setSearchVal(nextValue);
-                window.dispatchEvent(new CustomEvent("app-search-sync", { detail: { value: nextValue } }));
+                window.dispatchEvent(
+                  new CustomEvent("app-search-sync", {
+                    detail: { value: nextValue },
+                  }),
+                );
               }}
               onFocus={() => setSearchFocused(true)}
               onBlur={() => {
@@ -564,27 +625,28 @@ export default function Header() {
             }}
           >
             {navLinks.map((link) => (
-              <button
-                key={link}
-                onClick={() => {
-                  setMobileOpen(false);
-                  if (link === "About") {
-                    router.push("/about");
-                  } else if (link === "Home") {
-                    router.push("/");
-                  } else if (link === "Services") {
-                    router.push("/services");
-                  } else if (link === "Beat") {
-                    router.push("/beat");
-                  }
-                }}
-                className={`nav-link${activeLink === link ? " active" : ""}`}
+              <Link
+                key={link.label}
+                href={link.href}
+                prefetch
+                onClick={() => setMobileOpen(false)}
+                aria-current={activeLink === link.label ? "page" : undefined}
+                className={`nav-link${activeLink === link.label ? " active" : ""}`}
                 style={{ textAlign: "left", width: "fit-content" }}
               >
-                {link}
-              </button>
+                {link.label}
+              </Link>
             ))}
-            <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "12px", paddingTop: "12px", borderTop: "1px solid rgba(255, 255, 255, 0.08)" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "12px",
+                marginTop: "12px",
+                paddingTop: "12px",
+                borderTop: "1px solid rgba(255, 255, 255, 0.08)",
+              }}
+            >
               {isAuthenticated ? (
                 <>
                   <button

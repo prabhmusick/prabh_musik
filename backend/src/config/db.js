@@ -719,19 +719,19 @@ function init() {
                       return sqliteDb.exec(
                         `
                           INSERT INTO worked_with_artists (name, image, popular_song, music_type, worked_year)
-                          SELECT 'Karan Aujla', '/karan.png', 'Dont Look 2', 'Punjabi Trap', 2024
+                          SELECT 'Karan Aujla', '/karan.webp', 'Dont Look 2', 'Punjabi Trap', 2024
                           WHERE NOT EXISTS (SELECT 1 FROM worked_with_artists WHERE name = 'Karan Aujla');
                           INSERT INTO worked_with_artists (name, image, popular_song, music_type, worked_year)
-                          SELECT 'Sidhu Moose Wala', '/siddhu.png', 'Dont Look 2', 'Punjabi Trap', 2024
+                          SELECT 'Sidhu Moose Wala', '/siddhu.webp', 'Dont Look 2', 'Punjabi Trap', 2024
                           WHERE NOT EXISTS (SELECT 1 FROM worked_with_artists WHERE name = 'Sidhu Moose Wala');
                           INSERT INTO worked_with_artists (name, image, popular_song, music_type, worked_year)
-                          SELECT 'Ap Dhillon', '/ap.png', 'Dont Look 2', 'Punjabi Trap', 2024
+                          SELECT 'Ap Dhillon', '/ap.webp', 'Dont Look 2', 'Punjabi Trap', 2024
                           WHERE NOT EXISTS (SELECT 1 FROM worked_with_artists WHERE name = 'Ap Dhillon');
                           INSERT INTO worked_with_artists (name, image, popular_song, music_type, worked_year)
-                          SELECT 'Diljit Dosanjh', '/karan.png', 'Dont Look 2', 'Punjabi Trap', 2024
+                          SELECT 'Diljit Dosanjh', '/karan.webp', 'Dont Look 2', 'Punjabi Trap', 2024
                           WHERE NOT EXISTS (SELECT 1 FROM worked_with_artists WHERE name = 'Diljit Dosanjh');
                           INSERT INTO worked_with_artists (name, image, popular_song, music_type, worked_year)
-                          SELECT 'Shubh', '/siddhu.png', 'Dont Look 2', 'Punjabi Trap', 2024
+                          SELECT 'Shubh', '/siddhu.webp', 'Dont Look 2', 'Punjabi Trap', 2024
                           WHERE NOT EXISTS (SELECT 1 FROM worked_with_artists WHERE name = 'Shubh');
                           UPDATE worked_with_artists
                           SET popular_song = COALESCE(popular_song, 'Dont Look 2'),

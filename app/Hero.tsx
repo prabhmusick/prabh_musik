@@ -147,7 +147,7 @@ export default function HeroSection() {
           }}
         >
           <img
-            src="/hero.png"
+            src="/hero.webp"
             alt="Artist with Keyboard"
             style={{
               width: "90%",
@@ -157,7 +157,7 @@ export default function HeroSection() {
               filter: "drop-shadow(0 8px 44px #c8780a55)",
               userSelect: "none",
             }}
-	  />
+          />
         </div>
 
         {/* ══════════════════════════
@@ -173,11 +173,12 @@ export default function HeroSection() {
             maxWidth: "660px",
           }}
         >
-
           {/* ── H1 ── */}
           <h1
             style={{
-              fontFamily: fontsLoaded ? "'Jacques Francois', serif" : "Georgia, 'Times New Roman', serif",
+              fontFamily: fontsLoaded
+                ? "'Jacques Francois', serif"
+                : "Georgia, 'Times New Roman', serif",
               fontSize: "5.8rem",
               fontWeight: 400,
               color: "#fff",
@@ -188,7 +189,11 @@ export default function HeroSection() {
               letterSpacing: "0.01em",
             }}
           >
-            Industry<br />Ready beats for<br />Artist!
+            Industry
+            <br />
+            Ready beats for
+            <br />
+            Artist!
           </h1>
 
           {/* ── Subhead ── */}
@@ -220,7 +225,8 @@ export default function HeroSection() {
               animationDelay: "0.4s",
             }}
           >
-            Premium Trap, Drill, Punjabi, Emotional and commercial beats crafted for independent artists and labels
+            Premium Trap, Drill, Punjabi, Emotional and commercial beats crafted
+            for independent artists and labels
           </p>
 
           {/* ── CTA Button ── */}
@@ -240,7 +246,9 @@ export default function HeroSection() {
               letterSpacing: "0.01em",
               cursor: "pointer",
               marginTop: 8,
-              boxShadow: hovered ? "0 6px 18px #d4820a55" : "0 2px 8px #d4820a33",
+              boxShadow: hovered
+                ? "0 6px 18px #d4820a55"
+                : "0 2px 8px #d4820a33",
               transition: "background 0.2s, box-shadow 0.2s, transform 0.2s",
               animation: "fadeUp 0.7s ease both",
               animationDelay: "0.55s",

@@ -24,7 +24,7 @@ const artists: Artist[] = [
     album: "Dont Look 2",
     genre: "Punjabi Trap",
     year: "2024",
-    image: "/karan.png",
+    image: "/karan.webp",
     skinTone: "#c68642",
     clothColor: "#7B3A1A",
     clothColor2: "#5a2a10",
@@ -36,7 +36,7 @@ const artists: Artist[] = [
     album: "Dont Look 2",
     genre: "Punjabi Trap",
     year: "2024",
-    image: "/siddhu.png",
+    image: "/siddhu.webp",
     skinTone: "#b5763a",
     clothColor: "#1a2a4a",
     clothColor2: "#0f1e36",
@@ -48,7 +48,7 @@ const artists: Artist[] = [
     album: "Dont Look 2",
     genre: "Punjabi Trap",
     year: "2024",
-    image: "/ap.png",
+    image: "/ap.webp",
     skinTone: "#c09060",
     clothColor: "#1a1a3a",
     clothColor2: "#0f0f28",
@@ -493,7 +493,7 @@ export default function ArtistsWorkedWith() {
 
       <section
         style={{
-          backgroundImage: "url('/art_bg.png')",
+          backgroundImage: "url('/art_bg.webp')",
           backgroundSize: "cover",
           backgroundPosition: "center",
           backgroundRepeat: "no-repeat",
