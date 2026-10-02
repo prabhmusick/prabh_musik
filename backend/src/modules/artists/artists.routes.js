@@ -17,6 +17,12 @@ router.delete(
   requireAdmin,
   controller.deleteWorkedWithArtist,
 );
+router.patch(
+  "/worked-with/:id/visibility",
+  authMiddleware,
+  requireAdmin,
+  controller.updateWorkedWithArtistVisibility,
+);
 router.get("/", controller.listArtists);
 router.post("/", authMiddleware, requireAdmin, controller.createArtist);
 

@@ -567,6 +567,42 @@ function init() {
       )
       .then(() =>
         localD1Instance
+          .prepare(
+            "ALTER TABLE worked_with_artists ADD COLUMN show_on_mix_master INTEGER NOT NULL DEFAULT 0",
+          )
+          .run()
+          .catch((error) => {
+            if (!/duplicate column name/i.test(error.message || "")) {
+              throw error;
+            }
+          }),
+      )
+      .then(() =>
+        localD1Instance
+          .prepare(
+            "ALTER TABLE worked_with_artists ADD COLUMN show_on_lyrics INTEGER NOT NULL DEFAULT 0",
+          )
+          .run()
+          .catch((error) => {
+            if (!/duplicate column name/i.test(error.message || "")) {
+              throw error;
+            }
+          }),
+      )
+      .then(() =>
+        localD1Instance
+          .prepare(
+            "ALTER TABLE worked_with_artists ADD COLUMN show_on_marketing_distribution INTEGER NOT NULL DEFAULT 0",
+          )
+          .run()
+          .catch((error) => {
+            if (!/duplicate column name/i.test(error.message || "")) {
+              throw error;
+            }
+          }),
+      )
+      .then(() =>
+        localD1Instance
           .prepare("ALTER TABLE beats ADD COLUMN mood TEXT")
           .run()
           .catch((error) => {
@@ -635,7 +671,10 @@ function init() {
                 popular_song TEXT,
                 music_type TEXT,
                 worked_year INTEGER,
-                show_on_music_production INTEGER NOT NULL DEFAULT 0
+                show_on_music_production INTEGER NOT NULL DEFAULT 0,
+                show_on_mix_master INTEGER NOT NULL DEFAULT 0,
+                show_on_lyrics INTEGER NOT NULL DEFAULT 0,
+                show_on_marketing_distribution INTEGER NOT NULL DEFAULT 0
               )
             `,
             (createError) => {
@@ -666,6 +705,12 @@ function init() {
                     ["music_type", "TEXT"],
                     ["worked_year", "INTEGER"],
                     ["show_on_music_production", "INTEGER NOT NULL DEFAULT 0"],
+                    ["show_on_mix_master", "INTEGER NOT NULL DEFAULT 0"],
+                    ["show_on_lyrics", "INTEGER NOT NULL DEFAULT 0"],
+                    [
+                      "show_on_marketing_distribution",
+                      "INTEGER NOT NULL DEFAULT 0",
+                    ],
                   ].filter(([column]) => !existingColumns.has(column));
 
                   const addMissingColumn = () => {

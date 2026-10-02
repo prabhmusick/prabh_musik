@@ -11,10 +11,19 @@ import {
   createWorkedWithArtist,
   deleteWorkedWithArtist,
   getWorkedWithArtists,
+  updateWorkedWithArtistVisibility,
+  WorkedWithArtistVisibility,
 } from "../../../services/artist.service";
 import { useQueryClient } from "@tanstack/react-query";
 import { useQuery } from "@tanstack/react-query";
 import { getApiErrorMessage } from "../../../lib/api";
+
+const visibilityOptions = [
+  { key: "show_on_music_production", label: "Music Production" },
+  { key: "show_on_mix_master", label: "Mix and Master" },
+  { key: "show_on_lyrics", label: "Lyrics" },
+  { key: "show_on_marketing_distribution", label: "Marketing & Distribution" },
+] as const;
 
 export default function ArtistsPage() {
   const queryClient = useQueryClient();
@@ -36,11 +45,19 @@ export default function ArtistsPage() {
   const [workedWithMusicType, setWorkedWithMusicType] =
     React.useState("Punjabi Trap");
   const [workedWithYear, setWorkedWithYear] = React.useState("2024");
-  const [showOnMusicProduction, setShowOnMusicProduction] =
-    React.useState(false);
+  const [workedWithVisibility, setWorkedWithVisibility] =
+    React.useState<WorkedWithArtistVisibility>({
+      show_on_music_production: false,
+      show_on_mix_master: false,
+      show_on_lyrics: false,
+      show_on_marketing_distribution: false,
+    });
   const [workedWithSaving, setWorkedWithSaving] = React.useState(false);
   const [workedWithError, setWorkedWithError] = React.useState("");
   const [deletingWorkedWithId, setDeletingWorkedWithId] = React.useState<
+    number | null
+  >(null);
+  const [updatingVisibilityId, setUpdatingVisibilityId] = React.useState<
     number | null
   >(null);
 
@@ -74,7 +91,7 @@ export default function ArtistsPage() {
         popular_song: workedWithSong,
         music_type: workedWithMusicType,
         worked_year: Number(workedWithYear),
-        show_on_music_production: showOnMusicProduction,
+        ...workedWithVisibility,
       });
       await queryClient.invalidateQueries({
         queryKey: ["admin", "worked-with-artists"],
@@ -84,7 +101,12 @@ export default function ArtistsPage() {
       setWorkedWithSong("Dont Look 2");
       setWorkedWithMusicType("Punjabi Trap");
       setWorkedWithYear("2024");
-      setShowOnMusicProduction(false);
+      setWorkedWithVisibility({
+        show_on_music_production: false,
+        show_on_mix_master: false,
+        show_on_lyrics: false,
+        show_on_marketing_distribution: false,
+      });
     } catch (err: unknown) {
       setWorkedWithError(
         getApiErrorMessage(err, "Unable to add worked-with artist"),
@@ -95,7 +117,7 @@ export default function ArtistsPage() {
   };
 
   const removeWorkedWith = async (id: number) => {
-    if (!window.confirm("Remove this artist from the home page?")) return;
+    if (!window.confirm("Remove this worked-with artist?")) return;
 
     setDeletingWorkedWithId(id);
     setWorkedWithError("");
@@ -110,6 +132,38 @@ export default function ArtistsPage() {
       );
     } finally {
       setDeletingWorkedWithId(null);
+    }
+  };
+
+  const updateVisibility = async (
+    artistId: number,
+    key: keyof WorkedWithArtistVisibility,
+    checked: boolean,
+  ) => {
+    const artist = workedWithArtists.find((item) => item.id === artistId);
+    if (!artist) return;
+
+    const visibility: WorkedWithArtistVisibility = {
+      show_on_music_production: artist.showOnMusicProduction,
+      show_on_mix_master: artist.showOnMixMaster,
+      show_on_lyrics: artist.showOnLyrics,
+      show_on_marketing_distribution: artist.showOnMarketingDistribution,
+    };
+    visibility[key] = checked;
+
+    setUpdatingVisibilityId(artistId);
+    setWorkedWithError("");
+    try {
+      await updateWorkedWithArtistVisibility(artistId, visibility);
+      await queryClient.invalidateQueries({
+        queryKey: ["admin", "worked-with-artists"],
+      });
+    } catch (err: unknown) {
+      setWorkedWithError(
+        getApiErrorMessage(err, "Unable to update artist visibility"),
+      );
+    } finally {
+      setUpdatingVisibilityId(null);
     }
   };
 
@@ -195,7 +249,7 @@ export default function ArtistsPage() {
             Artists I Have Worked With
           </h2>
           <p className="mt-1 text-sm text-neutral-400">
-            These artists appear in the home page section.
+            Choose which service pages feature each artist.
           </p>
         </div>
 
@@ -238,16 +292,29 @@ export default function ArtistsPage() {
             onUploadComplete={setWorkedWithImage}
             type="image"
           />
-          <label className="flex items-center gap-2 text-sm text-neutral-300 md:col-span-2">
-            <input
-              type="checkbox"
-              checked={showOnMusicProduction}
-              onChange={(event) =>
-                setShowOnMusicProduction(event.target.checked)
-              }
-            />
-            Show on Music Production page
-          </label>
+          <fieldset className="grid gap-3 md:col-span-2 md:grid-cols-2">
+            <legend className="mb-2 text-sm font-medium text-neutral-300">
+              Show on service pages
+            </legend>
+            {visibilityOptions.map((option) => (
+              <label
+                key={option.key}
+                className="flex items-center gap-2 text-sm text-neutral-300"
+              >
+                <input
+                  type="checkbox"
+                  checked={workedWithVisibility[option.key]}
+                  onChange={(event) =>
+                    setWorkedWithVisibility((current) => ({
+                      ...current,
+                      [option.key]: event.target.checked,
+                    }))
+                  }
+                />
+                Show on {option.label} page
+              </label>
+            ))}
+          </fieldset>
           {workedWithError && (
             <p className="text-sm text-red-400 md:col-span-2">
               {workedWithError}
@@ -258,7 +325,7 @@ export default function ArtistsPage() {
             disabled={workedWithSaving}
             className="md:col-span-2"
           >
-            {workedWithSaving ? "Saving..." : "Add to Home Page"}
+            {workedWithSaving ? "Saving..." : "Add Worked-With Artist"}
           </Button>
         </form>
 
@@ -269,7 +336,7 @@ export default function ArtistsPage() {
             {workedWithArtists.map((artist) => (
               <div
                 key={artist.id}
-                className="flex items-center justify-between gap-3 rounded-lg border border-card-border p-3"
+                className="flex flex-col gap-3 rounded-lg border border-card-border p-3"
               >
                 <div className="flex min-w-0 items-center gap-3">
                   <img
@@ -277,26 +344,60 @@ export default function ArtistsPage() {
                     alt={artist.name}
                     className="h-12 w-12 rounded-full object-cover"
                   />
-                  <p className="truncate font-semibold text-white">
-                    {artist.name}
-                  </p>
-                  <p className="truncate text-xs text-neutral-400">
-                    {artist.popularSong} · {artist.musicType} ·{" "}
-                    {artist.workedYear}
-                  </p>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-semibold text-white">
+                      {artist.name}
+                    </p>
+                    <p className="truncate text-xs text-neutral-400">
+                      {artist.popularSong} · {artist.musicType} ·{" "}
+                      {artist.workedYear}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={deletingWorkedWithId === artist.id}
+                    onClick={() => removeWorkedWith(artist.id)}
+                    className="shrink-0 border-red-500/20 text-red-400 hover:border-red-500/40 hover:bg-red-500/5 hover:text-red-300"
+                  >
+                    {deletingWorkedWithId === artist.id
+                      ? "Removing..."
+                      : "Remove"}
+                  </Button>
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={deletingWorkedWithId === artist.id}
-                  onClick={() => removeWorkedWith(artist.id)}
-                  className="shrink-0 border-red-500/20 text-red-400 hover:border-red-500/40 hover:bg-red-500/5 hover:text-red-300"
-                >
-                  {deletingWorkedWithId === artist.id
-                    ? "Removing..."
-                    : "Remove"}
-                </Button>
+                <div className="grid gap-2 border-t border-card-border pt-3 sm:grid-cols-2">
+                  {visibilityOptions.map((option) => {
+                    const checked = {
+                      show_on_music_production: artist.showOnMusicProduction,
+                      show_on_mix_master: artist.showOnMixMaster,
+                      show_on_lyrics: artist.showOnLyrics,
+                      show_on_marketing_distribution:
+                        artist.showOnMarketingDistribution,
+                    }[option.key];
+
+                    return (
+                      <label
+                        key={option.key}
+                        className="flex items-center gap-2 text-xs text-neutral-300"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          disabled={updatingVisibilityId === artist.id}
+                          onChange={(event) =>
+                            updateVisibility(
+                              artist.id,
+                              option.key,
+                              event.target.checked,
+                            )
+                          }
+                        />
+                        {option.label}
+                      </label>
+                    );
+                  })}
+                </div>
               </div>
             ))}
           </div>

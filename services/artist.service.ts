@@ -9,6 +9,16 @@ export interface WorkedWithArtist {
   musicType: string;
   workedYear: string;
   showOnMusicProduction: boolean;
+  showOnMixMaster: boolean;
+  showOnLyrics: boolean;
+  showOnMarketingDistribution: boolean;
+}
+
+export interface WorkedWithArtistVisibility {
+  show_on_music_production: boolean;
+  show_on_mix_master: boolean;
+  show_on_lyrics: boolean;
+  show_on_marketing_distribution: boolean;
 }
 
 export async function getArtists(): Promise<Artist[]> {
@@ -28,8 +38,22 @@ export async function createWorkedWithArtist(data: {
   music_type: string;
   worked_year: number;
   show_on_music_production: boolean;
+  show_on_mix_master: boolean;
+  show_on_lyrics: boolean;
+  show_on_marketing_distribution: boolean;
 }): Promise<WorkedWithArtist> {
   const response = await api.post("/artists/worked-with", data);
+  return response.data.data;
+}
+
+export async function updateWorkedWithArtistVisibility(
+  id: number,
+  visibility: WorkedWithArtistVisibility,
+): Promise<WorkedWithArtist> {
+  const response = await api.patch(
+    `/artists/worked-with/${id}/visibility`,
+    visibility,
+  );
   return response.data.data;
 }
 

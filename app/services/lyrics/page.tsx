@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { getLyrics } from "../../../services/lyrics.service";
+import { WorkedWithArtistsSection } from "../../../components/services/WorkedWithArtistsSection";
 
 const DEFAULT_COMMISSIONS = [
   {
@@ -1308,6 +1309,8 @@ export default function LyricsPage() {
       </section>
 
       <div className="divider" />
+
+      <WorkedWithArtistsSection visibility="showOnLyrics" />
 
       {/* CONTACT */}
       <section className="contact-section" id="contact">

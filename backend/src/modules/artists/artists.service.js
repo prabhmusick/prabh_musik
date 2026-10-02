@@ -39,6 +39,9 @@ const toWorkedWithDto = (artist) => ({
   musicType: artist.music_type || "",
   workedYear: artist.worked_year ? String(artist.worked_year) : "",
   showOnMusicProduction: Boolean(artist.show_on_music_production),
+  showOnMixMaster: Boolean(artist.show_on_mix_master),
+  showOnLyrics: Boolean(artist.show_on_lyrics),
+  showOnMarketingDistribution: Boolean(artist.show_on_marketing_distribution),
 });
 
 const listWorkedWithArtists = async () =>
@@ -53,6 +56,10 @@ const createWorkedWithArtist = async (input) => {
     typeof input?.music_type === "string" ? input.music_type.trim() : "";
   const workedYear = Number(input?.worked_year);
   const showOnMusicProduction = input?.show_on_music_production === true;
+  const showOnMixMaster = input?.show_on_mix_master === true;
+  const showOnLyrics = input?.show_on_lyrics === true;
+  const showOnMarketingDistribution =
+    input?.show_on_marketing_distribution === true;
 
   if (!name) throw new AppError("Artist name is required.", 400);
   if (!image) throw new AppError("Artist image is required.", 400);
@@ -71,6 +78,9 @@ const createWorkedWithArtist = async (input) => {
         musicType,
         workedYear,
         showOnMusicProduction,
+        showOnMixMaster,
+        showOnLyrics,
+        showOnMarketingDistribution,
       }),
     );
   } catch (error) {
@@ -91,6 +101,33 @@ const removeWorkedWithArtist = async (id) => {
   if (!result.meta?.changes) {
     throw new AppError("Worked-with artist not found.", 404);
   }
+};
+
+const updateWorkedWithArtistVisibility = async (id, input) => {
+  const numericId = Number(id);
+  if (!Number.isInteger(numericId) || numericId < 1) {
+    throw new AppError("Invalid artist id.", 400);
+  }
+
+  const visibility = {
+    showOnMusicProduction: input?.show_on_music_production,
+    showOnMixMaster: input?.show_on_mix_master,
+    showOnLyrics: input?.show_on_lyrics,
+    showOnMarketingDistribution: input?.show_on_marketing_distribution,
+  };
+  if (Object.values(visibility).some((value) => typeof value !== "boolean")) {
+    throw new AppError("All service visibility values must be boolean.", 400);
+  }
+
+  const result = await repository.updateWorkedWithVisibility(
+    numericId,
+    visibility,
+  );
+  if (!result.meta?.changes) {
+    throw new AppError("Worked-with artist not found.", 404);
+  }
+
+  return toWorkedWithDto(await repository.findWorkedWithById(numericId));
 };
 
 const createArtist = async (input) => {
@@ -116,6 +153,7 @@ module.exports = {
   listWorkedWithArtists,
   createWorkedWithArtist,
   removeWorkedWithArtist,
+  updateWorkedWithArtistVisibility,
   createArtist,
   toDto,
 };
