@@ -23,6 +23,7 @@ export function mapUserDto(dto: BackendUserDto): UserProfile {
     fullName: dto.name,
     username: dto.name.toLowerCase().replace(/\s+/g, "_"),
     email: dto.email,
+    role: dto.role,
     avatar: dto.avatar_url || undefined,
   };
 }

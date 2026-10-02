@@ -1,16 +1,37 @@
 "use client"
 
 import * as React from "react"
+import { useRouter } from "next/navigation"
 import { AdminSidebar } from "../../components/admin/AdminSidebar"
 import { AdminHeader } from "../../components/admin/AdminHeader"
+import { useCurrentUser } from "../../hooks/useCurrentUser"
 
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const router = useRouter()
+  const { data: user, isError, isLoading } = useCurrentUser()
   const [isCollapsed, setIsCollapsed] = React.useState(false)
   const [isMobileOpen, setIsMobileOpen] = React.useState(false)
+
+  React.useEffect(() => {
+    if (isLoading || isError) return
+    if (!user) {
+      router.replace("/login")
+    } else if (user.role !== "admin") {
+      router.replace("/")
+    }
+  }, [isError, isLoading, router, user])
+
+  if (isLoading || isError || !user || user.role !== "admin") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background text-foreground" role="status">
+        {isError ? "Unable to verify administrator access." : "Checking administrator access..."}
+      </div>
+    )
+  }
 
   return (
     <div className="flex h-screen overflow-hidden bg-background text-foreground">
