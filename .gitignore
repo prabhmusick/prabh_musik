@@ -67,9 +67,7 @@ Thumbs.db
 # Backend
 backend/node_modules/
 
-# Local database
-
-
-# Environment
-backend/.env
+# Wrangler
+backend/.wrangler/
+.wrangler/
 

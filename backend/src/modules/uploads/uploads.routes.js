@@ -2,8 +2,12 @@ const express = require("express");
 const multer = require("multer");
 const controller = require("./uploads.controller");
 const catchAsync = require("../../utils/catchAsync");
+const authMiddleware = require("../../middleware/auth.middleware");
+const { requireAdmin } = require("../../middleware/role.middleware");
 
 const router = express.Router();
+
+router.use(authMiddleware, requireAdmin);
 
 // Configure multer to hold files in memory before forwarding to R2 storage
 const upload = multer({

@@ -97,10 +97,35 @@ if (trustProxyVal) {
 // Global correlation tracing at the very top of the stack
 app.use(requestIdMiddleware);
 
+const authMiddleware = require("./middleware/auth.middleware");
+
+// Fail-fast environment check in production
+if (process.env.NODE_ENV === "production") {
+  if (!process.env.JWT_ACCESS_SECRET || process.env.JWT_ACCESS_SECRET.includes("change_me")) {
+    throw new Error("FATAL CONFIGURATION ERROR: Production JWT_ACCESS_SECRET must be set securely.");
+  }
+  if (!process.env.JWT_REFRESH_SECRET || process.env.JWT_REFRESH_SECRET.includes("change_me")) {
+    throw new Error("FATAL CONFIGURATION ERROR: Production JWT_REFRESH_SECRET must be set securely.");
+  }
+}
+
 // Standard JSON body limits to mitigate DoS payloads
 app.use(express.json({ limit: "10kb" }));
 app.use(cookieParser());
-app.use(cors());
+
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || "http://localhost:3000,http://localhost:5005,https://www.prabhmusik.com,https://prabhmusik.com").split(",");
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== "production") {
+      return callback(null, true);
+    }
+    return callback(new Error("CORS policy violation: Origin not allowed"));
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Range"]
+}));
+
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" }
@@ -127,7 +152,7 @@ app.use("/api/users", usersRouter);
 app.use("/api/orders", ordersRouter);
 app.use("/api/ownerships", ownershipsRouter);
 app.use("/api/downloads", downloadsRouter);
-app.get("/api/me/library", ownershipsController.getLibraryByUser);
+app.get("/api/me/library", authMiddleware, ownershipsController.getLibraryByUser);
 
 // Register standardized global error handling middleware as the last handler
 app.use(errorHandler);

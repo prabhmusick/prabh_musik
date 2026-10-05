@@ -40,6 +40,36 @@ const deleteFile = async (key) => {
 };
 
 /**
+ * Streams a file key from R2. Supports HTTP range requests.
+ *
+ * @param {string} key - Storage object key
+ * @param {string|null} rangeHeader - Range header string (e.g. bytes=0-1024)
+ * @returns {Promise<{stream: ReadableStream, contentType: string, contentLength: number, contentRange: string, statusCode: number}>}
+ */
+const streamFile = async (key, rangeHeader = null) => {
+  const commandInput = {
+    Bucket: process.env.R2_BUCKET,
+    Key: key,
+  };
+
+  if (rangeHeader) {
+    commandInput.Range = rangeHeader;
+  }
+
+  const command = new GetObjectCommand(commandInput);
+  const response = await r2.send(command);
+
+  return {
+    stream: response.Body,
+    contentType: response.ContentType || "application/octet-stream",
+    contentLength: response.ContentLength,
+    contentRange: response.ContentRange,
+    acceptRanges: response.AcceptRanges || "bytes",
+    statusCode: rangeHeader && response.ContentRange ? 206 : 200,
+  };
+};
+
+/**
  * Downloads a file key from R2 and converts its readable stream to a Buffer.
  * Useful for serving media files through API streams.
  * 
@@ -95,5 +125,6 @@ module.exports = {
   uploadFile,
   deleteFile,
   getFile,
+  streamFile,
   listFiles
 };

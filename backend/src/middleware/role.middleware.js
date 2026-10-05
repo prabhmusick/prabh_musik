@@ -1,9 +1,6 @@
-/**
- * @fileoverview Role-Based Authorization Middleware Skeleton
- * Declares checks to gate access based on authorization status.
- */
-
 const AppError = require("../errors/AppError");
+const ERROR_CODES = require("../config/errorCodes");
+const { USER_ROLES } = require("../config/constants");
 
 /**
  * Ensures the authenticated user's role is Admin.
@@ -12,23 +9,36 @@ const AppError = require("../errors/AppError");
  * @param {import('express').Response} res - The Express response object.
  * @param {import('express').NextFunction} next - The Express next middleware callback.
  * @returns {void}
- * @throws {AppError} Not implemented error (501).
  */
 const requireAdmin = (req, res, next) => {
-  return next(new AppError("Not implemented", 501));
+  if (!req.user) {
+    const err = new AppError("Authentication required.", 401);
+    err.errorCode = ERROR_CODES.UNAUTHORIZED;
+    return next(err);
+  }
+  if (req.user.role !== USER_ROLES.ADMIN) {
+    const err = new AppError("Access denied. Admin privileges required.", 403);
+    err.errorCode = ERROR_CODES.FORBIDDEN;
+    return next(err);
+  }
+  next();
 };
 
 /**
- * Ensures the authenticated user's role is Customer.
+ * Ensures the user is authenticated.
  *
  * @param {import('express').Request} req - The Express request object.
  * @param {import('express').Response} res - The Express response object.
  * @param {import('express').NextFunction} next - The Express next middleware callback.
  * @returns {void}
- * @throws {AppError} Not implemented error (501).
  */
 const requireCustomer = (req, res, next) => {
-  return next(new AppError("Not implemented", 501));
+  if (!req.user) {
+    const err = new AppError("Authentication required.", 401);
+    err.errorCode = ERROR_CODES.UNAUTHORIZED;
+    return next(err);
+  }
+  next();
 };
 
 module.exports = {

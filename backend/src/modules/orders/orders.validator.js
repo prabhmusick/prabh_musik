@@ -14,15 +14,6 @@ const validateCreateOrder = (data) => {
     throw new AppError("No data provided", 400);
   }
 
-  const rawCust = String(data.customerId || "").trim();
-  if (!/^\d+$/.test(rawCust)) {
-    throw new AppError("Invalid or missing customerId", 400);
-  }
-  const customerId = parseInt(rawCust, 10);
-  if (customerId <= 0) {
-    throw new AppError("Invalid or missing customerId", 400);
-  }
-
   if (!Array.isArray(data.beatIds) || data.beatIds.length === 0) {
     throw new AppError("beatIds must be a non-empty array", 400);
   }
@@ -39,20 +30,13 @@ const validateCreateOrder = (data) => {
     return parsedId;
   });
 
-  const paymentMethod = cleanString(data.paymentMethod) || "credit_card";
+  const paymentMethod = cleanString(data.paymentMethod) || "razorpay";
   
-  let status = cleanString(data.status) ? cleanString(data.status).toLowerCase() : "pending";
-  // Support UI's 'COMPLETED' by mapping it to 'paid'
-  if (status === "completed") {
-    status = "paid";
-  }
-
-  if (!STATUS_WHITELIST.includes(status)) {
-    throw new AppError(`Invalid status. Must be one of: ${STATUS_WHITELIST.join(", ")}`, 400);
-  }
+  // Security Hardening: Initial order status MUST ALWAYS be pending upon creation.
+  // Payment completion can only be achieved via server-side payment verification.
+  const status = "pending";
 
   return {
-    customerId,
     beatIds,
     paymentMethod,
     status

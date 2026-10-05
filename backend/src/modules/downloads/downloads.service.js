@@ -5,14 +5,22 @@ const storageService = require("../../storage/storage.service");
 const downloadConfig = require("../../config/download.config");
 const AppError = require("../../errors/AppError");
 
+const usersRepository = require("../users/users.repository");
+
 /**
  * Request secure short-lived download token
  */
-const requestDownloadToken = async (userId, ownershipId) => {
+const requestDownloadToken = async (user, ownershipId) => {
+  const userId = typeof user === "object" ? user.id : user;
+  const userRole = typeof user === "object" ? user.role : "customer";
+
   // 1. Verify ownership validity & authorization
   const ownership = await ownershipsService.isOwnershipValid(ownershipId);
-  if (ownership.user_id !== userId) {
-    throw new AppError("Unauthorized access to ownership asset", 403);
+  const customer = (await usersRepository.getUserById(userId)) || (await usersRepository.findUserByPublicId(userId));
+  const customerId = customer ? customer.id : userId;
+
+  if (userRole !== "admin" && Number(ownership.user_id) !== Number(customerId)) {
+    throw new AppError("Access denied. You do not own this digital asset.", 403);
   }
 
   // 2. Concurrency duplicate checks: find existing active unexpired token

@@ -11,7 +11,10 @@ const getUser = async (id) => {
     throw new AppError("User ID is required", 400);
   }
 
-  const user = await repository.getUserById(id);
+  let user = await repository.getUserById(id);
+  if (!user) {
+    user = await repository.findUserByPublicId(id);
+  }
   if (!user) {
     throw new AppError("User not found", 404);
   }

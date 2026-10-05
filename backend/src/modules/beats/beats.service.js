@@ -102,6 +102,16 @@ const getAllBeats = async () => {
 };
 
 /**
+ * Fetches paginated and filtered beats from database
+ *
+ * @param {object} options - Query parameters (page, limit, search, genre, mood, etc.)
+ * @returns {Promise<object>} Paginated result structure
+ */
+const getBeatsPaginated = async (options = {}) => {
+  return repository.getBeatsPaginated(options);
+};
+
+/**
  * Updates properties of a beat record.
  * Automatically regenerates unique SEO slugs if the name has changed.
  *
@@ -180,6 +190,36 @@ const getBeatObject = async (key) => {
 };
 
 /**
+ * Streams a stored beat object (audio/image) supporting HTTP range requests.
+ *
+ * @param {string} key - Storage object key
+ * @param {string|null} rangeHeader - Range header string
+ */
+const getBeatObjectStream = async (key, rangeHeader = null) => {
+  if (!key) {
+    throw new AppError("Object key is required", 400);
+  }
+
+  const decodedKey = decodeURIComponent(key);
+
+  try {
+    return await r2Service.streamFile(decodedKey, rangeHeader);
+  } catch (err) {
+    if (
+      err.statusCode === 404 ||
+      err.name === "NoSuchKey" ||
+      err.Code === "NoSuchKey" ||
+      err.code === "NoSuchKey" ||
+      (err.message && err.message.toLowerCase().includes("not found"))
+    ) {
+      throw new AppError("Object not found in storage", 404);
+    }
+
+    throw new AppError("Storage asset unavailable", 404);
+  }
+};
+
+/**
  * Handles beat changes after successful order payment fulfillment
  */
 const handleOrderFulfillment = async (order, tx) => {
@@ -198,8 +238,10 @@ module.exports = {
   createBeat,
   getBeat,
   getAllBeats,
+  getBeatsPaginated,
   updateBeat,
   archiveBeat,
   getBeatObject,
+  getBeatObjectStream,
   handleOrderFulfillment,
 };

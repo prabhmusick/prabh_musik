@@ -124,10 +124,10 @@ const getBeatById = async (id) => {
     SELECT 
       ${BEAT_COLUMNS}
     FROM beats 
-    WHERE id = ? 
+    WHERE (id = ? OR public_id = ?) 
       AND status != 'archived'
   `;
-  return get(sql, [id]);
+  return get(sql, [id, id]);
 };
 
 /**
@@ -218,6 +218,79 @@ const getAllBeats = async () => {
 };
 
 /**
+ * Fetches paginated & filtered beat records using SQL parameters.
+ */
+const getBeatsPaginated = async ({
+  page = 1,
+  limit = 20,
+  search = "",
+  genre = null,
+  mood = null,
+  minPrice = null,
+  maxPrice = null,
+} = {}) => {
+  const pageNum = Math.max(1, parseInt(page, 10) || 1);
+  const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
+  const offset = (pageNum - 1) * limitNum;
+
+  const conditions = ["status != 'archived'"];
+  const params = [];
+
+  if (search && String(search).trim()) {
+    conditions.push("(beat_name LIKE ? OR genre LIKE ? OR mood LIKE ?)");
+    const term = `%${String(search).trim()}%`;
+    params.push(term, term, term);
+  }
+
+  if (genre && String(genre).trim()) {
+    conditions.push("genre = ?");
+    params.push(String(genre).trim());
+  }
+
+  if (mood && String(mood).trim()) {
+    conditions.push("mood = ?");
+    params.push(String(mood).trim());
+  }
+
+  if (minPrice !== null && minPrice !== undefined && minPrice !== "" && !isNaN(minPrice)) {
+    conditions.push("price >= ?");
+    params.push(Number(minPrice));
+  }
+
+  if (maxPrice !== null && maxPrice !== undefined && maxPrice !== "" && !isNaN(maxPrice)) {
+    conditions.push("price <= ?");
+    params.push(Number(maxPrice));
+  }
+
+  const whereClause = conditions.join(" AND ");
+
+  const countSql = `SELECT COUNT(*) as total FROM beats WHERE ${whereClause}`;
+  const countRow = await get(countSql, params);
+  const total = countRow ? countRow.total : 0;
+  const totalPages = Math.ceil(total / limitNum);
+
+  const dataSql = `
+    SELECT 
+      ${BEAT_COLUMNS}
+    FROM beats 
+    WHERE ${whereClause}
+    ORDER BY created_at DESC
+    LIMIT ? OFFSET ?
+  `;
+  const data = await all(dataSql, [...params, limitNum, offset]);
+
+  return {
+    data,
+    pagination: {
+      page: pageNum,
+      limit: limitNum,
+      total,
+      totalPages,
+    },
+  };
+};
+
+/**
  * Updates properties of a beat record dynamically
  * 
  * @param {number|string} id - Beat ID to update
@@ -299,6 +372,7 @@ module.exports = {
   getBeatById,
   existsBySlug,
   getAllBeats,
+  getBeatsPaginated,
   updateBeat,
   archiveBeat,
   updateSellingStatus

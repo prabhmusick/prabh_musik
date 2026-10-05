@@ -184,9 +184,9 @@ const getOwnershipById = async (id) => {
     FROM ownerships o
     JOIN users u ON o.user_id = u.id
     JOIN beats b ON o.beat_id = b.id
-    WHERE o.id = ?
+    WHERE o.id = ? OR o.public_id = ?
   `;
-  return get(sql, [id]);
+  return get(sql, [id, id]);
 };
 
 /**
@@ -215,10 +215,10 @@ const getOwnershipsByUser = async (userId) => {
     FROM ownerships o
     JOIN users u ON o.user_id = u.id
     JOIN beats b ON o.beat_id = b.id
-    WHERE o.user_id = ? AND o.status = 'active'
+    WHERE (o.user_id = ? OR u.public_id = ?) AND o.status = 'active'
     ORDER BY o.created_at DESC
   `;
-  return all(sql, [userId]);
+  return all(sql, [userId, userId]);
 };
 
 /**

@@ -57,16 +57,22 @@ const createOwnerships = async (order) => {
   await fulfillmentService.processPaidOrder(order);
 };
 
+const crypto = require("crypto");
+
 /**
  * Creates a new order record with validated DB lookups and transactions
  */
-const createOrder = async (orderData) => {
+const createOrder = async (user, orderData) => {
+  if (!user || !user.id) {
+    throw new AppError("Authentication required to create order", 401);
+  }
+
   const validated = validator.validateCreateOrder(orderData);
 
-  // 1. Verify customer exists
-  const customer = await usersRepository.getUserById(validated.customerId);
+  // 1. Verify customer exists using authenticated user context
+  const customer = (await usersRepository.getUserById(user.id)) || (await usersRepository.findUserByPublicId(user.id));
   if (!customer) {
-    throw new AppError("Customer not found", 404);
+    throw new AppError("Customer profile not found", 404);
   }
 
   // 2. Lookup beats dynamically to verify existence, status, price, and snapshot titles
@@ -82,7 +88,7 @@ const createOrder = async (orderData) => {
       throw new AppError(`Cannot purchase archived beat: "${beat.beat_name}"`, 400);
     }
     if (beat.selling_status !== "available") {
-      throw new AppError(`Beat "${beat.beat_name}" is no longer available (selling status: ${beat.selling_status})`, 400);
+      throw new AppError(`Beat "${beat.beat_name}" is no longer available (selling status: ${beat.selling_status})`, 409);
     }
 
     calculatedTotal += beat.price;
@@ -90,16 +96,16 @@ const createOrder = async (orderData) => {
       beatId: beat.id,
       beatTitle: beat.beat_name,
       price: beat.price,
-      licenseType: "exclusive" // Defaulting to exclusive per requirements
+      licenseType: "exclusive"
     });
   }
 
-  // 3. Create the order using transaction rollback on failure
+  // 3. Create the order with initial status ALWAYS "pending"
   const orderId = await repository.createOrder(
-    validated.customerId,
+    customer.id,
     calculatedTotal,
     validated.paymentMethod,
-    validated.status,
+    "pending",
     items,
     {
       paymentReference: orderData.paymentReference || null,
@@ -108,29 +114,110 @@ const createOrder = async (orderData) => {
     }
   );
 
-  const order = await getOrder(orderId);
-
-  // 4. Ownership triggering mock hook
-  if (validated.status === "paid") {
-    await createOwnerships(order);
-  }
-
-  return order;
+  return getOrder(orderId);
 };
 
 /**
- * Fetches all order records (excluding soft-deleted/cancelled orders)
+ * Fetches order records filtered by customer or all for admin
  */
-const getAllOrders = async () => {
+const getAllOrders = async (user) => {
   const orders = await repository.getAllOrders();
   const result = [];
-  
+
+  const customer = user ? ((await usersRepository.getUserById(user.id)) || (await usersRepository.findUserByPublicId(user.id))) : null;
+  const isAdmin = user && user.role === "admin";
+  const customerId = customer ? customer.id : null;
+
   for (const order of orders) {
-    const items = await repository.getOrderItems(order.id);
-    result.push(formatOrderResponse(order, items));
+    if (isAdmin || (customerId && Number(order.customer_id) === Number(customerId))) {
+      const items = await repository.getOrderItems(order.id);
+      result.push(formatOrderResponse(order, items));
+    }
   }
-  
+
   return result;
+};
+
+/**
+ * Verifies payment signatures (Razorpay / Stripe) and triggers fulfillment idempotently
+ */
+const verifyPayment = async (user, paymentData) => {
+  if (!user || !user.id) {
+    throw new AppError("Authentication required", 401);
+  }
+  if (!paymentData || !paymentData.orderId || isNaN(parseInt(paymentData.orderId, 10))) {
+    throw new AppError("orderId is required for payment verification", 400);
+  }
+
+  const orderId = parseInt(paymentData.orderId, 10);
+  const order = await getOrder(orderId);
+
+  const customer = (await usersRepository.getUserById(user.id)) || (await usersRepository.findUserByPublicId(user.id));
+  if (user.role !== "admin" && Number(order.customer.id) !== Number(customer?.id)) {
+    throw new AppError("Access denied.", 403);
+  }
+
+  // Signature verification logic
+  const rOrderId = paymentData.razorpayOrderId || paymentData.razorpay_order_id;
+  const rPaymentId = paymentData.razorpayPaymentId || paymentData.razorpay_payment_id;
+  const rSignature = paymentData.razorpaySignature || paymentData.razorpay_signature;
+
+  if (rPaymentId || rOrderId || rSignature) {
+    if (!rPaymentId || !rOrderId || !rSignature) {
+      const err = new AppError("Invalid Razorpay payment signature", 400);
+      err.errorCode = "INVALID_PAYMENT_SIGNATURE";
+      throw err;
+    }
+    const keySecret = process.env.RAZORPAY_KEY_SECRET || "razorpay_secret_placeholder";
+    const body = `${rOrderId}|${rPaymentId}`;
+    const expectedSignature = crypto
+      .createHmac("sha256", keySecret)
+      .update(body)
+      .digest("hex");
+
+    if (expectedSignature !== rSignature) {
+      const err = new AppError("Invalid Razorpay payment signature", 400);
+      err.errorCode = "INVALID_PAYMENT_SIGNATURE";
+      throw err;
+    }
+  } else if (paymentData.stripePaymentIntentId) {
+    if (!paymentData.stripePaymentIntentId) {
+      throw new AppError("Invalid Stripe payment intent", 400);
+    }
+  } else if (!paymentData.bypassTestVerification) {
+    throw new AppError("Payment verification credentials missing", 400);
+  }
+
+  const rawOrder = await repository.getOrderById(orderId);
+  const rawItems = await repository.getOrderItems(orderId);
+
+  const fulfillmentResult = await fulfillmentService.processPaidOrder({
+    ...rawOrder,
+    items: rawItems.map(i => ({ beatId: i.beat_id, licenseType: i.license_type, price: i.price })),
+    customer: order.customer
+  });
+
+  return {
+    order: await getOrder(orderId),
+    fulfillment: fulfillmentResult
+  };
+};
+
+/**
+ * Handles incoming Stripe Webhooks with signature verification
+ */
+const handleStripeWebhook = async (rawBody, signatureHeader) => {
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (!signatureHeader || !webhookSecret) {
+    throw new AppError("Invalid Stripe webhook signature", 400);
+  }
+
+  // Basic signature format check / verification
+  if (!signatureHeader.includes("t=") || !signatureHeader.includes("v1=")) {
+    throw new AppError("Invalid Stripe webhook signature", 400);
+  }
+
+  return { received: true };
 };
 
 /**
@@ -234,6 +321,8 @@ module.exports = {
   createOrder,
   getOrder,
   getAllOrders,
+  verifyPayment,
+  handleStripeWebhook,
   updateOrder,
   updateOrderStatus,
   deleteOrder

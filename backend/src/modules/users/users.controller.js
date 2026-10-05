@@ -1,4 +1,5 @@
 const service = require("./users.service");
+const AppError = require("../../errors/AppError");
 
 /**
  * Creates a new user record (HTTP 201)
@@ -13,7 +14,7 @@ const createUser = async (req, res) => {
 };
 
 /**
- * Lists all users
+ * Lists all users (Admin only)
  * GET /api/users
  */
 const getAllUsers = async (req, res) => {
@@ -26,11 +27,20 @@ const getAllUsers = async (req, res) => {
 };
 
 /**
- * Retrieves a single user by ID
+ * Retrieves a single user by ID (Self or Admin)
  * GET /api/users/:id
  */
 const getUser = async (req, res) => {
-  const user = await service.getUser(req.params.id);
+  const targetId = req.params.id;
+  const user = await service.getUser(targetId);
+
+  // Self or admin check
+  if (req.user.role !== "admin") {
+    if (String(req.user.id) !== String(user.id) && String(req.user.id) !== String(user.public_id)) {
+      throw new AppError("Access denied.", 403);
+    }
+  }
+
   res.json({
     success: true,
     data: user
@@ -38,11 +48,21 @@ const getUser = async (req, res) => {
 };
 
 /**
- * Updates a user record dynamically
+ * Updates a user record dynamically (Self or Admin)
  * PUT /api/users/:id
  */
 const updateUser = async (req, res) => {
-  const user = await service.updateUser(req.params.id, req.body);
+  const targetId = req.params.id;
+  const existingUser = await service.getUser(targetId);
+
+  // Self or admin check
+  if (req.user.role !== "admin") {
+    if (String(req.user.id) !== String(existingUser.id) && String(req.user.id) !== String(existingUser.public_id)) {
+      throw new AppError("Access denied.", 403);
+    }
+  }
+
+  const user = await service.updateUser(targetId, req.body);
   res.json({
     success: true,
     data: user
@@ -50,7 +70,7 @@ const updateUser = async (req, res) => {
 };
 
 /**
- * Updates user block status
+ * Updates user block status (Admin only)
  * PATCH /api/users/:id/status
  */
 const updateUserStatus = async (req, res) => {

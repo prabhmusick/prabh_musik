@@ -166,10 +166,10 @@ const getOrderById = async (id) => {
       ${ORDER_COLUMNS}
     FROM orders o
     JOIN users u ON o.customer_id = u.id
-    WHERE o.id = ?
+    WHERE (o.id = ? OR o.public_id = ?)
       AND o.is_deleted = 0
   `;
-  return get(sql, [id]);
+  return get(sql, [id, id]);
 };
 
 /**
