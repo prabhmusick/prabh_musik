@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef } from "react";
+import { SITE_CONFIG } from "@/lib/config/site";
 
 const COL1 = [
   {
@@ -56,7 +57,7 @@ const COL2 = [
 ];
 
 const STATS = [
-  { icon: "/sound.png", value: "10M+", label: "Streams" },
+  { icon: "/sound.png", value: SITE_CONFIG.claims.shortStreams, label: "Streams" },
   { icon: "/file.png", value: "150+", label: "Artists" },
   { icon: "/globe.png", value: "50+", label: "Countries" },
 ];

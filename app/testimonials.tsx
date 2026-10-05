@@ -13,46 +13,39 @@ interface TestimonialCardProps {
 
 const testimonials = [
   {
-    text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-    name: "Mickael Grants",
-    role: "CEO of Apples to Oranges",
-    initials: "MG",
+    text: "Working with Prabh Musik transformed my sound completely. The production quality, mix depth, and attention to vocal detail are unmatched.",
+    name: "Aviii",
+    role: "Recording Artist",
+    initials: "A",
     color: "#5b4fcf",
   },
   {
-    text: "Absolutely seamless experience from start to finish. The platform exceeded every expectation we had going in.",
-    name: "Sarah Chen",
-    role: "Head of Product at NovaCo",
-    initials: "SC",
+    text: "Prabh understands the exact vibe and bounce needed for modern Punjabi tracks. Every beat delivers heavy bass and crisp arrangements.",
+    name: "Bawa",
+    role: "Artist",
+    initials: "B",
     color: "#0f7c6e",
   },
   {
-    text: "Our team's productivity doubled within the first month. I can't imagine going back to the old way of working.",
-    name: "James O'Brien",
-    role: "CTO at Linkflow",
-    initials: "JO",
+    text: "The speed and professionalism of mixing and mastering are top tier. Tracks sound radio-ready across all sound systems.",
+    name: "Harris Bhullar",
+    role: "Artist & Songwriter",
+    initials: "HB",
     color: "#c0392b",
   },
   {
-    text: "The support team is phenomenal. Any question we had was answered swiftly and the onboarding was incredibly smooth.",
-    name: "Priya Malhotra",
-    role: "VP Engineering at Stackr",
-    initials: "PM",
+    text: "Hands down the best beat selection and custom production experience. Long-term collaboration built on real trust and vision.",
+    name: "Manjil Sidhu",
+    role: "Independent Artist",
+    initials: "MS",
     color: "#d35400",
   },
   {
-    text: "Best investment we made this year. The results speak for themselves — our conversion rate jumped significantly.",
-    name: "Lucas Ferreira",
-    role: "Founder at PulseMetrics",
-    initials: "LF",
+    text: "Studio-grade audio fidelity and unbelievable workflow. Prabh Musik is the ultimate daily driver for any serious producer or artist.",
+    name: "Arpan Sidhu",
+    role: "Recording Artist",
+    initials: "AS",
     color: "#1a6b9a",
-  },
-  {
-    text: "Incredibly intuitive interface paired with powerful features. It's rare to find software that nails both.",
-    name: "Amara Nwosu",
-    role: "Designer at Craft Studio",
-    initials: "AN",
-    color: "#7d3c98",
   },
 ];
 
@@ -115,7 +108,7 @@ const TestimonialCard: React.FC<TestimonialCardProps> = ({
           flex: 1,
         }}
       >
-        {text}
+        "{text}"
       </p>
 
       {/* Author row */}
@@ -147,7 +140,7 @@ const TestimonialCard: React.FC<TestimonialCardProps> = ({
           <div
             style={{
               fontSize: "13px",
-              fontWeight: 500,
+              fontWeight: 600,
               color: "#ffffff",
               lineHeight: 1.3,
               fontFamily: "'DM Sans', sans-serif",
@@ -276,8 +269,7 @@ const TestimonialsMarquee: React.FC = () => {
               maxWidth: "640px",
             }}
           >
-            Don't take our word for it,
-            Over 100+ people trust us
+            What Artists Say About Working With Us
           </h2>
           <span
             style={{

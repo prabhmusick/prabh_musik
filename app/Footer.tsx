@@ -1,20 +1,13 @@
 'use client';
 import React from "react";
 import { usePathname } from "next/navigation";
+import Link from "next/link";
+import { SITE_CONFIG } from "@/lib/config/site";
 
 const socialLinks = [
   {
-    label: "X / Twitter",
-    href: "#",
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M4 4l16 16M4 20L20 4" />
-      </svg>
-    ),
-  },
-  {
     label: "Instagram",
-    href: "#",
+    href: SITE_CONFIG.socials.instagram,
     icon: (
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="2" y="2" width="20" height="20" rx="5" />
@@ -24,22 +17,20 @@ const socialLinks = [
     ),
   },
   {
-    label: "LinkedIn",
-    href: "#",
+    label: "YouTube",
+    href: SITE_CONFIG.socials.youtube,
     icon: (
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
-        <rect x="2" y="9" width="4" height="12" />
-        <circle cx="4" cy="4" r="2" />
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
       </svg>
     ),
   },
   {
-    label: "GitHub",
-    href: "#",
+    label: "Facebook",
+    href: SITE_CONFIG.socials.facebook,
     icon: (
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
       </svg>
     ),
   },
@@ -47,40 +38,23 @@ const socialLinks = [
 
 const navColumns = [
   {
-    label: "Product",
-    links: ["Features", "Pricing", "Integrations", "Changelog"],
+    label: "Explore",
+    links: [
+      { label: "Beat Marketplace", href: "/beat" },
+      { label: "Music Production", href: "/services/music-production" },
+      { label: "Mix & Master", href: "/services/mix-n-master" },
+      { label: "Lyrics Writing", href: "/services/lyrics" },
+    ],
   },
   {
-    label: "Resources",
-    links: ["Documentation", "Tutorials", "Blog", "Support"],
-  },
-  {
-    label: "Company",
-    links: ["About", "Careers", "Contact", "Partners"],
+    label: "Services",
+    links: [
+      { label: "Marketing & Distribution", href: "/services/marketing-distribution" },
+      { label: "Custom Beat Production", href: "/services" },
+      { label: "About Prabh Musik", href: "/about" },
+    ],
   },
 ];
-
-const LogoIcon: React.FC = () => (
-  <div
-    style={{
-      width: 28,
-      height: 28,
-      background: "#c8a96e",
-      borderRadius: 6,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      flexShrink: 0,
-    }}
-  >
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <rect x="2" y="2" width="5" height="5" fill="#0a0a0a" rx="1" />
-      <rect x="9" y="2" width="5" height="5" fill="#0a0a0a" rx="1" />
-      <rect x="2" y="9" width="5" height="5" fill="#0a0a0a" rx="1" />
-      <rect x="9" y="9" width="5" height="5" fill="#0a0a0a" rx="1" />
-    </svg>
-  </div>
-);
 
 const SocialButton: React.FC<{ label: string; href: string; icon: React.ReactNode }> = ({
   label,
@@ -92,18 +66,20 @@ const SocialButton: React.FC<{ label: string; href: string; icon: React.ReactNod
   return (
     <a
       href={href}
+      target="_blank"
+      rel="noopener noreferrer"
       aria-label={label}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        width: 30,
-        height: 30,
-        border: `0.5px solid ${hovered ? "#c8a96e" : "#2e2e2e"}`,
+        width: 32,
+        height: 32,
+        border: `1px solid ${hovered ? "#fbbf24" : "rgba(255,255,255,0.15)"}`,
         borderRadius: 8,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        color: hovered ? "#c8a96e" : "#6a6050",
+        color: hovered ? "#fbbf24" : "rgba(255,255,255,0.7)",
         textDecoration: "none",
         transition: "border-color 0.15s, color 0.15s",
         flexShrink: 0,
@@ -114,45 +90,45 @@ const SocialButton: React.FC<{ label: string; href: string; icon: React.ReactNod
   );
 };
 
-const NavLink: React.FC<{ label: string; href?: string }> = ({ label, href = "#" }) => {
+const NavLink: React.FC<{ label: string; href: string }> = ({ label, href }) => {
   const [hovered, setHovered] = React.useState(false);
 
   return (
     <li>
-      <a
+      <Link
         href={href}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         style={{
           fontSize: 13,
-          color: hovered ? "#e8e0d0" : "#6a6050",
+          color: hovered ? "#fbbf24" : "rgba(255,255,255,0.65)",
           textDecoration: "none",
           transition: "color 0.15s",
         }}
       >
         {label}
-      </a>
+      </Link>
     </li>
   );
 };
 
-const LegalLink: React.FC<{ label: string; href?: string }> = ({ label, href = "#" }) => {
+const LegalLink: React.FC<{ label: string; href: string }> = ({ label, href }) => {
   const [hovered, setHovered] = React.useState(false);
 
   return (
-    <a
+    <Link
       href={href}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
         fontSize: 12,
-        color: hovered ? "#7a7060" : "#3a3530",
+        color: hovered ? "#fbbf24" : "rgba(255,255,255,0.45)",
         textDecoration: "none",
         transition: "color 0.15s",
       }}
     >
       {label}
-    </a>
+    </Link>
   );
 };
 
@@ -174,32 +150,36 @@ const GraphyFooter: React.FC = () => {
               marginBottom: 14,
             }}
           >
-            <LogoIcon />
             <span
               style={{
-                fontSize: 18,
-                fontWeight: 500,
+                fontSize: 20,
+                fontWeight: 800,
                 color: "#f5f0e8",
                 letterSpacing: "-0.02em",
+                fontFamily: "'Syne', sans-serif",
               }}
             >
-              PrabhMusik
+              {SITE_CONFIG.name}
             </span>
           </div>
           <p
             style={{
               fontSize: 13,
               lineHeight: 1.65,
-              color: "#7a7060",
-              marginBottom: 20,
-              maxWidth: 220,
-              margin: "0 0 20px 0",
+              color: "rgba(255,255,255,0.55)",
+              maxWidth: 240,
+              margin: "0 0 16px 0",
             }}
           >
-            Graphy empowers teams to transform raw data into clear, compelling
-            visuals — making insights easier to share, understand, and act on.
+            Premium studio-grade beats, custom music production, and mixing & mastering crafted for independent artists and record labels.
           </p>
-          <div className="footer-social">
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 13, color: "rgba(255,255,255,0.65)", marginBottom: 18 }}>
+            <span>📍 {SITE_CONFIG.contact.address.display}</span>
+            <span>📞 Call: <a href={SITE_CONFIG.contact.phoneTel} style={{ color: "#fbbf24", textDecoration: "none" }}>{SITE_CONFIG.contact.phoneDisplay}</a></span>
+            <span>💬 WhatsApp: <a href={SITE_CONFIG.contact.whatsappLink} target="_blank" rel="noopener noreferrer" style={{ color: "#25D366", textDecoration: "none", fontWeight: 600 }}>{SITE_CONFIG.contact.whatsappDisplay}</a></span>
+            <span>✉️ Email: <a href={SITE_CONFIG.contact.emailMailto} style={{ color: "#fbbf24", textDecoration: "none" }}>{SITE_CONFIG.contact.email}</a></span>
+          </div>
+          <div className="footer-social" style={{ display: "flex", gap: 10 }}>
             {socialLinks.map((s) => (
               <SocialButton key={s.label} {...s} />
             ))}
@@ -212,10 +192,10 @@ const GraphyFooter: React.FC = () => {
             <p
               style={{
                 fontSize: 11,
-                fontWeight: 500,
+                fontWeight: 700,
                 letterSpacing: "0.1em",
                 textTransform: "uppercase",
-                color: "#c8a96e",
+                color: "#fbbf24",
                 marginBottom: 16,
                 margin: "0 0 16px 0",
               }}
@@ -233,7 +213,7 @@ const GraphyFooter: React.FC = () => {
               }}
             >
               {col.links.map((link) => (
-                <NavLink key={link} label={link} />
+                <NavLink key={link.label} label={link.label} href={link.href} />
               ))}
             </ul>
           </div>
@@ -242,17 +222,17 @@ const GraphyFooter: React.FC = () => {
 
       {/* Bottom bar */}
       <div className="footer-bottom">
-        <span style={{ fontSize: 12, color: "#3a3530" }}>
-          © 2025 PrabhMusik. All rights reserved.
+        <span style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>
+          © {new Date().getFullYear()} {SITE_CONFIG.name}. All rights reserved.
         </span>
-        <div className="footer-legal-links">
-          <LegalLink label="Privacy Policy" />
-          <LegalLink label="Terms of Service" />
-          <LegalLink label="Cookies Settings" />
+        <div className="footer-legal-links" style={{ display: "flex", gap: 18 }}>
+          <LegalLink label="Privacy Policy" href="/privacy" />
+          <LegalLink label="Terms & Conditions" href="/terms" />
+          <LegalLink label="Beat License Agreement" href="/beat-license" />
         </div>
       </div>
     </footer>
   );
 };
 
-export default GraphyFooter;
+export default GraphyFooter;
