@@ -3,6 +3,32 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { fetchBeats as fetchBeatsAPI } from "@/lib/api/beats";
 import { useAppShell } from "../contexts/app-shell-context";
 import { useRouter } from "next/navigation";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { CANONICAL_DOMAIN, createBreadcrumbSchema } from "@/lib/seo/schemas";
+
+const beatCatalogCollectionPageSchema = {
+  "@type": "CollectionPage",
+  "@id": `${CANONICAL_DOMAIN}/beat#webpage`,
+  url: `${CANONICAL_DOMAIN}/beat`,
+  name: "Beat Catalog - Trending Beats | Prabh Musik",
+  description:
+    "Explore studio-grade Punjabi & Hip-Hop beat catalog on Prabh Musik. Listen to previews, filter by genre, mood, price, and BPM.",
+  isPartOf: {
+    "@id": `${CANONICAL_DOMAIN}/#website`,
+  },
+  breadcrumb: {
+    "@id": `${CANONICAL_DOMAIN}/beat#breadcrumb`,
+  },
+};
+
+const beatCatalogBreadcrumbSchema = createBreadcrumbSchema(
+  `${CANONICAL_DOMAIN}/beat`,
+  [
+    { name: "Home", url: CANONICAL_DOMAIN },
+    { name: "Beats", url: `${CANONICAL_DOMAIN}/beat` },
+  ]
+);
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -677,6 +703,7 @@ export default function BeatMarketplace() {
 
   return (
     <>
+      <JsonLd data={[beatCatalogCollectionPageSchema, beatCatalogBreadcrumbSchema]} />
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;1,500&family=Jacques+Francois:wght@400&display=swap');
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }

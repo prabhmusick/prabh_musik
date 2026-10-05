@@ -1,5 +1,49 @@
-'use client';
+"use client";
 import { useState, useEffect, useRef } from "react";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { CANONICAL_DOMAIN, createBreadcrumbSchema } from "@/lib/seo/schemas";
+import { WorkedWithArtistsSection } from "../../../components/services/WorkedWithArtistsSection";
+
+const mktgDistWebPageSchema = {
+  "@type": "WebPage",
+  "@id": `${CANONICAL_DOMAIN}/services/marketing-distribution#webpage`,
+  url: `${CANONICAL_DOMAIN}/services/marketing-distribution`,
+  name: "Music Marketing & Distribution Services | Prabh Musik",
+  description:
+    "Strategic music marketing, global streaming distribution, and release strategy by Prabh Musik.",
+  isPartOf: {
+    "@id": `${CANONICAL_DOMAIN}/#website`,
+  },
+  breadcrumb: {
+    "@id": `${CANONICAL_DOMAIN}/services/marketing-distribution#breadcrumb`,
+  },
+};
+
+const mktgDistBreadcrumbSchema = createBreadcrumbSchema(
+  `${CANONICAL_DOMAIN}/services/marketing-distribution`,
+  [
+    { name: "Home", url: CANONICAL_DOMAIN },
+    { name: "Services", url: `${CANONICAL_DOMAIN}/services` },
+    {
+      name: "Marketing & Distribution",
+      url: `${CANONICAL_DOMAIN}/services/marketing-distribution`,
+    },
+  ]
+);
+
+const mktgDistServiceSchema = {
+  "@type": "Service",
+  "@id": `${CANONICAL_DOMAIN}/services/marketing-distribution#service`,
+  name: "Marketing & Distribution",
+  serviceType: "Music Marketing & Distribution",
+  description:
+    "We help you reach the right audience and get your music on all major platforms worldwide.",
+  url: `${CANONICAL_DOMAIN}/services/marketing-distribution`,
+  provider: {
+    "@id": `${CANONICAL_DOMAIN}/#organization`,
+  },
+};
+
 
 const stats = [
   { value: "200M+", label: "Units Sold Worldwide" },
@@ -110,6 +154,14 @@ export default function BeatsMarketingPage() {
         overflowX: "hidden",
       }}
     >
+      <JsonLd
+        data={[
+          mktgDistWebPageSchema,
+          mktgDistBreadcrumbSchema,
+          mktgDistServiceSchema,
+        ]}
+      />
+
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,300&display=swap');
 
@@ -421,9 +473,12 @@ export default function BeatsMarketingPage() {
         className="hero"
         style={{
           minHeight: "100vh",
-          display: "flex", flexDirection: "column", justifyContent: "center",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
           padding: "80px 48px 80px",
-          position: "relative", overflow: "hidden",
+          position: "relative",
+          overflow: "hidden",
         }}
       >
         <div className="hero-bg" />
@@ -439,20 +494,28 @@ export default function BeatsMarketingPage() {
             color: "transparent",
             WebkitTextStroke: "1px rgba(255,145,36,0.055)",
             position: "absolute",
-            right: "-60px", top: "50%",
+            right: "-60px",
+            top: "50%",
             transform: "translateY(-50%)",
-            userSelect: "none", pointerEvents: "none",
+            userSelect: "none",
+            pointerEvents: "none",
           }}
         >
           b
         </div>
 
         <div style={{ position: "relative", maxWidth: 880 }}>
-          <div className="stat-pill fade-up delay-1" style={{ marginBottom: 32 }}>
+          <div
+            className="stat-pill fade-up delay-1"
+            style={{ marginBottom: 32 }}
+          >
             <span
               style={{
-                width: 7, height: 7, borderRadius: "50%",
-                background: "var(--orange)", display: "inline-block",
+                width: 7,
+                height: 7,
+                borderRadius: "50%",
+                background: "var(--orange)",
+                display: "inline-block",
                 animation: "pulse-dot 1.8s ease infinite",
               }}
             />
@@ -481,9 +544,12 @@ export default function BeatsMarketingPage() {
           <p
             className="fade-up delay-3"
             style={{
-              fontSize: 18, fontWeight: 300,
-              color: "#777", maxWidth: 520,
-              lineHeight: 1.7, marginBottom: 44,
+              fontSize: 18,
+              fontWeight: 300,
+              color: "#777",
+              maxWidth: 520,
+              lineHeight: 1.7,
+              marginBottom: 44,
             }}
           >
             Beats isn't a headphone brand. It's a cultural movement powered by
@@ -491,7 +557,10 @@ export default function BeatsMarketingPage() {
             every frequency of modern life.
           </p>
 
-          <div className="fade-up delay-4" style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+          <div
+            className="fade-up delay-4"
+            style={{ display: "flex", gap: 14, flexWrap: "wrap" }}
+          >
             <button className="cta-primary">View Full Strategy</button>
             <button className="cta-secondary">Watch Brand Film</button>
           </div>
@@ -501,8 +570,13 @@ export default function BeatsMarketingPage() {
         <div
           className="hero-stats"
           style={{
-            position: "absolute", right: 48, bottom: 80,
-            display: "flex", flexDirection: "column", gap: 18, alignItems: "flex-end",
+            position: "absolute",
+            right: 48,
+            bottom: 80,
+            display: "flex",
+            flexDirection: "column",
+            gap: 18,
+            alignItems: "flex-end",
           }}
         >
           {stats.map((s, i) => (
@@ -514,10 +588,25 @@ export default function BeatsMarketingPage() {
                 transition: "opacity 0.6s",
               }}
             >
-              <div style={{ fontSize: 34, fontWeight: 800, color: "var(--orange)", lineHeight: 1 }}>
+              <div
+                style={{
+                  fontSize: 34,
+                  fontWeight: 800,
+                  color: "var(--orange)",
+                  lineHeight: 1,
+                }}
+              >
                 {s.value}
               </div>
-              <div style={{ fontSize: 9, color: "#555", letterSpacing: 2, fontWeight: 500, marginTop: 2 }}>
+              <div
+                style={{
+                  fontSize: 9,
+                  color: "#555",
+                  letterSpacing: 2,
+                  fontWeight: 500,
+                  marginTop: 2,
+                }}
+              >
                 {s.label}
               </div>
             </div>
@@ -528,27 +617,38 @@ export default function BeatsMarketingPage() {
       {/* TICKER */}
       <div
         style={{
-          borderTop: "1px solid #181818", borderBottom: "1px solid #181818",
-          padding: "13px 0", overflow: "hidden",
+          borderTop: "1px solid #181818",
+          borderBottom: "1px solid #181818",
+          padding: "13px 0",
+          overflow: "hidden",
           background: "rgba(255,145,36,0.018)",
         }}
       >
         <div className="ticker">
           {[...Array(2)].map((_, j) =>
-            ["STUDIO QUALITY", "CULTURAL IMPACT", "ARTIST DRIVEN", "GLOBAL REACH",
-             "SONIC DOMINANCE", "DROP CULTURE", "PREMIUM SOUND", "BEATS BY DRE",
+            [
+              "STUDIO QUALITY",
+              "CULTURAL IMPACT",
+              "ARTIST DRIVEN",
+              "GLOBAL REACH",
+              "SONIC DOMINANCE",
+              "DROP CULTURE",
+              "PREMIUM SOUND",
+              "BEATS BY DRE",
             ].map((t, i) => (
               <span
                 key={`${j}-${i}`}
                 style={{
-                  fontSize: 10, letterSpacing: 4, fontWeight: 600,
+                  fontSize: 10,
+                  letterSpacing: 4,
+                  fontWeight: 600,
                   color: i % 2 === 0 ? "#2a2a2a" : "var(--orange-dim)",
                   textTransform: "uppercase",
                 }}
               >
                 {t} ◆{" "}
               </span>
-            ))
+            )),
           )}
         </div>
       </div>
@@ -557,7 +657,8 @@ export default function BeatsMarketingPage() {
       <section
         className="stats-bar"
         style={{
-          display: "grid", gridTemplateColumns: "repeat(4, 1fr)",
+          display: "grid",
+          gridTemplateColumns: "repeat(4, 1fr)",
           borderBottom: "1px solid #181818",
         }}
       >
@@ -567,7 +668,8 @@ export default function BeatsMarketingPage() {
             style={{
               padding: "44px 32px",
               borderRight: i < 3 ? "1px solid #181818" : "none",
-              position: "relative", overflow: "hidden",
+              position: "relative",
+              overflow: "hidden",
             }}
           >
             <div
@@ -579,15 +681,21 @@ export default function BeatsMarketingPage() {
             <div
               style={{
                 fontSize: "clamp(38px, 4.5vw, 58px)",
-                fontWeight: 800, color: "var(--orange)", lineHeight: 1,
+                fontWeight: 800,
+                color: "var(--orange)",
+                lineHeight: 1,
               }}
             >
               {s.value}
             </div>
             <div
               style={{
-                fontSize: 10, color: "#484848", letterSpacing: 2.5,
-                marginTop: 8, fontWeight: 600, textTransform: "uppercase",
+                fontSize: 10,
+                color: "#484848",
+                letterSpacing: 2.5,
+                marginTop: 8,
+                fontWeight: 600,
+                textTransform: "uppercase",
               }}
             >
               {s.label}
@@ -602,16 +710,20 @@ export default function BeatsMarketingPage() {
         <div
           className="strategy-grid"
           style={{
-            display: "grid", gridTemplateColumns: "1fr 1.5fr",
-            gap: 60, alignItems: "start",
+            display: "grid",
+            gridTemplateColumns: "1fr 1.5fr",
+            gap: 60,
+            alignItems: "start",
           }}
         >
           <div>
             <h2
               style={{
                 fontSize: "clamp(44px, 5.5vw, 76px)",
-                fontWeight: 800, lineHeight: 0.95,
-                letterSpacing: "-1.5px", marginBottom: 28,
+                fontWeight: 800,
+                lineHeight: 0.95,
+                letterSpacing: "-1.5px",
+                marginBottom: 28,
               }}
             >
               How We
@@ -624,12 +736,15 @@ export default function BeatsMarketingPage() {
             </h2>
             <p
               style={{
-                color: "#555", fontSize: 15, lineHeight: 1.8,
-                fontWeight: 300, maxWidth: 380,
+                color: "#555",
+                fontSize: 15,
+                lineHeight: 1.8,
+                fontWeight: 300,
+                maxWidth: 380,
               }}
             >
-              Four interlocking vectors of market penetration — each one reinforcing
-              the next. Not a strategy. A system.
+              Four interlocking vectors of market penetration — each one
+              reinforcing the next. Not a strategy. A system.
             </p>
           </div>
 
@@ -642,26 +757,40 @@ export default function BeatsMarketingPage() {
               >
                 <div
                   style={{
-                    display: "flex", justifyContent: "space-between",
+                    display: "flex",
+                    justifyContent: "space-between",
                     alignItems: "flex-start",
                     marginBottom: activeStrategy === i ? 14 : 0,
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                  <div
+                    style={{ display: "flex", alignItems: "center", gap: 14 }}
+                  >
                     <span
                       style={{
-                        fontSize: 10, color: "var(--orange)",
-                        letterSpacing: 2, fontWeight: 700,
+                        fontSize: 10,
+                        color: "var(--orange)",
+                        letterSpacing: 2,
+                        fontWeight: 700,
                       }}
                     >
                       {s.id}
                     </span>
                     <span style={{ fontSize: 18 }}>{s.icon}</span>
-                    <span style={{ fontSize: 17, fontWeight: 700, color: "#fff" }}>
+                    <span
+                      style={{ fontSize: 17, fontWeight: 700, color: "#fff" }}
+                    >
                       {s.title}
                     </span>
                   </div>
-                  <span style={{ color: "#333", fontSize: 20, lineHeight: 1, fontWeight: 300 }}>
+                  <span
+                    style={{
+                      color: "#333",
+                      fontSize: 20,
+                      lineHeight: 1,
+                      fontWeight: 300,
+                    }}
+                  >
                     {activeStrategy === i ? "−" : "+"}
                   </span>
                 </div>
@@ -669,25 +798,35 @@ export default function BeatsMarketingPage() {
                   <div>
                     <p
                       style={{
-                        color: "#777", fontSize: 14, lineHeight: 1.7,
-                        fontWeight: 300, marginBottom: 14,
+                        color: "#777",
+                        fontSize: 14,
+                        lineHeight: 1.7,
+                        fontWeight: 300,
+                        marginBottom: 14,
                       }}
                     >
                       {s.description}
                     </p>
                     <div
                       style={{
-                        display: "inline-flex", alignItems: "center", gap: 8,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 8,
                         background: "rgba(255,145,36,0.07)",
                         border: "1px solid rgba(255,145,36,0.18)",
-                        padding: "6px 14px", borderRadius: "100px",
+                        padding: "6px 14px",
+                        borderRadius: "100px",
                       }}
                     >
-                      <span style={{ color: "var(--orange)", fontSize: 10 }}>▲</span>
+                      <span style={{ color: "var(--orange)", fontSize: 10 }}>
+                        ▲
+                      </span>
                       <span
                         style={{
-                          fontSize: 10, color: "var(--orange)",
-                          letterSpacing: 1, fontWeight: 600,
+                          fontSize: 10,
+                          color: "var(--orange)",
+                          letterSpacing: 1,
+                          fontWeight: 600,
                         }}
                       >
                         {s.kpi}
@@ -753,6 +892,8 @@ export default function BeatsMarketingPage() {
         </div>
       </section> */}
 
+      <WorkedWithArtistsSection visibility="showOnMarketingDistribution" />
+
       {/* CTA BANNER */}
       <section
         className="cta-banner"
@@ -760,16 +901,22 @@ export default function BeatsMarketingPage() {
           margin: "0 48px 80px",
           background: "linear-gradient(135deg, #FF9124 0%, #FF7A00 100%)",
           padding: "64px 64px",
-          display: "flex", justifyContent: "space-between",
-          alignItems: "center", borderRadius: 12,
-          flexWrap: "wrap", gap: 28,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          borderRadius: 12,
+          flexWrap: "wrap",
+          gap: 28,
         }}
       >
         <div>
           <div
             style={{
-              fontSize: 10, color: "rgba(0,0,0,0.5)",
-              letterSpacing: 3, marginBottom: 10, fontWeight: 700,
+              fontSize: 10,
+              color: "rgba(0,0,0,0.5)",
+              letterSpacing: 3,
+              marginBottom: 10,
+              fontWeight: 700,
               textTransform: "uppercase",
             }}
           >
@@ -778,8 +925,10 @@ export default function BeatsMarketingPage() {
           <h3
             style={{
               fontSize: "clamp(32px, 4.5vw, 58px)",
-              fontWeight: 800, color: "#000",
-              lineHeight: 0.95, letterSpacing: "-1px",
+              fontWeight: 800,
+              color: "#000",
+              lineHeight: 0.95,
+              letterSpacing: "-1px",
             }}
           >
             Let's Build Something
@@ -789,28 +938,46 @@ export default function BeatsMarketingPage() {
         </div>
         <div style={{ display: "flex", gap: 14 }}>
           <button
+            type="button"
+            onClick={() => {
+              try {
+                const subject = encodeURIComponent(
+                  "Let's Build Something — Project Inquiry",
+                );
+                const body = encodeURIComponent(
+                  "Name:%0AEmail:%0AProject%20Type:%20%0A%0ADetails:%0A",
+                );
+                const gmail = `https://mail.google.com/mail/?view=cm&fs=1&to=support@prabhmusik.com&su=${subject}&body=${body}`;
+                const win = window.open(gmail, "_blank");
+                if (!win) {
+                  // popup blocked — fallback to mailto
+                  window.location.href = `mailto:support@prabhmusik.com?subject=${subject}&body=${body}`;
+                }
+              } catch (e) {
+                const subject = encodeURIComponent(
+                  "Let's Build Something — Project Inquiry",
+                );
+                const body = encodeURIComponent(
+                  "Name:%0AEmail:%0AProject%20Type:%20%0A%0ADetails:%0A",
+                );
+                window.location.href = `mailto:support@prabhmusik.com?subject=${subject}&body=${body}`;
+              }
+            }}
             style={{
-              background: "#000", color: "var(--orange)",
-              border: "none", padding: "16px 40px",
+              background: "#000",
+              color: "var(--orange)",
+              border: "none",
+              padding: "16px 40px",
               fontFamily: "'Plus Jakarta Sans', sans-serif",
-              fontSize: 13, fontWeight: 700,
-              letterSpacing: 2, textTransform: "uppercase",
-              cursor: "pointer", borderRadius: 6,
+              fontSize: 13,
+              fontWeight: 700,
+              letterSpacing: 2,
+              textTransform: "uppercase",
+              cursor: "pointer",
+              borderRadius: 6,
             }}
           >
             Get In Touch
-          </button>
-          <button
-            style={{
-              background: "transparent", color: "#000",
-              border: "2px solid rgba(0,0,0,0.25)", padding: "14px 40px",
-              fontFamily: "'Plus Jakarta Sans', sans-serif",
-              fontSize: 13, fontWeight: 700,
-              letterSpacing: 2, textTransform: "uppercase",
-              cursor: "pointer", borderRadius: 6,
-            }}
-          >
-            Download Deck
           </button>
         </div>
       </section>

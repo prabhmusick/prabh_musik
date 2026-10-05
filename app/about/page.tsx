@@ -1,5 +1,34 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import { SITE_CONFIG } from '@/lib/config/site';
+import { JsonLd } from "@/components/seo/JsonLd";
+import { CANONICAL_DOMAIN, createBreadcrumbSchema } from "@/lib/seo/schemas";
+
+const aboutPageSchema = {
+  "@type": "AboutPage",
+  "@id": `${CANONICAL_DOMAIN}/about#webpage`,
+  url: `${CANONICAL_DOMAIN}/about`,
+  name: "About Prabh Musik | Punjabi & Hip-Hop Beat Producer & Studio",
+  description:
+    "Learn about Prabh Musik — professional music producer offering exclusive Punjabi beats, custom beat production, mixing and mastering, and artist development.",
+  isPartOf: {
+    "@id": `${CANONICAL_DOMAIN}/#website`,
+  },
+  about: {
+    "@id": `${CANONICAL_DOMAIN}/#organization`,
+  },
+  breadcrumb: {
+    "@id": `${CANONICAL_DOMAIN}/about#breadcrumb`,
+  },
+};
+
+const aboutBreadcrumbSchema = createBreadcrumbSchema(
+  `${CANONICAL_DOMAIN}/about`,
+  [
+    { name: "Home", url: CANONICAL_DOMAIN },
+    { name: "About", url: `${CANONICAL_DOMAIN}/about` },
+  ]
+);
 
 /* ─────────────────────────────────────────────
    TYPES
@@ -364,22 +393,19 @@ function VisionSection({ isMobile }: { isMobile: boolean }) {
           fontFamily: "'Cormorant Garamond', serif",
           fontSize: isMobile ? 17 : 19,
           lineHeight: 1.9,
-          color: 'rgba(245,240,232,0.6)',
+          color: 'rgba(245,240,232,0.85)',
           marginBottom: 24,
         }}>
-          At Prabh Musik, every artist is treated as a unique creative voice.
-          We focus on understanding their inspirations, style, personality, and
-          goals to create music that feels authentic and meaningful.
+          {SITE_CONFIG.about.vision}
         </p>
         <p style={{
           fontFamily: "'Cormorant Garamond', serif",
           fontSize: isMobile ? 17 : 19,
           lineHeight: 1.9,
-          color: 'rgba(245,240,232,0.35)',
+          color: 'rgba(245,240,232,0.6)',
           marginBottom: 36,
         }}>
-          The objective isn't simply to make songs. It's to create moments
-          people remember for the rest of their lives.
+          {SITE_CONFIG.about.whatWeDo}
         </p>
         <div style={{
           padding: '24px 28px',
@@ -741,12 +767,10 @@ function SuccessSection({ isMobile }: { isMobile: boolean }) {
                 fontFamily: "'Cormorant Garamond', serif",
                 fontSize: isMobile ? 17 : 19,
                 lineHeight: 1.9,
-                color: 'rgba(245,240,232,0.55)',
+                color: 'rgba(245,240,232,0.8)',
                 marginBottom: 20,
               }}>
-                Success isn't measured by delivering a track. It's measured by
-                helping artists build careers. Every project receives complete
-                attention, dedication, and creative commitment.
+                {SITE_CONFIG.about.builtForLongTerm}
               </p>
               <p style={{
                 fontFamily: "'Bebas Neue', sans-serif",
@@ -1059,6 +1083,7 @@ export default function PrabhMusikAbout() {
 
   return (
     <>
+      <JsonLd data={[aboutPageSchema, aboutBreadcrumbSchema]} />
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Space+Mono:wght@400;700&display=swap');
 
