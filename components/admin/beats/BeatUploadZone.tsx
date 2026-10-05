@@ -1,11 +1,12 @@
 "use client"
 
 import * as React from "react"
-import { Upload, Check, Loader2, FileText, Image as ImageIcon, Music } from "lucide-react"
+import { Check, Loader2, FileText, Image as ImageIcon, Music } from "lucide-react"
 import { Button } from "../../ui/button"
 import { cn } from "../../../lib/utils"
 
 import { uploadFile } from "../../../services/upload.service"
+import { getApiErrorMessage } from "../../../lib/api"
 
 interface BeatUploadZoneProps {
   label: string;
@@ -13,7 +14,7 @@ interface BeatUploadZoneProps {
   description: string;
   value?: string;
   onUploadComplete: (key: string, duration?: number) => void;
-  type: "image" | "audio" | "document";
+  type: "image" | "banner" | "audio" | "document";
 }
 
 export function BeatUploadZone({
@@ -64,8 +65,7 @@ export function BeatUploadZone({
     } catch (err: any) {
       setIsUploading(false)
       console.error("Upload error:", err)
-      const errorMsg = err?.response?.data?.error || err?.response?.data?.message || err?.message || "Unknown error"
-      setUploadError(errorMsg)
+      setUploadError(getApiErrorMessage(err, "Unable to upload file."))
     }
   }
 
@@ -74,7 +74,7 @@ export function BeatUploadZone({
   }
 
   const getIcon = () => {
-    if (type === "image") return <ImageIcon size={28} className="text-neutral-400" />
+    if (type === "image" || type === "banner") return <ImageIcon size={28} className="text-neutral-400" />
     if (type === "audio") return <Music size={28} className="text-neutral-400" />
     return <FileText size={28} className="text-neutral-400" />
   }

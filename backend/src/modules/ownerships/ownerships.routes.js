@@ -5,19 +5,16 @@ const { requireAdmin } = require("../../middleware/role.middleware");
 
 const router = express.Router();
 
-router.use(authMiddleware);
+// Admin endpoints
+router.get("/admin", authMiddleware, requireAdmin, controller.getOwnershipsAdmin);
+router.patch("/:publicId", authMiddleware, requireAdmin, controller.updateExpiryByPublicId);
+router.delete("/:publicId", authMiddleware, requireAdmin, controller.revokeOwnershipByPublicId);
 
-// Collection routes
-router.get("/", requireAdmin, controller.getOwnerships);
-router.get("/user/:id", controller.getOwnershipsByUser);
-router.get("/beat/:id", requireAdmin, controller.getOwnershipsByBeat);
-
-// Single record routes
-router.get("/:id", controller.getOwnershipById);
-router.patch("/:id/expiry", requireAdmin, controller.updateExpiry);
-router.delete("/:id", requireAdmin, controller.revokeOwnership);
+// Customer endpoints
+router.get("/", authMiddleware, controller.getMyOwnerships);
+router.get("/:publicId", authMiddleware, controller.getOwnershipByPublicId);
 
 // Download increment POST action API
-router.post("/:id/download", controller.incrementDownloads);
+router.post("/:publicId/download", authMiddleware, controller.incrementDownloads);
 
 module.exports = router;

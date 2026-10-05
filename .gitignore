@@ -38,6 +38,7 @@ yarn-error.log*
 # env
 .env*
 **/.env*
+!**/.env.example
 
 # vercel
 .vercel
@@ -54,6 +55,7 @@ backend/node_modules/
 backend/Database/*.db
 backend/Database/*.sqlite
 backend/Database/*.sqlite3
+backend/.wrangler/
 
 # logs
 *.log
@@ -71,3 +73,5 @@ backend/node_modules/
 backend/.wrangler/
 .wrangler/
 
+
+backend/coverage/

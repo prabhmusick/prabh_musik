@@ -1,7 +1,9 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function HeroSection() {
+  const router = useRouter();
   const [hovered, setHovered] = useState(false);
   const [fontsLoaded, setFontsLoaded] = useState(false);
 
@@ -32,43 +34,61 @@ export default function HeroSection() {
           .hero-section {
             min-height: auto !important;
             align-items: flex-start !important;
-            padding-top: 60px !important;
-            padding-bottom: 60px !important;
+            padding-top: 48px !important;
+            padding-bottom: 48px !important;
+            flex-direction: column !important;
           }
 
           .hero-copy {
             max-width: 100% !important;
-            padding-left: 4% !important;
-            padding-right: 4% !important;
+            padding-left: 5% !important;
+            padding-right: 5% !important;
           }
 
+          /* Put the image into document flow below the text on small screens */
           .hero-image-container {
-            position: absolute !important;
+            position: static !important;
             width: 100% !important;
-            height: 40vh !important;
-            left: 0 !important;
-            right: 0 !important;
-            bottom: 0 !important;
+            height: auto !important;
+            left: auto !important;
+            right: auto !important;
+            bottom: auto !important;
             overflow: hidden !important;
+            order: 2 !important;
+            margin-top: 20px !important;
+            display: block !important;
           }
 
           .hero-image-container img {
             width: 100% !important;
-            height: 100% !important;
+            height: auto !important;
             object-fit: cover !important;
+            border-radius: 12px;
           }
 
           .hero-section h1 {
-            font-size: 3.4rem !important;
-            line-height: 1.05 !important;
+            font-size: clamp(2.2rem, 6vw, 3.4rem) !important;
+            line-height: 1.06 !important;
+            margin-bottom: 10px !important;
           }
 
           .hero-section p {
             font-size: clamp(0.95rem, 2.5vw, 1rem) !important;
           }
 
-          .hero-section button {
-            width: fit-content !important;
+          /* Make CTAs easier to tap on mobile */
+          .hero-section button,
+          .hero-section a.hero-primary-btn,
+          .hero-section a.hero-secondary-btn {
+            width: 100% !important;
+            max-width: 420px !important;
+            padding: 14px 18px !important;
+            border-radius: 10px !important;
+            text-align: center !important;
+          }
+
+          .hero-copy {
+            z-index: 10;
           }
         }
       `}</style>
@@ -127,7 +147,7 @@ export default function HeroSection() {
           }}
         >
           <img
-            src="/hero.png"
+            src="/hero.webp"
             alt="Artist with Keyboard"
             style={{
               width: "90%",
@@ -137,7 +157,7 @@ export default function HeroSection() {
               filter: "drop-shadow(0 8px 44px #c8780a55)",
               userSelect: "none",
             }}
-	  />
+          />
         </div>
 
         {/* ══════════════════════════
@@ -153,11 +173,12 @@ export default function HeroSection() {
             maxWidth: "660px",
           }}
         >
-
           {/* ── H1 ── */}
           <h1
             style={{
-              fontFamily: fontsLoaded ? "'Jacques Francois', serif" : "Georgia, 'Times New Roman', serif",
+              fontFamily: fontsLoaded
+                ? "'Jacques Francois', serif"
+                : "Georgia, 'Times New Roman', serif",
               fontSize: "5.8rem",
               fontWeight: 400,
               color: "#fff",
@@ -168,7 +189,11 @@ export default function HeroSection() {
               letterSpacing: "0.01em",
             }}
           >
-            Industry<br />Ready beats for<br />Artists
+            Industry
+            <br />
+            Ready beats for
+            <br />
+            Artist!
           </h1>
 
           {/* ── Subhead ── */}
@@ -200,11 +225,13 @@ export default function HeroSection() {
               animationDelay: "0.4s",
             }}
           >
-            Premium Trap, Drill, Punjabi, Emotional and commercial beats crafted for independent artists and labels
+            Premium Trap, Drill, Punjabi, Emotional and commercial beats crafted
+            for independent artists and labels
           </p>
 
           {/* ── CTA Button ── */}
           <button
+            onClick={() => router.push("/beat")}
             onMouseEnter={() => setHovered(true)}
             onMouseLeave={() => setHovered(false)}
             style={{
@@ -219,7 +246,9 @@ export default function HeroSection() {
               letterSpacing: "0.01em",
               cursor: "pointer",
               marginTop: 8,
-              boxShadow: hovered ? "0 6px 18px #d4820a55" : "0 2px 8px #d4820a33",
+              boxShadow: hovered
+                ? "0 6px 18px #d4820a55"
+                : "0 2px 8px #d4820a33",
               transition: "background 0.2s, box-shadow 0.2s, transform 0.2s",
               animation: "fadeUp 0.7s ease both",
               animationDelay: "0.55s",

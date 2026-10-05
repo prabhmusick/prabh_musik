@@ -1,114 +1,106 @@
 const service = require("./orders.service");
-const AppError = require("../../errors/AppError");
 
 /**
  * Creates a new purchase order
  * POST /api/orders
  */
-const createOrder = async (req, res) => {
-  const order = await service.createOrder(req.user, req.body);
-  res.status(201).json({
-    success: true,
-    data: order
-  });
+const createOrder = async (req, res, next) => {
+  try {
+    const order = await service.createOrder(req.body);
+    res.status(201).json({
+      success: true,
+      data: order
+    });
+  } catch (error) {
+    next(error);
+  }
 };
 
 /**
- * Lists orders (Filtered by customer or all for admin)
+ * Lists all orders (excluding cancelled)
  * GET /api/orders
  */
-const getAllOrders = async (req, res) => {
-  const orders = await service.getAllOrders(req.user);
-  res.json({
-    success: true,
-    count: orders.length,
-    data: orders
-  });
+const getAllOrders = async (req, res, next) => {
+  try {
+    const orders = await service.getAllOrders();
+    res.json({
+      success: true,
+      count: orders.length,
+      data: orders
+    });
+  } catch (error) {
+    next(error);
+  }
 };
 
 /**
- * Gets a single order by ID with ownership check
+ * Gets a single order by ID
  * GET /api/orders/:id
  */
-const getOrder = async (req, res) => {
-  const order = await service.getOrder(req.params.id);
-
-  if (req.user.role !== "admin") {
-    if (String(req.user.id) !== String(order.customer.id) && String(req.user.id) !== String(order.customer.public_id)) {
-      throw new AppError("Access denied.", 403);
-    }
+const getOrder = async (req, res, next) => {
+  try {
+    const order = await service.getOrder(req.params.id);
+    res.json({
+      success: true,
+      data: order
+    });
+  } catch (error) {
+    next(error);
   }
-
-  res.json({
-    success: true,
-    data: order
-  });
 };
 
 /**
- * Server-side payment verification (Razorpay / Stripe)
- * POST /api/orders/verify-payment
- */
-const verifyPayment = async (req, res) => {
-  const result = await service.verifyPayment(req.user, req.body);
-  res.json({
-    success: true,
-    data: result
-  });
-};
-
-/**
- * Updates an order record dynamically (Admin only)
+ * Updates an order record dynamically
  * PUT /api/orders/:id
  */
-const updateOrder = async (req, res) => {
-  const order = await service.updateOrder(req.params.id, req.body);
-  res.json({
-    success: true,
-    data: order
-  });
+const updateOrder = async (req, res, next) => {
+  try {
+    const order = await service.updateOrder(req.params.id, req.body);
+    res.json({
+      success: true,
+      data: order
+    });
+  } catch (error) {
+    next(error);
+  }
 };
 
 /**
- * Updates order status specifically (Admin only)
+ * Updates order status specifically
  * PATCH /api/orders/:id/status
  */
-const updateOrderStatus = async (req, res) => {
-  const order = await service.updateOrderStatus(req.params.id, req.body);
-  res.json({
-    success: true,
-    data: order
-  });
+const updateOrderStatus = async (req, res, next) => {
+  try {
+    const order = await service.updateOrderStatus(req.params.id, req.body);
+    res.json({
+      success: true,
+      data: order
+    });
+  } catch (error) {
+    next(error);
+  }
 };
 
 /**
- * Soft deletes/cancels an order (Admin only)
+ * Soft deletes/cancels an order
  * DELETE /api/orders/:id
  */
-const deleteOrder = async (req, res) => {
-  await service.deleteOrder(req.params.id);
-  res.json({
-    success: true,
-    message: "Order cancelled and archived successfully."
-  });
-};
-
-/**
- * Webhook handler for Stripe payment events
- * POST /api/orders/webhook/stripe
- */
-const handleStripeWebhook = async (req, res) => {
-  const signature = req.headers["stripe-signature"];
-  const result = await service.handleStripeWebhook(req.body, signature);
-  res.json({ success: true, data: result });
+const deleteOrder = async (req, res, next) => {
+  try {
+    await service.deleteOrder(req.params.id);
+    res.json({
+      success: true,
+      message: "Order cancelled and archived successfully."
+    });
+  } catch (error) {
+    next(error);
+  }
 };
 
 module.exports = {
   createOrder,
   getAllOrders,
   getOrder,
-  verifyPayment,
-  handleStripeWebhook,
   updateOrder,
   updateOrderStatus,
   deleteOrder

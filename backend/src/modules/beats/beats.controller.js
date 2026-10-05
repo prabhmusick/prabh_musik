@@ -1,136 +1,238 @@
+/**
+ * @fileoverview Beats Controller Layer
+ * Handles HTTP request parsing, status code mapping, and response serialization for beats.
+ */
+
 const service = require("./beats.service");
 
 /**
- * Creates a new beat record (HTTP 201)
- * POST /api/beats
+ * Handles HTTP POST request to create a new beat.
+ *
+ * @param {import('express').Request} req - Express request object.
+ * @param {import('express').Response} res - Express response object.
+ * @param {import('express').NextFunction} next - Express next middleware reference.
+ * @returns {Promise<void>} Resolves when HTTP response is sent.
  */
-const createBeat = async (req, res) => {
-  const beat = await service.createBeat(req.body);
-  res.status(201).json({
-    success: true,
-    data: beat,
-  });
-};
+const createBeat = async (req, res, next) => {
+  try {
+    const creatorUserId = req.user ? req.user.id : undefined;
+    const beatDto = await service.createBeat(req.body, creatorUserId);
 
-/**
- * Lists all active non-archived beats
- * GET /api/beats
- */
-const getAllBeats = async (req, res) => {
-  const result = await service.getBeatsPaginated(req.query);
-  res.json({
-    success: true,
-    count: result.data.length,
-    data: result.data,
-    pagination: result.pagination,
-  });
-};
-
-/**
- * Retrieves a single beat by ID
- * GET /api/beats/:id
- */
-const getBeat = async (req, res) => {
-  const beat = await service.getBeat(req.params.id);
-  res.json({
-    success: true,
-    data: beat,
-  });
-};
-
-/**
- * Updates a beat record dynamically
- * PATCH /api/beats/:id
- */
-const updateBeat = async (req, res) => {
-  const beat = await service.updateBeat(req.params.id, req.body);
-  res.json({
-    success: true,
-    data: beat,
-  });
-};
-
-/**
- * Soft deletes/archives a beat
- * DELETE /api/beats/:id
- */
-const archiveBeat = async (req, res) => {
-  await service.archiveBeat(req.params.id);
-  res.json({
-    success: true,
-    message: "Beat archived successfully.",
-  });
-};
-
-/**
- * Streams a stored beat object (audio/image) from the configured storage backend.
- * GET /api/beats/object/:key
- */
-const getBeatObject = async (req, res) => {
-  const key = req.params.key;
-
-  // Security check: Prevent path traversal or invalid keys
-  if (!key || key.includes("..") || key.startsWith("/") || key.includes("\\")) {
-    return res.status(400).json({ success: false, message: "Invalid object key." });
+    res.status(201).json({
+      success: true,
+      data: beatDto,
+    });
+  } catch (error) {
+    next(error);
   }
+};
 
-  const decodedKey = decodeURIComponent(key);
+/**
+ * Handles HTTP GET request to retrieve a single beat by public_id.
+ *
+ * @param {import('express').Request} req - Express request object.
+ * @param {import('express').Response} res - Express response object.
+ * @param {import('express').NextFunction} next - Express next middleware reference.
+ * @returns {Promise<void>} Resolves when HTTP response is sent.
+ */
+const getBeatByPublicId = async (req, res, next) => {
+  try {
+    const beatDto = await service.getBeatByPublicId(req.params.publicId);
 
-  // Security check: Prevent unauthorized access to private master files, stems, or licenses
-  if (decodedKey.startsWith("masters/") || decodedKey.startsWith("stems/") || decodedKey.startsWith("licenses/")) {
-    const authHeader = req.headers.authorization;
-    if (!req.user && authHeader && authHeader.startsWith("Bearer ")) {
-      const token = authHeader.split(" ")[1];
-      try {
-        const jwtUtil = require("../../utils/jwt");
-        const decoded = jwtUtil.verifyAccessToken(token);
-        if (decoded && decoded.sub) {
-          req.user = {
-            id: decoded.sub,
-            role: decoded.role,
-            sessionId: decoded.sid
-          };
-        }
-      } catch (e) {}
-    }
-
-    if (!req.user) {
-      return res.status(401).json({ success: false, message: "Authentication required for master assets." });
-    }
-    if (req.user.role !== "admin") {
-      const ownershipsService = require("../ownerships/ownerships.service");
-      const userOwnerships = await ownershipsService.getOwnershipsByUser(req.user.id);
-      const hasAccess = userOwnerships.some(o => o.audio_key === decodedKey || String(o.beat_id) === decodedKey);
-      if (!hasAccess) {
-        return res.status(403).json({ success: false, message: "Access denied. Valid beat purchase required." });
-      }
-    }
+    res.status(200).json({
+      success: true,
+      data: beatDto,
+    });
+  } catch (error) {
+    next(error);
   }
+};
 
-  const rangeHeader = req.headers.range;
-  const objectData = await service.getBeatObjectStream(key, rangeHeader);
+/**
+ * Handles HTTP GET request to retrieve a single published beat by its SEO slug.
+ *
+ * @param {import('express').Request} req - Express request object.
+ * @param {import('express').Response} res - Express response object.
+ * @param {import('express').NextFunction} next - Express next middleware reference.
+ * @returns {Promise<void>} Resolves when HTTP response is sent.
+ */
+const getBeatBySlug = async (req, res, next) => {
+  try {
+    const beatDto = await service.getBeatBySlug(req.params.slug);
 
-  res.status(objectData.statusCode);
-  res.set("Content-Type", objectData.contentType);
-  res.set("Accept-Ranges", "bytes");
-  res.set("Cache-Control", "public, max-age=31536000, immutable");
-
-  if (objectData.contentLength) {
-    res.set("Content-Length", objectData.contentLength);
+    res.status(200).json({
+      success: true,
+      data: beatDto,
+    });
+  } catch (error) {
+    next(error);
   }
+};
 
-  if (objectData.contentRange) {
-    res.set("Content-Range", objectData.contentRange);
+/**
+ * Handles HTTP GET request to list published beats for the storefront catalog.
+ *
+ * @param {import('express').Request} req - Express request object.
+ * @param {import('express').Response} res - Express response object.
+ * @param {import('express').NextFunction} next - Express next middleware reference.
+ * @returns {Promise<void>} Resolves when HTTP response is sent.
+ */
+const listPublicBeats = async (req, res, next) => {
+  try {
+    const options = {
+      genre: req.query.genre,
+      search: req.query.search || req.query.q,
+      mood: req.query.mood,
+      minBpm: req.query.minBpm,
+      maxBpm: req.query.maxBpm,
+      minPrice: req.query.minPrice,
+      maxPrice: req.query.maxPrice,
+      limit: req.query.limit,
+      offset: req.query.offset,
+      sortBy: req.query.sortBy,
+      sortOrder: req.query.sortOrder,
+    };
+
+    const beats =
+      req.query.catalog === "1"
+        ? await service.listPublicBeatsPage(options)
+        : await service.listPublicBeats(options);
+
+    res.status(200).json({
+      success: true,
+      data: beats,
+    });
+  } catch (error) {
+    next(error);
   }
+};
 
-  objectData.stream.pipe(res);
+const listTrendingBeats = async (req, res, next) => {
+  try {
+    const limit = Number(req.query.limit) || 4;
+    const beats = await service.listTrendingBeats(limit);
+    res.status(200).json({ success: true, data: beats });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const recordPlay = async (req, res, next) => {
+  try {
+    const beat = await service.recordPlay(req.params.publicId);
+    res.status(200).json({ success: true, data: beat });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Handles HTTP GET request to list all beats (drafts, published, archived) for the administrative dashboard.
+ *
+ * @param {import('express').Request} req - Express request object.
+ * @param {import('express').Response} res - Express response object.
+ * @param {import('express').NextFunction} next - Express next middleware reference.
+ * @returns {Promise<void>} Resolves when HTTP response is sent.
+ */
+const listAdminBeats = async (req, res, next) => {
+  try {
+    const options = {
+      status: req.query.status,
+      genre: req.query.genre,
+      limit: req.query.limit,
+      offset: req.query.offset,
+      sortBy: req.query.sortBy,
+      sortOrder: req.query.sortOrder,
+    };
+
+    const beats = await service.listAdminBeats(options);
+
+    res.status(200).json({
+      success: true,
+      data: beats,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Handles HTTP PATCH request to update a beat record.
+ *
+ * @param {import('express').Request} req - Express request object.
+ * @param {import('express').Response} res - Express response object.
+ * @param {import('express').NextFunction} next - Express next middleware reference.
+ * @returns {Promise<void>} Resolves when HTTP response is sent.
+ */
+const updateBeat = async (req, res, next) => {
+  try {
+    const adminUserId = req.user ? req.user.id : undefined;
+    const updatedBeatDto = await service.updateBeat(
+      req.params.publicId,
+      req.body,
+      adminUserId,
+    );
+
+    res.status(200).json({
+      success: true,
+      data: updatedBeatDto,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Handles HTTP PATCH request to update a beat's lifecycle status.
+ *
+ * @param {import('express').Request} req - Express request object.
+ * @param {import('express').Response} res - Express response object.
+ * @param {import('express').NextFunction} next - Express next middleware reference.
+ * @returns {Promise<void>} Resolves when HTTP response is sent.
+ */
+const updateStatus = async (req, res, next) => {
+  try {
+    const adminUserId = req.user ? req.user.id : undefined;
+    const status = req.body ? req.body.status : undefined;
+
+    const updatedBeatDto = await service.updateStatus(
+      req.params.publicId,
+      status,
+      adminUserId,
+    );
+
+    res.status(200).json({
+      success: true,
+      data: updatedBeatDto,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const archiveBeat = async (req, res, next) => {
+  try {
+    const adminUserId = req.user ? req.user.id : undefined;
+    await service.archiveBeat(req.params.publicId, adminUserId);
+
+    res.status(200).json({
+      success: true,
+      message: "Beat archived successfully.",
+    });
+  } catch (error) {
+    next(error);
+  }
 };
 
 module.exports = {
   createBeat,
-  getAllBeats,
-  getBeat,
+  getBeatByPublicId,
+  getBeatBySlug,
+  listPublicBeats,
+  listTrendingBeats,
+  recordPlay,
+  listAdminBeats,
   updateBeat,
+  updateStatus,
   archiveBeat,
-  getBeatObject,
 };

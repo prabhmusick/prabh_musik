@@ -1,6 +1,53 @@
 import api from "../lib/api";
 import { Beat } from "../types/admin";
 
+const resolveApiBase = () => {
+  const configured =
+    process.env.NEXT_PUBLIC_API_URL || process.env.BACKEND_PUBLIC_URL;
+
+  if (configured && configured.trim()) {
+    return configured
+      .trim()
+      .replace(/\/api\/?$/, "")
+      .replace(/\/+$/, "");
+  }
+
+  if (
+    typeof window !== "undefined" &&
+    !["localhost", "127.0.0.1"].includes(window.location.hostname)
+  ) {
+    return "";
+  }
+
+  return "http://localhost:5005";
+};
+
+const API_HOST = resolveApiBase();
+const API_OBJECT_BASE = API_HOST ? `${API_HOST}/api` : "/api";
+
+const normalizeMediaUrl = (value: unknown): string => {
+  if (typeof value !== "string" || !value.trim()) return "";
+
+  try {
+    const parsed = new URL(
+      value,
+      API_HOST ||
+        (typeof window !== "undefined"
+          ? window.location.origin
+          : "http://localhost:5005"),
+    );
+
+    if (parsed.pathname.replace(/\/+$/, "") === "/api/media") {
+      const key = parsed.searchParams.get("key");
+      return key && key !== "api/media" ? parsed.toString() : "";
+    }
+  } catch {
+    return "";
+  }
+
+  return value;
+};
+
 // ============================================================================
 // DTO Mappers: Bridges Backend Column names and Frontend TypeScript typings
 // ============================================================================
@@ -9,44 +56,38 @@ import { Beat } from "../types/admin";
  * Maps a backend beat record to the frontend typings shape
  */
 export function mapBackendToFrontend(beat: any): Beat {
-  const getUrl = (key: string | null): string => {
-    if (!key) return "";
-    // If the key is already a complete URL, return it unchanged
-    if (key.startsWith("http://") || key.startsWith("https://")) return key;
-    // Otherwise, point to the backend object streaming endpoint
-    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5005/api";
-    const cleanApiUrl = API_URL.endsWith("/") ? API_URL.slice(0, -1) : API_URL;
-    return `${cleanApiUrl}/beats/object/${encodeURIComponent(key)}`;
-  };
-
-  const statusMap: Record<string, 'DRAFT' | 'AVAILABLE' | 'SOLD'> = {
+  const statusMap: Record<string, "DRAFT" | "AVAILABLE" | "SOLD"> = {
     draft: "DRAFT",
     published: "AVAILABLE",
-    archived: "SOLD"
+    archived: "SOLD",
   };
   const mappedStatus = statusMap[beat.status || "draft"] || "DRAFT";
 
   return {
-    id: String(beat.id),
-    artistId: "", // Artist is single/global and managed on backend
-    title: beat.beat_name || "",
+    id: String(beat.public_id || beat.id),
+    artistId: String(beat.artist_id || ""),
+    title: beat.title || "",
     description: beat.description || "",
+    relatedArtistName: beat.related_artist_name || "",
+    relatedArtistImage: beat.related_artist_image_url || "",
+    isTrending: Boolean(beat.is_trending),
+    playCount: Number(beat.play_count || 0),
     genre: beat.genre || "",
     bpm: beat.bpm || 0,
-    key: "", // Separated from mood, keep empty since backend does not have musical_key column yet
+    key: beat.musical_key || "",
     mood: beat.mood || "",
-    type: beat.beat_type || "beat",
-    trackType: beat.track_type || "non-exclusive",
+    type: "beat",
+    trackType: "non-exclusive",
     tags: [],
-    price: beat.price || 0,
+    price: beat.price_amount ? beat.price_amount / 100 : 0,
     status: mappedStatus,
     createdAt: beat.created_at || new Date().toISOString(),
     duration: beat.duration || 0,
     assets: {
-      coverImage: getUrl(beat.cover_key),
-      bannerImage: getUrl(beat.banner_key),
-      previewAudio: getUrl(beat.audio_key),
-      wavFile: getUrl(beat.audio_key), // Wav fallback map
+      coverImage: normalizeMediaUrl(beat.cover_url),
+      bannerImage: normalizeMediaUrl(beat.banner_url),
+      previewAudio: normalizeMediaUrl(beat.audio_url),
+      wavFile: normalizeMediaUrl(beat.audio_url), // Wav fallback map
       stemsFile: "",
     },
     analytics: {
@@ -65,21 +106,28 @@ export function mapBackendToFrontend(beat: any): Beat {
 export function mapFrontendToBackend(beat: any): any {
   const data: any = {};
 
-  if (beat.title !== undefined) data.beat_name = beat.title;
+  if (beat.title !== undefined) data.title = beat.title;
   if (beat.description !== undefined) data.description = beat.description;
   if (beat.genre !== undefined) data.genre = beat.genre;
+  if (beat.mood !== undefined) data.mood = beat.mood || null;
   if (beat.bpm !== undefined) data.bpm = Number(beat.bpm);
   if (beat.duration !== undefined) data.duration = Number(beat.duration);
-  if (beat.mood !== undefined) data.mood = beat.mood;
-  if (beat.type !== undefined) data.beat_type = beat.type;
-  if (beat.trackType !== undefined) data.track_type = beat.trackType;
-  if (beat.price !== undefined) data.price = Number(beat.price);
-  
+  if (beat.key !== undefined) data.musical_key = beat.key;
+  if (beat.price !== undefined)
+    data.price_amount = Math.round(Number(beat.price) * 100);
+  if (beat.relatedArtistName !== undefined)
+    data.related_artist_name = beat.relatedArtistName || null;
+  if (beat.relatedArtistImage !== undefined)
+    data.related_artist_image_key = beat.relatedArtistImage || null;
+  if (beat.artistId !== undefined) data.artist_id = beat.artistId || null;
+  if (beat.isTrending !== undefined)
+    data.is_trending = Boolean(beat.isTrending);
+
   if (beat.status !== undefined) {
     const statusMapInverse: Record<string, string> = {
       DRAFT: "draft",
       AVAILABLE: "published",
-      SOLD: "archived"
+      SOLD: "archived",
     };
     data.status = statusMapInverse[beat.status] || "draft";
   }
@@ -88,10 +136,40 @@ export function mapFrontendToBackend(beat: any): any {
   if (beat.assets !== undefined) {
     const getRawKey = (url: string | undefined): string | null => {
       if (!url) return null;
+
+      try {
+        const parsed = new URL(
+          url,
+          API_HOST ||
+            (typeof window !== "undefined"
+              ? window.location.origin
+              : "http://localhost:5005"),
+        );
+        if (parsed.pathname.replace(/\/+$/, "") === "/api/media") {
+          return parsed.searchParams.get("key") || null;
+        }
+      } catch {
+        // fall through to direct URL fallback below
+      }
+
       if (url.includes("/beats/object/")) {
         return url.split("/beats/object/").pop() || null;
       }
-      return url;
+
+      try {
+        const parsed = new URL(
+          url,
+          API_HOST ||
+            (typeof window !== "undefined"
+              ? window.location.origin
+              : "http://localhost:5005"),
+        );
+        const pathname = parsed.pathname.replace(/^\/+|\/+$/g, "");
+        if (pathname === "api/media") return null;
+        return pathname || null;
+      } catch {
+        return url;
+      }
     };
 
     if (beat.assets.coverImage !== undefined) {
@@ -130,6 +208,54 @@ export async function getBeats(): Promise<Beat[]> {
   }
 }
 
+export interface BeatCatalogFilters {
+  search?: string;
+  genre?: string;
+  mood?: string;
+  minBpm?: number;
+  maxBpm?: number;
+  minPrice?: number;
+  maxPrice?: number;
+  limit?: number;
+  offset?: number;
+}
+
+export async function getBeatCatalog(
+  filters: BeatCatalogFilters = {},
+  signal?: AbortSignal,
+): Promise<{
+  items: Beat[];
+  total: number;
+  pages: number;
+}> {
+  const params = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") {
+      params.set(key, String(value));
+    }
+  });
+  params.set("catalog", "1");
+  const response = await api.get(`/beats?${params.toString()}`, { signal });
+  const data = response?.data?.data || {};
+  return {
+    items: Array.isArray(data.items)
+      ? data.items.map(mapBackendToFrontend)
+      : [],
+    total: Number(data.total || 0),
+    pages: Number(data.pages || 0),
+  };
+}
+
+export async function getTrendingBeats(): Promise<Beat[]> {
+  const response = await api.get("/beats/trending?limit=4");
+  const rawList = response?.data?.data || [];
+  return Array.isArray(rawList) ? rawList.map(mapBackendToFrontend) : [];
+}
+
+export async function recordBeatPlay(id: string): Promise<void> {
+  await api.post(`/beats/${id}/play`);
+}
+
 /**
  * Retrieves a single beat record by ID
  */
@@ -160,7 +286,7 @@ export async function createBeat(data: any): Promise<Beat> {
  */
 export async function updateBeat(id: string, data: any): Promise<Beat> {
   const backendPayload = mapFrontendToBackend(data);
-  const response = await api.put(`/beats/${id}`, backendPayload);
+  const response = await api.patch(`/beats/${id}`, backendPayload);
   return mapBackendToFrontend(response.data.data);
 }
 
@@ -198,7 +324,10 @@ export async function deleteBeat(id: string): Promise<boolean> {
  */
 export async function duplicateBeat(id: string): Promise<Beat> {
   const baseBeat = await getBeat(id);
-  const duplicated: Omit<Beat, "id" | "createdAt" | "analytics" | "ownershipsCount"> = {
+  const duplicated: Omit<
+    Beat,
+    "id" | "createdAt" | "analytics" | "ownershipsCount"
+  > = {
     artistId: baseBeat.artistId || "",
     title: `${baseBeat.title} (Copy)`,
     description: baseBeat.description,

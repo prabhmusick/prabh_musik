@@ -1,5 +1,6 @@
 const { db } = require("../../config/db");
 const crypto = require("crypto");
+const RepositoryError = require("../../errors/RepositoryError");
 
 // Explicit list of columns to retrieve (never use SELECT *)
 const ORDER_COLUMNS = `
@@ -31,7 +32,7 @@ const run = (sql, params = []) => {
   return new Promise((resolve, reject) => {
     db.run(sql, params, function (err) {
       if (err) {
-        reject(err);
+        reject(new RepositoryError(`Database run error: ${err.message}`, err));
       } else {
         resolve({ id: this.lastID, changes: this.changes });
       }
@@ -43,7 +44,7 @@ const get = (sql, params = []) => {
   return new Promise((resolve, reject) => {
     db.get(sql, params, (err, row) => {
       if (err) {
-        reject(err);
+        reject(new RepositoryError(`Database get error: ${err.message}`, err));
       } else {
         resolve(row);
       }
@@ -55,7 +56,7 @@ const all = (sql, params = []) => {
   return new Promise((resolve, reject) => {
     db.all(sql, params, (err, rows) => {
       if (err) {
-        reject(err);
+        reject(new RepositoryError(`Database all error: ${err.message}`, err));
       } else {
         resolve(rows);
       }
@@ -63,15 +64,25 @@ const all = (sql, params = []) => {
   });
 };
 
-/**
- * Creates a new order along with its order items in a transaction.
- */
-const createOrder = async (customerId, totalAmount, paymentMethod, status, items, extra = {}) => {
+const createOrder = async (
+  customerId,
+  totalAmount,
+  paymentMethod,
+  status,
+  items,
+  extra = {},
+) => {
   const publicId = crypto.randomUUID();
   return new Promise((resolve, reject) => {
     db.serialize(() => {
       db.run("BEGIN TRANSACTION", (err) => {
-        if (err) return reject(err);
+        if (err)
+          return reject(
+            new RepositoryError(
+              `Failed to begin order transaction: ${err.message}`,
+              err,
+            ),
+          );
 
         const orderSql = `
           INSERT INTO orders (
@@ -95,16 +106,21 @@ const createOrder = async (customerId, totalAmount, paymentMethod, status, items
             extra.paymentReference || null,
             extra.transactionId || null,
             extra.gateway || null,
-            status
+            status,
           ],
           function (err2) {
             if (err2) {
               db.run("ROLLBACK");
-              return reject(err2);
+              return reject(
+                new RepositoryError(
+                  `Failed to create order: ${err2.message}`,
+                  err2,
+                ),
+              );
             }
             const orderId = this.lastID;
 
-          const itemSql = `
+            const itemSql = `
             INSERT INTO order_items (
               order_id,
               beat_id,
@@ -114,44 +130,104 @@ const createOrder = async (customerId, totalAmount, paymentMethod, status, items
             ) VALUES (?, ?, ?, ?, ?)
           `;
 
-          let insertCount = 0;
-          if (items.length === 0) {
-            db.run("COMMIT", (errCommit) => {
-              if (errCommit) {
-                db.run("ROLLBACK");
-                return reject(errCommit);
-              }
-              resolve(orderId);
-            });
-            return;
-          }
-
-          let failed = false;
-          items.forEach((item) => {
-            if (failed) return;
-            db.run(
-              itemSql,
-              [orderId, item.beatId, item.beatTitle, item.price, item.licenseType || "exclusive"],
-              (err3) => {
-                if (err3) {
-                  failed = true;
+            let insertCount = 0;
+            if (items.length === 0) {
+              db.run("COMMIT", (errCommit) => {
+                if (errCommit) {
                   db.run("ROLLBACK");
-                  return reject(err3);
+                  return reject(
+                    new RepositoryError(
+                      `Failed to commit order transaction: ${errCommit.message}`,
+                      errCommit,
+                    ),
+                  );
                 }
-                insertCount++;
-                if (insertCount === items.length) {
-                  db.run("COMMIT", (errCommit) => {
-                    if (errCommit) {
-                      db.run("ROLLBACK");
-                      return reject(errCommit);
-                    }
-                    resolve(orderId);
-                  });
-                }
-              }
-            );
-          });
-        });
+                resolve(orderId);
+              });
+              return;
+            }
+
+            let failed = false;
+            items.forEach((item) => {
+              if (failed) return;
+              db.run(
+                itemSql,
+                [
+                  orderId,
+                  item.beatId,
+                  item.beatTitle,
+                  item.price,
+                  item.licenseType || "exclusive",
+                ],
+                (err3) => {
+                  if (err3) {
+                    failed = true;
+                    db.run("ROLLBACK");
+                    return reject(
+                      new RepositoryError(
+                        `Failed to create order item: ${err3.message}`,
+                        err3,
+                      ),
+                    );
+                  }
+                  insertCount++;
+                  if (insertCount === items.length) {
+                    const purchaseSql = `
+                    INSERT INTO beat_purchases (user_id, beat_id, purchase_price)
+                    SELECT ?, ?, ?
+                    WHERE NOT EXISTS (
+                      SELECT 1 FROM beat_purchases WHERE user_id = ? AND beat_id = ?
+                    )
+                  `;
+
+                    const insertPurchases = (index) => {
+                      if (status !== "paid" || index >= items.length) {
+                        return db.run("COMMIT", (errCommit) => {
+                          if (errCommit) {
+                            db.run("ROLLBACK");
+                            return reject(
+                              new RepositoryError(
+                                `Failed to commit order transaction: ${errCommit.message}`,
+                                errCommit,
+                              ),
+                            );
+                          }
+                          resolve(orderId);
+                        });
+                      }
+
+                      const item = items[index];
+                      db.run(
+                        purchaseSql,
+                        [
+                          customerId,
+                          item.beatId,
+                          item.price,
+                          customerId,
+                          item.beatId,
+                        ],
+                        (purchaseError) => {
+                          if (purchaseError) {
+                            db.run("ROLLBACK");
+                            return reject(
+                              new RepositoryError(
+                                `Failed to create beat purchase: ${purchaseError.message}`,
+                                purchaseError,
+                              ),
+                            );
+                          }
+                          insertPurchases(index + 1);
+                        },
+                      );
+                    };
+
+                    insertPurchases(0);
+                  }
+                },
+              );
+            });
+          },
+        );
       });
     });
   });
@@ -166,10 +242,10 @@ const getOrderById = async (id) => {
       ${ORDER_COLUMNS}
     FROM orders o
     JOIN users u ON o.customer_id = u.id
-    WHERE (o.id = ? OR o.public_id = ?)
+    WHERE o.id = ?
       AND o.is_deleted = 0
   `;
-  return get(sql, [id, id]);
+  return get(sql, [id]);
 };
 
 /**
@@ -277,13 +353,24 @@ const executeFulfillmentTransaction = async (orderId, callback) => {
       const context = { lockAcquired: false };
       db.serialize(() => {
         db.run("BEGIN TRANSACTION", async (err) => {
-          if (err) return reject(err);
+          if (err)
+            return reject(
+              new RepositoryError(
+                `Failed to begin fulfillment transaction: ${err.message}`,
+                err,
+              ),
+            );
           try {
             callbackResult = await callback(db, context);
             db.run("COMMIT", (errCommit) => {
               if (errCommit) {
                 db.run("ROLLBACK");
-                return reject(errCommit);
+                return reject(
+                  new RepositoryError(
+                    `Failed to commit fulfillment transaction: ${errCommit.message}`,
+                    errCommit,
+                  ),
+                );
               }
               resolve(callbackResult);
             });
@@ -293,10 +380,19 @@ const executeFulfillmentTransaction = async (orderId, callback) => {
             if (context.lockAcquired) {
               db.run(
                 "UPDATE orders SET fulfillment_status = 'failed', updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-                [orderId]
+                [orderId],
               );
             }
-            reject(error);
+            if (error instanceof RepositoryError) {
+              reject(error);
+            } else {
+              reject(
+                new RepositoryError(
+                  `Fulfillment transaction callback failed: ${error.message}`,
+                  error,
+                ),
+              );
+            }
           }
         });
       });
@@ -321,8 +417,16 @@ const acquireFulfillmentLock = async (orderId, tx) => {
   `;
   return new Promise((resolve, reject) => {
     tx.run(sql, [orderId], function (err) {
-      if (err) reject(err);
-      else resolve(this.changes > 0);
+      if (err) {
+        reject(
+          new RepositoryError(
+            `Failed to acquire fulfillment lock: ${err.message}`,
+            err,
+          ),
+        );
+      } else {
+        resolve(this.changes > 0);
+      }
     });
   });
 };
@@ -341,10 +445,48 @@ const completeFulfillment = async (orderId, tx) => {
   `;
   return new Promise((resolve, reject) => {
     tx.run(sql, [orderId], function (err) {
-      if (err) reject(err);
-      else resolve(this.changes > 0);
+      if (err) {
+        reject(
+          new RepositoryError(
+            `Failed to complete fulfillment: ${err.message}`,
+            err,
+          ),
+        );
+      } else {
+        resolve(this.changes > 0);
+      }
     });
   });
+};
+
+/**
+ * Finds a single order record matching a payment reference (Stripe paymentIntentId).
+ *
+ * @param {string} paymentReference - The unique payment intent reference.
+ * @returns {Promise<Object|null>} The order profile object, or null.
+ */
+const getOrderByPaymentReference = async (paymentReference) => {
+  const sql = `
+    SELECT 
+      ${ORDER_COLUMNS}
+    FROM orders o
+    JOIN users u ON o.customer_id = u.id
+    WHERE o.payment_reference = ?
+      AND o.is_deleted = 0
+    LIMIT 1
+  `;
+  try {
+    const order = await db.prepare(sql).bind(paymentReference).first();
+    return order || null;
+  } catch (err) {
+    if (err instanceof RepositoryError) {
+      throw err;
+    }
+    throw new RepositoryError(
+      `Failed to fetch order by payment reference: ${err.message}`,
+      err,
+    );
+  }
 };
 
 module.exports = {
@@ -357,5 +499,6 @@ module.exports = {
   deleteOrder,
   executeFulfillmentTransaction,
   acquireFulfillmentLock,
-  completeFulfillment
+  completeFulfillment,
+  getOrderByPaymentReference,
 };

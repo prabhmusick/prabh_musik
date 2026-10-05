@@ -9,6 +9,7 @@ import { PageHeader } from "../../../../components/admin/PageHeader"
 import { BeatForm } from "../../../../components/admin/beats/BeatForm"
 import { useCreateBeat } from "../../../../hooks/useBeats"
 import { Button } from "../../../../components/ui/button"
+import { getApiErrorMessage } from "../../../../lib/api"
 
 export default function NewBeatPage() {
   const router = useRouter()
@@ -23,9 +24,7 @@ export default function NewBeatPage() {
   }
 
   const errorMsg = createBeatMutation.error
-    ? (createBeatMutation.error as any)?.response?.data?.error || 
-      (createBeatMutation.error as any)?.response?.data?.message || 
-      createBeatMutation.error.message
+    ? getApiErrorMessage(createBeatMutation.error, "Unable to create beat.")
     : null;
 
   return (

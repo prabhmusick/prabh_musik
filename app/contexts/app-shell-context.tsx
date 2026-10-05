@@ -1,6 +1,16 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import api, { setAccessToken, clearAccessToken } from "../../lib/api";
+import { mapUserDto } from "../../lib/mappers/user.mapper";
+import { useCurrentUser } from "../../hooks/useCurrentUser";
 
 export interface BeatItem {
   id: number | string;
@@ -19,15 +29,18 @@ export interface UserProfile {
   fullName: string;
   username: string;
   email: string;
+  role?: string;
   avatar?: string;
 }
 
 interface AppShellContextValue {
   user: UserProfile | null;
   isAuthenticated: boolean;
-  login: (payload: Partial<UserProfile> & { emailOrUsername?: string }) => void;
-  signup: (payload: Partial<UserProfile> & { email?: string; fullName?: string; username?: string }) => void;
-  logout: () => void;
+  login: (emailOrUsername: string, password: string) => Promise<void>;
+  signup: (fullName: string, email: string, password: string) => Promise<void>;
+  loginWithGoogle: (idToken: string) => Promise<void>;
+  loginWithApple: (idToken: string, nonce?: string) => Promise<void>;
+  logout: () => Promise<void>;
   cart: BeatItem[];
   cartOpen: boolean;
   openCart: () => void;
@@ -41,39 +54,16 @@ interface AppShellContextValue {
   toggleWishlist: (beat: BeatItem) => void;
 }
 
-const AppShellContext = createContext<AppShellContextValue | undefined>(undefined);
+const AppShellContext = createContext<AppShellContextValue | undefined>(
+  undefined,
+);
 
-const USER_STORAGE_KEY = "prabhmusick-user";
 const CART_STORAGE_KEY = "prabhmusick-cart";
 const WISHLIST_STORAGE_KEY = "prabhmusick-wishlist";
 const PURCHASES_STORAGE_KEY = "prabhmusick-purchases";
 
-const defaultPurchases: BeatItem[] = [
-  {
-    id: 101,
-    title: "Midnight Glow",
-    producer: "Ava Lane",
-    price: 4500,
-    cover: "https://images.unsplash.com/photo-1516280440614-37939bbacd81?auto=format&fit=crop&w=800&q=80",
-  },
-  {
-    id: 102,
-    title: "Neon Skyline",
-    producer: "Riley Fox",
-    price: 3200,
-    cover: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=800&q=80",
-  },
-];
-
-const defaultWishlist: BeatItem[] = [
-  {
-    id: 201,
-    title: "Golden Hour",
-    producer: "Noah Reed",
-    price: 2800,
-    cover: "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=800&q=80",
-  },
-];
+const defaultPurchases: BeatItem[] = [];
+const defaultWishlist: BeatItem[] = [];
 
 function getStoredValue<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
@@ -95,55 +85,142 @@ function persistValue<T>(key: string, value: T | null) {
 }
 
 export function AppShellProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<UserProfile | null>(() => getStoredValue<UserProfile | null>(USER_STORAGE_KEY, null));
-  const [cart, setCart] = useState<BeatItem[]>(() => getStoredValue<BeatItem[]>(CART_STORAGE_KEY, []));
-  const [wishlist, setWishlist] = useState<BeatItem[]>(() => getStoredValue<BeatItem[]>(WISHLIST_STORAGE_KEY, defaultWishlist));
-  const [purchasedBeats, setPurchasedBeats] = useState<BeatItem[]>(() => getStoredValue<BeatItem[]>(PURCHASES_STORAGE_KEY, defaultPurchases));
+  const queryClient = useQueryClient();
+  const { data: currentUser } = useCurrentUser();
+
+  const user = currentUser || null;
+  const [cart, setCart] = useState<BeatItem[]>([]);
+  const [wishlist, setWishlist] = useState<BeatItem[]>(defaultWishlist);
+  const [purchasedBeats, setPurchasedBeats] =
+    useState<BeatItem[]>(defaultPurchases);
   const [cartOpen, setCartOpen] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+
+  const syncCartAfterLogin = async (localCart: BeatItem[]) => {
+    const serverResponse = await api.get("/cart");
+    const serverCart = serverResponse.data.data || [];
+    const merged = Array.from(
+      new Map(
+        [...serverCart, ...localCart].map((item) => [String(item.id), item]),
+      ).values(),
+    );
+    const response = await api.put("/cart", { items: merged });
+    setCart(response.data.data || []);
+  };
 
   useEffect(() => {
-    persistValue(USER_STORAGE_KEY, user);
-  }, [user]);
+    setCart(getStoredValue<BeatItem[]>(CART_STORAGE_KEY, []));
+    setWishlist(
+      getStoredValue<BeatItem[]>(WISHLIST_STORAGE_KEY, defaultWishlist),
+    );
+    setPurchasedBeats(
+      getStoredValue<BeatItem[]>(PURCHASES_STORAGE_KEY, defaultPurchases),
+    );
+    setHydrated(true);
+  }, []);
 
   useEffect(() => {
+    if (!hydrated) return;
     persistValue(CART_STORAGE_KEY, cart);
-  }, [cart]);
+  }, [hydrated, cart]);
 
   useEffect(() => {
+    if (!hydrated) return;
     persistValue(WISHLIST_STORAGE_KEY, wishlist);
-  }, [wishlist]);
+  }, [hydrated, wishlist]);
 
   useEffect(() => {
+    if (!hydrated) return;
     persistValue(PURCHASES_STORAGE_KEY, purchasedBeats);
-  }, [purchasedBeats]);
+  }, [hydrated, purchasedBeats]);
 
-  const login = (payload: Partial<UserProfile> & { emailOrUsername?: string }) => {
-    const fallbackName = payload.fullName || payload.username || payload.emailOrUsername?.split("@")[0] || "Producer";
-    setUser({
-      id: payload.id || `${Date.now()}`,
-      fullName: fallbackName,
-      username: payload.username || fallbackName.toLowerCase().replace(/\s+/g, "_"),
-      email: payload.email || payload.emailOrUsername || "producer@prabhmusik.com",
-      avatar: payload.avatar || `https://api.dicebear.com/7.x/thumbs/svg?seed=${encodeURIComponent(fallbackName)}`,
+  // Event handler for background session expiration notifications
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      clearAccessToken();
+      queryClient.setQueryData(["currentUser"], null);
+
+      setCart([]);
+      setWishlist([]);
+      setPurchasedBeats([]);
+      setCartOpen(false);
+    };
+
+    window.addEventListener("auth-session-expired", handleSessionExpired);
+    return () => {
+      window.removeEventListener("auth-session-expired", handleSessionExpired);
+    };
+  }, [queryClient]);
+
+  const login = async (emailOrUsername: string, password: string) => {
+    const response = await api.post("/auth/login", {
+      email: emailOrUsername,
+      password: password,
     });
+
+    const { user: backendUser, accessToken } = response.data.data;
+    setAccessToken(accessToken);
+    const mapped = mapUserDto(backendUser);
+    queryClient.setQueryData(["currentUser"], mapped);
+    await syncCartAfterLogin(cart);
     setCartOpen(false);
   };
 
-  const signup = (payload: Partial<UserProfile> & { email?: string; fullName?: string; username?: string }) => {
-    setUser({
-      id: payload.id || `${Date.now()}`,
-      fullName: payload.fullName || "New Creator",
-      username: payload.username || "new_creator",
-      email: payload.email || "creator@prabhmusik.com",
-      avatar: payload.avatar || "https://api.dicebear.com/7.x/thumbs/svg?seed=creator",
+  const signup = async (fullName: string, email: string, password: string) => {
+    const response = await api.post("/auth/signup", {
+      name: fullName,
+      email,
+      password,
     });
-    setCartOpen(false);
-  };
 
-  const logout = () => {
-    setUser(null);
+    const { user: backendUser, accessToken } = response.data.data;
+    setAccessToken(accessToken);
+    const mapped = mapUserDto(backendUser);
+    queryClient.setQueryData(["currentUser"], mapped);
+
+    // Reset user-specific lists for new accounts
     setCart([]);
+    setWishlist([]);
+    setPurchasedBeats([]);
     setCartOpen(false);
+  };
+
+  const loginWithGoogle = async (idToken: string) => {
+    const response = await api.post("/auth/google", { idToken });
+
+    const { user: backendUser, accessToken } = response.data.data;
+    setAccessToken(accessToken);
+    const mapped = mapUserDto(backendUser);
+    queryClient.setQueryData(["currentUser"], mapped);
+    await syncCartAfterLogin(cart);
+    setCartOpen(false);
+  };
+
+  const loginWithApple = async (idToken: string, nonce?: string) => {
+    const response = await api.post("/auth/apple", { idToken, nonce });
+
+    const { user: backendUser, accessToken } = response.data.data;
+    setAccessToken(accessToken);
+    const mapped = mapUserDto(backendUser);
+    queryClient.setQueryData(["currentUser"], mapped);
+    await syncCartAfterLogin(cart);
+    setCartOpen(false);
+  };
+
+  const logout = async () => {
+    try {
+      await api.post("/auth/logout");
+    } catch (e) {
+      // Ignore network errors to guarantee UI teardown proceeds
+    } finally {
+      clearAccessToken();
+      queryClient.setQueryData(["currentUser"], null);
+
+      setCart([]);
+      setWishlist([]);
+      setPurchasedBeats([]);
+      setCartOpen(false);
+    }
   };
 
   const addToCart = (beat: BeatItem) => {
@@ -151,16 +228,37 @@ export function AppShellProvider({ children }: { children: React.ReactNode }) {
       if (current.some((item) => item.id === beat.id)) {
         return current;
       }
-      return [...current, beat];
+      const next = [...current, beat];
+      if (user) {
+        api.put("/cart", { items: next }).catch((error) => {
+          console.error("Failed to persist cart", error);
+        });
+      }
+      return next;
     });
     setCartOpen(true);
   };
 
   const removeFromCart = (id: number | string) => {
-    setCart((current) => current.filter((item) => item.id !== id));
+    setCart((current) => {
+      const next = current.filter((item) => item.id !== id);
+      if (user) {
+        api.put("/cart", { items: next }).catch((error) => {
+          console.error("Failed to persist cart", error);
+        });
+      }
+      return next;
+    });
   };
 
-  const clearCart = () => setCart([]);
+  const clearCart = () => {
+    setCart([]);
+    if (user) {
+      api.put("/cart", { items: [] }).catch((error) => {
+        console.error("Failed to persist cart", error);
+      });
+    }
+  };
 
   const checkoutCart = () => {
     if (!cart.length) return;
@@ -172,7 +270,9 @@ export function AppShellProvider({ children }: { children: React.ReactNode }) {
   const toggleWishlist = (beat: BeatItem) => {
     setWishlist((current) => {
       const exists = current.some((item) => item.id === beat.id);
-      return exists ? current.filter((item) => item.id !== beat.id) : [...current, beat];
+      return exists
+        ? current.filter((item) => item.id !== beat.id)
+        : [...current, beat];
     });
   };
 
@@ -182,6 +282,8 @@ export function AppShellProvider({ children }: { children: React.ReactNode }) {
       isAuthenticated: Boolean(user),
       login,
       signup,
+      loginWithGoogle,
+      loginWithApple,
       logout,
       cart,
       cartOpen,
@@ -195,10 +297,14 @@ export function AppShellProvider({ children }: { children: React.ReactNode }) {
       wishlist,
       toggleWishlist,
     }),
-    [user, cart, wishlist, purchasedBeats, cartOpen]
+    [user, cart, wishlist, purchasedBeats, cartOpen],
   );
 
-  return <AppShellContext.Provider value={value}>{children}</AppShellContext.Provider>;
+  return (
+    <AppShellContext.Provider value={value}>
+      {children}
+    </AppShellContext.Provider>
+  );
 }
 
 export function useAppShell() {

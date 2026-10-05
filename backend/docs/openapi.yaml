@@ -1,0 +1,1032 @@
+openapi: 3.0.0
+info:
+  title: Prabh Musik API
+  description: Production-hardened REST API contract for the Prabh Musik Beat Marketplace.
+  version: 1.0.0
+servers:
+  - url: http://localhost:5005
+    description: Local development environment
+
+paths:
+  /health:
+    get:
+      summary: Health Check
+      description: Returns simple application status, version, uptime, memory, and dependency connectivity status.
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  status:
+                    type: string
+                    example: ok
+                  uptime:
+                    type: number
+                    example: 124.5
+                  version:
+                    type: string
+                    example: 1.0.0
+                  nodeVersion:
+                    type: string
+                    example: v18.16.0
+                  memoryUsage:
+                    type: object
+                  dependencies:
+                    type: object
+                    properties:
+                      database:
+                        type: string
+                        example: connected
+                      storage:
+                        type: string
+                        example: connected
+                      stripe:
+                        type: string
+                        example: configured
+
+  /ready:
+    get:
+      summary: Readiness Check
+      description: Verifies external connectivity to SQLite/D1 database, storage provider, and validates critical startup properties.
+      responses:
+        '200':
+          description: Application is fully initialized and ready
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  status:
+                    type: string
+                    example: ready
+        '503':
+          description: Dependencies are not yet initialized or reached
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  status:
+                    type: string
+                    example: not_ready
+                  message:
+                    type: string
+                    example: Database check failed
+
+  /api/monitoring/metrics:
+    get:
+      summary: System Metrics Summary (Admin Only)
+      description: Returns a complete breakdown of API requests, latencies, database queries, and errors.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Aggregated in-memory metrics list
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden (lacks admin credentials)
+
+  /api/monitoring/dashboard:
+    get:
+      summary: Operational Dashboard Representation (Admin Only)
+      description: Returns identical structured telemetry formatted for UI dashboard graphs.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Dashboard formatted telemetry payload
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+
+  /api/auth/signup:
+    post:
+      summary: Customer Signup
+      description: Registers a new user account profile in active status. Enforces a rate limit of 5 requests per 15 minutes.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+                - name
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: customer@example.com
+                password:
+                  type: string
+                  minLength: 8
+                  example: supersecretpassword123
+                name:
+                  type: string
+                  example: John Doe
+      responses:
+        '201':
+          description: User registered successfully
+        '400':
+          description: Validation or malformed payload error
+        '409':
+          description: Email address already taken
+
+  /api/auth/login:
+    post:
+      summary: User Login
+      description: Authenticates user credentials, sets cookies, and returns JWT access tokens. Limit 10 attempts per 15 minutes.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Successful authentication
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+                example: refreshToken=xxx; Path=/api/auth; HttpOnly; SameSite=Strict
+        '400':
+          description: Invalid parameters
+        '401':
+          description: Invalid email or password
+
+  /api/auth/logout:
+    post:
+      summary: Terminate Session
+      description: Revokes the refresh token and clears HTTP-Only session cookies.
+      responses:
+        '200':
+          description: Logout successful
+
+  /api/auth/refresh:
+    post:
+      summary: Rotate Access Token
+      description: Consumes valid Refresh Token cookie and issues a new access token + rotated refresh token cookie.
+      responses:
+        '200':
+          description: Token rotated successfully
+
+  /api/auth/me:
+    get:
+      summary: Get Current Session Profile
+      description: Retrieves the currently authenticated user's profile metadata. Requires a valid JWT Access Token.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Authenticated user payload
+        '401':
+          description: Unauthorized or session expired
+
+  /api/auth/forgot-password:
+    post:
+      summary: Request Password Reset
+      description: Sends recovery email verification tokens. Limit 3 requests per 15 minutes.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Request processed
+
+  /api/auth/reset-password:
+    post:
+      summary: Complete Password Reset
+      description: Validates recovery token and updates credentials. Limit 3 requests per 15 minutes.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+                - password
+              properties:
+                token:
+                  type: string
+                password:
+                  type: string
+                  minLength: 8
+      responses:
+        '200':
+          description: Password updated successfully
+
+  /api/users:
+    post:
+      summary: Create Raw User Profile
+      description: Inserts a raw user record into the users table. Used by internal sync processors.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - name
+              properties:
+                email:
+                  type: string
+                  format: email
+                name:
+                  type: string
+      responses:
+        '201':
+          description: Profile created successfully
+
+  /api/beats:
+    get:
+      summary: List Storefront Catalog Beats
+      description: Retrieves published catalog items with optional filtering and sorting. Limit 100 requests per 15 minutes.
+      parameters:
+        - name: genre
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Catalog beats payload
+
+  /api/beats/slug/{slug}:
+    get:
+      summary: Fetch Beat by Slug
+      description: Retrieves metadata for a published beat by its SEO-friendly slug.
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Beat details payload
+        '404':
+          description: Beat not found or not published
+
+  /api/beats/{publicId}:
+    get:
+      summary: Fetch Beat by Public ID
+      description: Retrieves a single beat record by public_id (bt_...).
+      parameters:
+        - name: publicId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Beat details payload
+        '404':
+          description: Beat not found
+
+  /api/orders:
+    post:
+      summary: Create Order Record
+      description: Registers a new pending order transaction for beat items.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - customerId
+                - beatIds
+                - paymentMethod
+              properties:
+                customerId:
+                  type: integer
+                beatIds:
+                  type: array
+                  items:
+                    type: integer
+                paymentMethod:
+                  type: string
+                  example: card
+      responses:
+        '201':
+          description: Pending order created successfully
+        '400':
+          description: Invalid request parameters
+        '404':
+          description: Customer or beat not found
+
+  /api/orders/{id}:
+    get:
+      summary: Fetch Order by ID
+      description: Retrieves order details and items.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Order details payload
+        '404':
+          description: Order not found
+
+  /api/payments/create-checkout-session:
+    post:
+      summary: Create Stripe Checkout Session
+      description: Generates a hosted checkout redirect URL. Limit 10 requests per 15 minutes.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - amount
+                - email
+                - beats
+                - successUrl
+                - cancelUrl
+              properties:
+                amount:
+                  type: integer
+                  description: Integer amount in minor currency units (e.g. paisa)
+                email:
+                  type: string
+                  format: email
+                beats:
+                  type: array
+                  items:
+                    type: object
+                successUrl:
+                  type: string
+                cancelUrl:
+                  type: string
+      responses:
+        '200':
+          description: Checkout session URL payload
+
+  /api/payments/payment-success:
+    post:
+      summary: Confirm Successful Payment (DEPRECATED)
+      description: Returns HTTP 410 Gone. Payment confirmation is now handled exclusively by Stripe webhooks under /api/payments/webhook.
+      responses:
+        '410':
+          description: Endpoint deprecated. Fulfillments must run via Webhooks.
+
+  /api/payments/webhook:
+    post:
+      summary: Stripe Webhook Entry
+      description: Authoritative payment confirmation callback point for Stripe. Enforces Stripe signature verification.
+      parameters:
+        - name: stripe-signature
+          in: header
+          required: true
+          schema:
+            type: string
+            description: Stripe webhook signature header
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Webhook event processed or skipped successfully
+        '400':
+          description: Missing signature or signature verification failed
+        '500':
+          description: Internal webhook processing failure
+
+  /api/ownerships:
+    get:
+      summary: List Logged-In Customer's Licensed Library
+      description: Returns paginated and sorted beat ownership records for the authenticated user.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [purchaseDate, beatTitle, price]
+            default: purchaseDate
+        - name: order
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        '200':
+          description: Customer library payload
+        '401':
+          description: Unauthorized session
+
+  /api/ownerships/admin:
+    get:
+      summary: List All Active Licenses (Admin)
+      description: Retrieves all active ownership records in the system. Requires administrative role.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Complete active licenses list
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden (lacks admin role privileges)
+
+  /api/ownerships/{publicId}:
+    get:
+      summary: Fetch Licensed Beat Ownership by Public ID
+      description: Returns specific license metadata if owned by authenticated user or admin.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: publicId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: License details payload
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden (does not own this license)
+        '404':
+          description: License record not found
+    patch:
+      summary: Update Expiry Timestamp (Admin)
+      description: Modifies license expiration dates. Requires administrative role.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: publicId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - expiresAt
+              properties:
+                expiresAt:
+                  type: string
+                  format: date-time
+                  nullable: true
+      responses:
+        '200':
+          description: Expiry updated successfully
+        '400':
+          description: Invalid parameters
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+    delete:
+      summary: Revoke Active License (Admin)
+      description: Soft-deactivates beat license. Requires administrative role.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: publicId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: License revoked successfully
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+
+  /api/downloads/{ownershipPublicId}:
+    get:
+      summary: Generate Beat Download Link (Customer)
+      description: Verifies customer beat ownership validity and returns a secure, short-lived signed R2 URL redirect link. Enforces rate limits.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: ownershipPublicId
+          in: path
+          required: true
+          schema:
+            type: string
+            example: own_50
+      responses:
+        '200':
+          description: Download link successfully generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  downloadUrl:
+                    type: string
+                    format: uri
+                    example: https://prabh-musik-assets.r2.cloudflarestorage.com/audio/bt_201.mp3?X-Amz-Signature=...
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden (mismatch of owner, expired, revoked, or limit reached)
+        '404':
+          description: Ownership record not found
+
+  /api/downloads/history:
+    get:
+      summary: Get Customer Download History
+      description: Retrieves the authenticated customer's download history logs.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of customer download logs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        ownership_id:
+                          type: integer
+                        ip_address:
+                          type: string
+                        user_agent:
+                          type: string
+                        status:
+                          type: string
+                          example: success
+                        downloaded_at:
+                          type: string
+                          format: date-time
+                        ownership_public_id:
+                          type: string
+                        beat_title:
+                          type: string
+                        beat_public_id:
+                          type: string
+        '401':
+          description: Unauthorized
+
+  /api/downloads/admin:
+    get:
+      summary: Get All Download History (Admin)
+      description: Retrieves all download history logs for auditing. Requires administrative role privileges.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of all download logs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        ownership_id:
+                          type: integer
+                        ip_address:
+                          type: string
+                        user_agent:
+                          type: string
+                        status:
+                          type: string
+                          example: success
+                        downloaded_at:
+                          type: string
+                          format: date-time
+                        ownership_public_id:
+                          type: string
+                        beat_title:
+                          type: string
+                        beat_public_id:
+                          type: string
+                        user_email:
+                          type: string
+                        user_name:
+                          type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden (lacks admin privileges)
+
+  /api/downloads/admin/{ownershipPublicId}:
+    get:
+      summary: Get Download History for a Specific License (Admin)
+      description: Retrieves download logs for a specific beat license. Requires administrative role privileges.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: ownershipPublicId
+          in: path
+          required: true
+          schema:
+            type: string
+            example: own_50
+      responses:
+        '200':
+          description: List of download logs for specified ownership
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        ownership_id:
+                          type: integer
+                        ip_address:
+                          type: string
+                        user_agent:
+                          type: string
+                        status:
+                          type: string
+                          example: success
+                        downloaded_at:
+                          type: string
+                          format: date-time
+                        ownership_public_id:
+                          type: string
+                        beat_title:
+                          type: string
+                        beat_public_id:
+                          type: string
+                        user_email:
+                          type: string
+                        user_name:
+                          type: string
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden (lacks admin privileges)
+        '404':
+          description: Ownership record not found
+
+  /api/uploads/audio:
+    post:
+      summary: Upload Audio Asset (Admin)
+      description: Uploads a beat audio or audio preview file. Allowed formats are mp3, wav, ogg, flac. Max size 25MB.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [audio, preview]
+            default: audio
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                audio:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Upload succeeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadResult'
+        '400':
+          description: Validation failure
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden (Admin only)
+
+  /api/uploads/image:
+    post:
+      summary: Upload Image Asset (Admin)
+      description: Uploads a cover image or avatar. Allowed formats are jpg, jpeg, png, webp. Max size 5MB (avatar 2MB).
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [cover, avatar]
+            default: cover
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Upload succeeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadResult'
+        '400':
+          description: Validation failure
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden (Admin only)
+
+  /api/uploads/banner:
+    post:
+      summary: Upload Banner Image (Admin)
+      description: Uploads a channel/beat banner image. Allowed formats are jpg, jpeg, png, webp. Max size 5MB.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                banner:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Upload succeeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadResult'
+        '400':
+          description: Validation failure
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden (Admin only)
+
+  /api/uploads/{publicId}:
+    patch:
+      summary: Replace Uploaded Asset (Admin)
+      description: Replaces an existing storage asset atomically. The old asset is only deleted after the new one is verified and written.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: publicId
+          in: path
+          required: true
+          schema:
+            type: string
+            example: upl_01k3xyz
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Replacement succeeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadResult'
+        '400':
+          description: Validation failure
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden (Admin only)
+        '404':
+          description: Upload metadata not found or inactive
+
+    delete:
+      summary: Delete Asset (Admin)
+      description: Soft deletes the metadata record and removes the physical file from the storage provider.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: publicId
+          in: path
+          required: true
+          schema:
+            type: string
+            example: upl_01k3xyz
+      responses:
+        '200':
+          description: Asset successfully deleted
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden (Admin only)
+        '404':
+          description: Upload metadata not found
+
+    get:
+      summary: Get Upload Metadata & Public Link (Admin)
+      description: Retrieves the asset database metadata record and constructs a signed public CDN/preview URL.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: publicId
+          in: path
+          required: true
+          schema:
+            type: string
+            example: upl_01k3xyz
+      responses:
+        '200':
+          description: Metadata successfully returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/UploadResultDetail'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden (Admin only)
+        '404':
+          description: Upload metadata not found
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    UploadResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/UploadResultDetail'
+    UploadResultDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        public_id:
+          type: string
+          example: upl_01k3xyz
+        storage_key:
+          type: string
+          example: audio/2026/08/01/01k3xyz.wav
+        asset_type:
+          type: string
+          example: audio
+        mime_type:
+          type: string
+          example: audio/wav
+        file_size:
+          type: integer
+          example: 1548293
+        checksum:
+          type: string
+          example: a7b5928f9d0c...
+        duration:
+          type: number
+          format: float
+          example: 180.5
+        image_width:
+          type: integer
+          nullable: true
+          example: null
+        image_height:
+          type: integer
+          nullable: true
+          example: null
+        uploaded_by:
+          type: integer
+          example: 2
+        status:
+          type: string
+          example: active
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        publicUrl:
+          type: string
+          format: uri
+          example: https://prabh-musik-assets.r2.cloudflarestorage.com/audio/2026/08/01/01k3xyz.wav?X-Amz-Signature=...

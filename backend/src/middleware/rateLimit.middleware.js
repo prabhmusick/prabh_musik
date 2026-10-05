@@ -4,6 +4,8 @@
  */
 
 const ERROR_CODES = require("../config/errorCodes");
+const logger = require("../utils/logger");
+const metrics = require("../utils/metrics");
 
 /**
  * Abstract Rate Limit Store Base Class
@@ -25,10 +27,17 @@ class RateLimitStore {
  * In-Memory Storage Adapter
  * Default store implementation using JavaScript Map object.
  */
+const globalStores = new Set();
+
 class InMemoryStore extends RateLimitStore {
   constructor() {
     super();
     this.hits = new Map();
+    globalStores.add(this);
+  }
+
+  reset() {
+    this.hits.clear();
   }
 
   async increment(key, windowMs) {
@@ -62,6 +71,12 @@ class InMemoryStore extends RateLimitStore {
   }
 }
 
+const resetAllRateLimits = () => {
+  for (const store of globalStores) {
+    store.hits.clear();
+  }
+};
+
 /**
  * Rate limiting middleware creator.
  *
@@ -86,6 +101,8 @@ const rateLimit = (options = {}) => {
       ip = ip.split(",")[0].trim();
     }
 
+    metrics.increment("rateLimitHits");
+
     try {
       const { current, resetTime } = await store.increment(ip, windowMs);
       const remaining = Math.max(0, max - current);
@@ -96,6 +113,19 @@ const rateLimit = (options = {}) => {
       res.setHeader("X-RateLimit-Remaining", remaining);
 
       if (current > max) {
+        metrics.increment("blockedRequests");
+        metrics.metricsState.suspiciousIps[ip] = (metrics.metricsState.suspiciousIps[ip] || 0) + 1;
+
+        logger.warn({
+          event: "RATE_LIMIT_BLOCKED",
+          ip,
+          url: req.originalUrl || req.url,
+          current,
+          max,
+          severity: "warning",
+          message: `Rate limit blocked IP: ${ip} on path ${req.url}`
+        });
+
         res.setHeader("Retry-After", retryAfterSeconds);
         return res.status(429).json({
           success: false,
@@ -117,5 +147,6 @@ const rateLimit = (options = {}) => {
 module.exports = {
   rateLimit,
   RateLimitStore,
-  InMemoryStore
+  InMemoryStore,
+  resetAllRateLimits
 };

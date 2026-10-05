@@ -23,8 +23,12 @@ const getLicenseDownloadLimit = (licenseType) => {
  * Checks active validity of an ownership (revoked, expiry, and download limits).
  * Returns the fully populated ownership record if valid.
  */
-const isOwnershipValid = async (id) => {
-  const ownership = await repository.getOwnershipById(id);
+const isOwnershipValid = async (idOrPublicId) => {
+  const isPub = typeof idOrPublicId === "string" && isNaN(Number(idOrPublicId));
+  const ownership = isPub
+    ? await repository.getOwnershipByPublicId(idOrPublicId)
+    : await repository.getOwnershipById(idOrPublicId);
+
   if (!ownership || ownership.status !== OWNERSHIP_STATUS.ACTIVE) {
     throw new AppError("Ownership record not found or inactive", 404);
   }
@@ -52,16 +56,16 @@ const isOwnershipValid = async (id) => {
  * Validates and increments the download counter.
  * Returns updated download counts and remaining counts.
  */
-const incrementDownloads = async (id) => {
+const incrementDownloads = async (idOrPublicId) => {
   // Validate checks: active status, expiry date, download counts
-  await isOwnershipValid(id);
+  const ownership = await isOwnershipValid(idOrPublicId);
 
-  const success = await repository.incrementDownloadCount(id);
+  const success = await repository.incrementDownloadCount(ownership.id);
   if (!success) {
     throw new AppError("Failed to update download logs", 500);
   }
 
-  const updated = await repository.getOwnershipById(id);
+  const updated = await repository.getOwnershipById(ownership.id);
   const remainingDownloads = updated.max_downloads === null
     ? "unlimited"
     : Math.max(0, updated.max_downloads - updated.download_count);
@@ -190,22 +194,26 @@ const updateExpiry = async (id, expiresAtData) => {
 /**
  * Expose soft revoke ownership
  */
-const revokeOwnership = async (id) => {
-  const existing = await repository.getOwnershipById(id);
+const revokeOwnership = async (idOrPublicId) => {
+  const isPub = typeof idOrPublicId === "string" && isNaN(Number(idOrPublicId));
+  const existing = isPub
+    ? await repository.getOwnershipByPublicId(idOrPublicId)
+    : await repository.getOwnershipById(idOrPublicId);
+
   if (!existing || existing.status !== OWNERSHIP_STATUS.ACTIVE) {
     throw new AppError("Ownership not found or inactive", 404);
   }
 
-  const success = await repository.revokeOwnership(id);
+  const success = await repository.revokeOwnership(existing.id);
   if (!success) {
     throw new AppError("Revocation failed", 400);
   }
 
   // Require dynamically to prevent circular dependencies
   const downloadsService = require("../downloads/downloads.service");
-  await downloadsService.revokeTokensByOwnership(id);
+  await downloadsService.revokeTokensByOwnership(existing.id);
 
-  return getOwnership(id);
+  return getOwnership(existing.id);
 };
 
 /**
@@ -221,7 +229,7 @@ const isLicenseExclusive = (licenseType) => {
 const getLibraryByUser = async (userId, page = 1, pageSize = 20, sort = "purchaseDate", order = "desc") => {
   const SORT_FIELDS = {
     purchaseDate: "o.purchase_date",
-    beatTitle: "b.beat_name",
+    beatTitle: "b.title",
     price: "o.purchase_price"
   };
 
@@ -241,6 +249,31 @@ const incrementDownloadsCount = async (id) => {
   return repository.incrementDownloadCount(id);
 };
 
+/**
+ * Fetches an ownership by its public ID
+ */
+const getOwnershipByPublicId = async (publicId) => {
+  if (!publicId) {
+    throw new AppError("Public ID is required", 400);
+  }
+  const row = await repository.getOwnershipByPublicId(publicId);
+  if (!row) {
+    throw new AppError("Ownership not found", 404);
+  }
+  return row;
+};
+
+/**
+ * Checks if a user owns a licensed beat
+ */
+const verifyOwnership = async (userId, beatId) => {
+  if (!userId || !beatId) {
+    throw new AppError("userId and beatId are required for verification", 400);
+  }
+  const row = await repository.getOwnershipByUserAndBeat(userId, beatId);
+  return row || null;
+};
+
 module.exports = {
   OWNERSHIP_STATUS,
   isOwnershipValid,
@@ -255,5 +288,7 @@ module.exports = {
   revokeOwnership,
   isLicenseExclusive,
   getLibraryByUser,
-  incrementDownloadsCount
+  incrementDownloadsCount,
+  getOwnershipByPublicId,
+  verifyOwnership
 };

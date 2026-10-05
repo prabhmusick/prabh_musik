@@ -10,20 +10,31 @@ import api from "../lib/api";
  */
 export async function uploadFile(
   file: File,
-  type: "image" | "audio" | "document",
+  type: "image" | "banner" | "audio" | "document",
   onProgress?: (progress: number) => void
-): Promise<{ success: boolean; fileName: string }> {
+): Promise<{ 
+  success: boolean; 
+  fileName: string;
+  storageKey?: string;
+  url?: string;
+  mimeType?: string;
+  size?: number;
+  [key: string]: any;
+}> {
   const formData = new FormData();
   
   let fieldName = "audio";
-  let endpoint = "/uploads/upload-audio";
+  let endpoint = "/uploads/audio";
   
   if (type === "image") {
     fieldName = "image";
-    endpoint = "/uploads/upload-image";
+    endpoint = "/uploads/image";
+  } else if (type as string === "banner") {
+    fieldName = "banner";
+    endpoint = "/uploads/banner";
   } else if (type === "document") {
     fieldName = "document";
-    endpoint = "/uploads/upload-document";
+    endpoint = "/uploads/document";
   }
   
   formData.append(fieldName, file);
@@ -42,5 +53,13 @@ export async function uploadFile(
     },
   });
   
-  return response.data;
+  return {
+    success: response.data.success,
+    fileName: response.data.data.storage_key,
+    storageKey: response.data.data.storage_key,
+    url: response.data.data.publicUrl || "",
+    mimeType: response.data.data.mime_type,
+    size: response.data.data.file_size,
+    ...response.data.data
+  };
 }

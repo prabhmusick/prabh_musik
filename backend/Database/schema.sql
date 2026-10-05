@@ -2,12 +2,15 @@
 -- SPRINT 2: AUTHENTICATION DATABASE LAYER
 -- ==========================================
 
+DROP TABLE IF EXISTS processed_webhook_events;
+DROP TABLE IF EXISTS uploads;
 DROP TABLE IF EXISTS download_logs;
 DROP TABLE IF EXISTS download_tokens;
 DROP TABLE IF EXISTS ownerships;
 DROP TABLE IF EXISTS order_items;
 DROP TABLE IF EXISTS orders;
 DROP TABLE IF EXISTS beat_purchases;
+DROP TABLE IF EXISTS cart_items;
 DROP TABLE IF EXISTS beats;
 DROP TABLE IF EXISTS email_verification_tokens;
 DROP TABLE IF EXISTS password_reset_tokens;
@@ -93,26 +96,75 @@ CREATE TABLE email_verification_tokens (
 -- BEATS
 -- ==========================================
 
-CREATE TABLE beats (
+CREATE TABLE artists (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    public_id TEXT UNIQUE NOT NULL,            -- public-facing UUID
-    beat_name TEXT NOT NULL,
-    slug TEXT UNIQUE NOT NULL,
-    beat_type TEXT,
-    price REAL DEFAULT 0,
-    genre TEXT,
-    bpm INTEGER,
-    description TEXT,
-    audio_key TEXT NOT NULL,
-    cover_key TEXT,
-    banner_key TEXT,
-    duration INTEGER,
-    track_type TEXT,
-    mood TEXT,
-    selling_status TEXT DEFAULT 'available',
-    status TEXT DEFAULT 'draft',
+    public_id TEXT UNIQUE NOT NULL,
+    name TEXT NOT NULL,
+    phone TEXT,
+    email TEXT,
+    image_key TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE worked_with_artists (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT UNIQUE NOT NULL,
+    image TEXT NOT NULL,
+    popular_song TEXT,
+    music_type TEXT,
+    worked_year INTEGER,
+    show_on_music_production INTEGER NOT NULL DEFAULT 0,
+    show_on_mix_master INTEGER NOT NULL DEFAULT 0,
+    show_on_lyrics INTEGER NOT NULL DEFAULT 0,
+    show_on_marketing_distribution INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE testimonials (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    image TEXT NOT NULL,
+    rating INTEGER NOT NULL CHECK(rating BETWEEN 1 AND 5),
+    testimonial TEXT NOT NULL,
+    professional TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE lyrics (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    genre TEXT NOT NULL,
+    quote TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE beats (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    public_id TEXT UNIQUE NOT NULL,            -- Pattern: bt_<ULID> (Exposed to frontend)
+    title TEXT NOT NULL,                        -- Renamed from beat_name
+    slug TEXT UNIQUE NOT NULL,                  -- SEO Url-safe representation (e.g. 'midnight-drive')
+    price_amount INTEGER NOT NULL DEFAULT 0,
+    currency_code TEXT NOT NULL DEFAULT 'INR', -- ISO-4217 Currency representation
+    genre TEXT,
+    mood TEXT,
+    bpm INTEGER,
+    musical_key TEXT,                          -- Catalog metadata (e.g. 'Cmin', 'Amaj')
+    description TEXT,
+    related_artist_name TEXT,
+    related_artist_image_key TEXT,
+    artist_id INTEGER,
+    play_count INTEGER NOT NULL DEFAULT 0,
+    is_trending INTEGER NOT NULL DEFAULT 0 CHECK(is_trending IN (0, 1)),
+    audio_key TEXT NOT NULL,                   -- Pattern: audio/bt_<public_id>.mp3
+    cover_key TEXT,                            -- Pattern: covers/bt_<public_id>_<timestamp>.webp
+    banner_key TEXT,                           -- Pattern: banners/bt_<public_id>_<timestamp>.webp
+    duration INTEGER,                          -- Length in seconds
+    status TEXT NOT NULL DEFAULT 'draft',
+    created_by INTEGER NOT NULL,               -- Foreign key referencing users.id
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(created_by) REFERENCES users(id) ON DELETE RESTRICT,
+    FOREIGN KEY(artist_id) REFERENCES artists(id) ON DELETE SET NULL
 );
 
 -- ==========================================
@@ -127,6 +179,16 @@ CREATE TABLE beat_purchases (
     purchased_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(user_id) REFERENCES users(id),
     FOREIGN KEY(beat_id) REFERENCES beats(id)
+);
+
+CREATE TABLE cart_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    beat_id INTEGER NOT NULL,
+    added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY(beat_id) REFERENCES beats(id) ON DELETE CASCADE,
+    UNIQUE(user_id, beat_id)
 );
 
 CREATE TABLE orders (
@@ -236,6 +298,8 @@ CREATE INDEX idx_order_items_beat ON order_items(beat_id);
 CREATE INDEX idx_ownerships_user ON ownerships(user_id);
 CREATE INDEX idx_ownerships_beat ON ownerships(beat_id);
 CREATE INDEX idx_ownerships_order ON ownerships(order_id);
+CREATE INDEX idx_beat_purchases_user ON beat_purchases(user_id);
+CREATE INDEX idx_cart_items_user ON cart_items(user_id);
 CREATE INDEX idx_ownerships_status ON ownerships(status);
 CREATE UNIQUE INDEX idx_unique_ownership ON ownerships(user_id, beat_id, order_id);
 
@@ -244,3 +308,45 @@ CREATE INDEX idx_download_tokens_val ON download_tokens(token);
 CREATE INDEX idx_download_tokens_owner ON download_tokens(ownership_id);
 CREATE INDEX idx_download_logs_ownership ON download_logs(ownership_id);
 CREATE INDEX idx_download_logs_date ON download_logs(downloaded_at);
+
+-- ==========================================
+-- SPRINT 10: UPLOADS METADATA LAYER
+-- ==========================================
+
+CREATE TABLE uploads (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    public_id TEXT UNIQUE NOT NULL,
+    storage_key TEXT UNIQUE NOT NULL,
+    asset_type TEXT NOT NULL CHECK(asset_type IN ('audio', 'preview', 'cover', 'banner', 'avatar', 'document')),
+    mime_type TEXT NOT NULL,
+    file_size INTEGER NOT NULL,
+    checksum TEXT NOT NULL,
+    duration REAL,                          -- for audio (in seconds)
+    image_width INTEGER,                    -- for images
+    image_height INTEGER,                   -- for images
+    uploaded_by INTEGER NOT NULL,
+    status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'deleted')),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(uploaded_by) REFERENCES users(id)
+);
+
+CREATE INDEX idx_uploads_public_id ON uploads(public_id);
+CREATE INDEX idx_uploads_storage_key ON uploads(storage_key);
+CREATE INDEX idx_uploads_status ON uploads(status);
+
+-- ==========================================
+-- SPRINT 12: WEBHOOK IDEMPOTENCY LAYER
+-- ==========================================
+
+CREATE TABLE processed_webhook_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_id TEXT UNIQUE NOT NULL,
+    event_type TEXT NOT NULL,
+    status TEXT NOT NULL CHECK(status IN ('RECEIVED', 'PROCESSING', 'PROCESSED', 'FAILED')),
+    received_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    processed_at DATETIME,
+    failure_reason TEXT
+);
+
+CREATE INDEX idx_processed_webhook_events_id ON processed_webhook_events(event_id);

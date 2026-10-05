@@ -186,6 +186,32 @@ const findCredentialByEmail = async (email, tx = null) => {
 };
 
 /**
+ * Locates user credentials matching a specific OAuth provider and provider user ID.
+ *
+ * @param {string} provider - The OAuth provider (e.g. 'google', 'apple').
+ * @param {string} providerId - The provider's unique user identifier.
+ * @param {import('sqlite3').Database|null} tx - Optional transaction handle.
+ * @returns {Promise<Object|null>} The credential row.
+ */
+const findCredentialByProvider = async (provider, providerId, tx = null) => {
+  const conn = tx || db;
+  const sql = `
+    SELECT id, user_id, provider, provider_id, provider_email, password_hash, created_at, updated_at
+    FROM user_credentials
+    WHERE provider = ? AND provider_id = ?
+  `;
+  return new Promise((resolve, reject) => {
+    conn.get(sql, [provider, providerId], (err, row) => {
+      if (err) {
+        reject(new RepositoryError(`Failed to fetch credentials by provider: ${err.message}`, err));
+      } else {
+        resolve(row || null);
+      }
+    });
+  });
+};
+
+/**
  * Locates an active session record matching a given refresh token.
  */
 const findSessionByToken = async (token, tx = null) => {
@@ -587,6 +613,7 @@ module.exports = {
   updateSessionRefreshHash,
   findCredentialByUserId,
   findCredentialByEmail,
+  findCredentialByProvider,
   findSessionByToken,
   revokeSession,
   updateSessionActivity,

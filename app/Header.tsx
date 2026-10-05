@@ -1,28 +1,66 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import Link from "next/link";
 import { useAppShell } from "./contexts/app-shell-context";
 
-const navLinks = ["Home", "About", "Services", "Beats"];
-
+const navLinks = [
+  { label: "Home", href: "/" },
+  { label: "Beat", href: "/beat" },
+  { label: "Services", href: "/services" },
+  { label: "About", href: "/about" },
+];
 
 export default function Header() {
   const router = useRouter();
   const pathname = usePathname();
-  const { isAuthenticated, user, cart, cartOpen, openCart, closeCart, logout } = useAppShell();
-  if (pathname?.startsWith("/admin")) return null;
+  const { isAuthenticated, user, cart, openCart, logout } = useAppShell();
   const [searchFocused, setSearchFocused] = useState(false);
   const [searchVal, setSearchVal] = useState("");
-  const [loginHov, setLoginHov] = useState(false);
-  const [signupHov, setSignupHov] = useState(false);
-  const [logoutHov, setLogoutHov] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  useEffect(() => {
+    const syncFromUrl = () => {
+      const params = new URLSearchParams(window.location.search);
+      const nextValue = params.get("q") ?? "";
+      setSearchVal(nextValue);
+    };
+
+    syncFromUrl();
+    window.addEventListener("popstate", syncFromUrl);
+    const handleSync = (event: Event) => {
+      const nextValue =
+        (event as CustomEvent<{ value?: string }>).detail?.value ?? "";
+      setSearchVal(nextValue);
+    };
+    window.addEventListener("app-search-sync", handleSync);
+
+    return () => {
+      window.removeEventListener("popstate", syncFromUrl);
+      window.removeEventListener("app-search-sync", handleSync);
+    };
+  }, [pathname]);
+
+  const submitSearch = (value?: string) => {
+    const query = (value ?? searchVal).trim();
+    setSearchVal(query);
+    window.dispatchEvent(
+      new CustomEvent("app-search-sync", { detail: { value: query } }),
+    );
+    if (!query) {
+      router.push("/beat");
+      return;
+    }
+    router.push(`/beat?q=${encodeURIComponent(query)}`);
+  };
+
+  if (pathname?.startsWith("/admin")) return null;
 
   const getActiveLink = () => {
     if (pathname === "/") return "Home";
-    if (pathname === "/about") return "About";
+    if (pathname === "/beat") return "Beat";
     if (pathname === "/services") return "Services";
-    if (pathname === "/beat") return "Beats";
+    if (pathname === "/about") return "About";
     return "";
   };
   const activeLink = getActiveLink();
@@ -33,114 +71,350 @@ export default function Header() {
         @import url('https://fonts.googleapis.com/css2?family=Jacques+Francois&family=Inter:wght@400;500;600;700&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
+        .header-wrapper {
+          position: relative;
+          z-index: 100;
+          width: 100%;
+          max-width: 1240px;
+          margin: 16px auto;
+          background: radial-gradient(
+            circle at 85% 0%,
+            rgba(245, 158, 11, 0.07),
+            transparent 35%
+          ),
+          rgba(14, 16, 22, 0.78);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 18px;
+          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35), 0 0 30px rgba(245, 158, 11, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+          transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .desktop-header-top {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 28px;
+          padding: 12px 28px 8px;
+        }
+
+        .desktop-header-actions {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          flex-shrink: 0;
+        }
+
+        .desktop-search-row {
+          padding: 10px 28px 16px;
+          width: 100%;
+          margin-top: 4px;
+        }
+
+        .desktop-search-row .search-container {
+          width: 100%;
+          max-width: 100%;
+          min-height: 48px;
+          padding: 10px 18px;
+        }
+
+        .desktop-search-row .search-input {
+          width: 100%;
+          min-height: 28px;
+          font-size: 14px;
+        }
+
+        .header-wrapper::after {
+          content: "";
+          position: absolute;
+          bottom: -1px;
+          left: 10%;
+          width: 80%;
+          height: 1px;
+          background: linear-gradient(
+            90deg,
+            transparent,
+            rgba(245, 158, 11, 0.35),
+            transparent
+          );
+          pointer-events: none;
+        }
+
         .nav-link {
           position: relative;
           font-family: 'Inter', sans-serif;
           font-size: 14px;
-          font-weight: 400;
-          color: rgba(255,255,255,0.75);
+          font-weight: 500;
+          color: rgba(255, 255, 255, 0.72);
           background: none;
           border: none;
           cursor: pointer;
-          padding: 4px 0;
-          transition: color 0.2s ease;
+          padding: 6px 4px;
+          transition: color 0.25s ease, transform 0.25s ease, text-shadow 0.25s ease;
           text-decoration: none;
         }
         .nav-link::after {
           content: '';
           position: absolute;
-          bottom: -2px;
-          left: 0;
+          bottom: -8px;
+          left: 50%;
           width: 0;
-          height: 1.5px;
-          background: #d4820a;
-          transition: width 0.25s ease;
+          height: 2px;
+          border-radius: 999px;
+          background: linear-gradient(
+            90deg,
+            transparent,
+            #f59e0b,
+            #ffb84d,
+            transparent
+          );
+          transform: translateX(-50%);
+          transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+          box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+          opacity: 0;
         }
-        .nav-link:hover { color: #ffffff; }
-        .nav-link:hover::after { width: 100%; }
-        .nav-link.active { color: #ffffff; }
-        .nav-link.active::after { width: 100%; }
+        .nav-link:hover {
+          color: #ffffff;
+          transform: translateY(-1px);
+          text-shadow: 0 0 12px rgba(245, 158, 11, 0.25);
+        }
+        .nav-link:hover::after {
+          width: 50%;
+          opacity: 0.7;
+        }
+        .nav-link.active {
+          color: #ffffff;
+          font-weight: 600;
+        }
+        .nav-link.active::after {
+          width: 70%;
+          opacity: 1;
+        }
+
+        .search-container {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 999px;
+          padding: 6px 14px;
+          box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+          transition: background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+        }
+        .search-container:hover, .search-container.focused {
+          background: rgba(255, 255, 255, 0.08);
+          border-color: rgba(245, 158, 11, 0.45);
+          box-shadow: 0 0 14px rgba(245, 158, 11, 0.15), inset 0 1px 2px rgba(0, 0, 0, 0.2);
+        }
+
+        .search-icon {
+          transition: fill 0.25s ease;
+        }
+        .search-container.focused .search-icon, .search-container:hover .search-icon {
+          fill: #f59e0b;
+        }
 
         .search-input {
           background: transparent;
           border: none;
           outline: none;
-          color: rgba(255,255,255,0.85);
+          color: rgba(255, 255, 255, 0.9);
           font-family: 'Inter', sans-serif;
           font-size: 13px;
-          width: 100px;
-          transition: width 0.3s ease;
-          caret-color: #d4820a;
+          width: 110px;
+          transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+          caret-color: #f59e0b;
         }
-        .search-input::placeholder { color: rgba(255,255,255,0.4); }
-        .search-input:focus { width: 140px; }
+        .search-input::placeholder {
+          color: rgba(255, 255, 255, 0.42);
+        }
+        .search-input:focus {
+          width: 150px;
+        }
+
+        .cart-btn {
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          color: #ffffff;
+          font-family: 'Inter', sans-serif;
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
+          padding: 6px 14px;
+          border-radius: 999px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          transition: background 0.25s ease, border-color 0.25s ease, transform 0.2s ease, box-shadow 0.25s ease;
+        }
+        .cart-btn:hover {
+          background: rgba(255, 255, 255, 0.09);
+          border-color: rgba(245, 158, 11, 0.35);
+          transform: translateY(-1px);
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+        }
+        .cart-badge {
+          background: rgba(245, 158, 11, 0.18);
+          color: #ffb84d;
+          border: 1px solid rgba(245, 158, 11, 0.35);
+          font-size: 11px;
+          font-weight: 700;
+          padding: 2px 7px;
+          border-radius: 999px;
+          line-height: 1;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 0 8px rgba(245, 158, 11, 0.2);
+        }
+
+        .login-btn {
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          color: rgba(255, 255, 255, 0.88);
+          font-family: 'Inter', sans-serif;
+          font-size: 13px;
+          font-weight: 500;
+          cursor: pointer;
+          padding: 7px 16px;
+          border-radius: 8px;
+          transition: background 0.25s ease, border-color 0.25s ease, color 0.25s ease, transform 0.2s ease, box-shadow 0.25s ease;
+        }
+        .login-btn:hover {
+          background: rgba(255, 255, 255, 0.08);
+          border-color: rgba(245, 158, 11, 0.35);
+          color: #ffffff;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .signup-btn {
+          background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+          border: 1px solid rgba(251, 191, 36, 0.4);
+          color: #050507;
+          font-family: 'Inter', sans-serif;
+          font-size: 13px;
+          font-weight: 700;
+          letter-spacing: 0.2px;
+          cursor: pointer;
+          padding: 7.5px 20px;
+          border-radius: 8px;
+          transition: background 0.25s ease, transform 0.2s ease, box-shadow 0.25s ease;
+          box-shadow: 0 4px 14px rgba(245, 158, 11, 0.15);
+        }
+        .signup-btn:hover {
+          background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+          transform: translateY(-1.5px);
+          box-shadow: 0 8px 24px rgba(245, 158, 11, 0.28), 0 2px 6px rgba(0, 0, 0, 0.4);
+        }
+
+        .profile-btn {
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          color: #ffffff;
+          font-family: 'Inter', sans-serif;
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
+          padding: 6px 14px;
+          border-radius: 999px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          transition: background 0.25s ease, border-color 0.25s ease, transform 0.2s ease;
+        }
+        .profile-btn:hover {
+          background: rgba(255, 255, 255, 0.09);
+          border-color: rgba(245, 158, 11, 0.35);
+          transform: translateY(-1px);
+        }
+
+        .logo-text-accent {
+          font-family: 'Irish Grover', cursive;
+          font-size: 21px;
+          font-weight: 400;
+          background: linear-gradient(135deg, #f59e0b 0%, #ffb84d 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          letter-spacing: 0.3px;
+          filter: drop-shadow(0 0 12px rgba(245, 158, 11, 0.25));
+        }
+        .logo-text-white {
+          font-family: 'Irish Grover', cursive;
+          font-size: 21px;
+          font-weight: 400;
+          color: #ffffff;
+          letter-spacing: 0.3px;
+        }
+
+        .mobile-menu-btn {
+          display: none;
+          align-items: center;
+          justify-content: center;
+          background: transparent;
+          border: none;
+          color: #ffffff;
+          cursor: pointer;
+          padding: 4px;
+        }
+
+        .auth-helper-text {
+          display: inline;
+        }
 
         @media (max-width: 768px) {
           .desktop-nav { display: none !important; }
-          .mobile-menu-btn { display: flex !important; }
+          .auth-helper-text { display: none !important; }
+          .mobile-menu-btn { display: flex !important; flex-shrink: 0; }
+          .header-wrapper { margin: 10px 8px 14px; width: calc(100% - 16px); max-width: 100%; box-sizing: border-box; }
+          .desktop-header-top { padding: 10px 10px 6px; gap: 6px; width: 100%; max-width: 100%; box-sizing: border-box; }
+          .desktop-header-actions { gap: 6px; margin-left: auto; flex-shrink: 0; }
+          .logo-text-accent, .logo-text-white { font-size: 17px; }
+          .desktop-search-row { padding: 4px 10px 10px; margin-top: 2px; width: 100%; max-width: 100%; box-sizing: border-box; }
+          .desktop-search-row .search-container { width: 100%; max-width: 100%; box-sizing: border-box; min-height: 40px; padding: 6px 12px; }
+          .desktop-search-row .search-input { width: 100%; min-width: 0; flex: 1; font-size: 13px; min-height: 24px; }
+          .desktop-search-row .search-input:focus { width: 100%; }
+          .cart-btn { padding: 5px 8px; font-size: 11px; gap: 4px; flex-shrink: 0; white-space: nowrap; }
+          .cart-badge { padding: 1px 5px; font-size: 10px; }
+          .profile-btn { padding: 5px 8px; font-size: 11px; gap: 4px; flex-shrink: 0; white-space: nowrap; }
+          .login-btn { padding: 5px 10px; font-size: 11px; flex-shrink: 0; white-space: nowrap; margin-right: 0 !important; }
+          .signup-btn { padding: 5px 12px; font-size: 11px; flex-shrink: 0; white-space: nowrap; }
         }
+
+        @media (max-width: 360px) {
+          .header-wrapper { margin: 8px 4px 12px; width: calc(100% - 8px); }
+          .desktop-header-top { padding: 8px 6px 4px; gap: 4px; }
+          .desktop-header-actions { gap: 4px; }
+          .logo-text-accent, .logo-text-white { font-size: 15px; }
+          .cart-btn { padding: 4px 6px; font-size: 10px; gap: 3px; }
+          .profile-btn { padding: 4px 6px; font-size: 10px; gap: 3px; }
+          .login-btn { padding: 4px 7px; font-size: 10px; }
+          .signup-btn { padding: 4px 8px; font-size: 10px; }
+        }
+
         @media (min-width: 769px) {
           .mobile-menu-btn { display: none !important; }
           .mobile-nav { display: none !important; }
         }
       `}</style>
 
-      <header
-        style={{
-          position: "relative",
-          zIndex: 100,
-          width: "100%",
-          maxWidth: 1240,
-          margin: "16px auto 16px",
-          background: "#0A0C10",
-          backdropFilter: "blur(18px)",
-          WebkitBackdropFilter: "blur(18px)",
-          border: "1px solid rgba(255,255,255,0.09)",
-          borderRadius: "18px",
-          boxShadow: "0 8px 40px rgba(0,0,0,0.45), 0 1px 0 rgba(255,255,255,0.06) inset",
-        }}
-      >
-        <div
-          style={{
-            padding: "12px 28px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: "32px",
-          }}
-        >
+      <header className="header-wrapper">
+        <div className="desktop-header-top">
           {/* ── Logo ── */}
           <div
+            onClick={() => router.push("/")}
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "2px",
+              gap: "4px",
               flexShrink: 0,
               cursor: "pointer",
             }}
           >
-            <span
-              style={{
-                fontFamily: "'Irish Grover', cursive",
-                fontSize: "20px",
-                fontWeight: 400,
-                color: "#d4820a",
-                letterSpacing: "0.3px",
-              }}
-            >
-              Prahbh
-            </span>
-            <span
-              style={{
-                fontFamily: "'Irish Grover', cursive",
-                fontSize: "20px",
-                fontWeight: 400,
-                color: "#ffffff",
-                letterSpacing: "0.3px",
-              }}
-            >
-              {" "}Musik
-            </span>
+            <span className="logo-text-accent">Prabh</span>
+            <span className="logo-text-white">Musik</span>
           </div>
 
           {/* ── Desktop Nav ── */}
@@ -155,108 +429,68 @@ export default function Header() {
             }}
           >
             {navLinks.map((link) => (
-              <button
-                key={link}
-                onClick={() => {
-                  if (link === "About") {
-                    router.push("/about");
-                  } else if (link === "Home") {
-                    router.push("/");
-                  } else if (link === "Services") {
-                    router.push("/services");
-                  } else if (link === "Beats") {
-                    router.push("/beat");
-                  }
-                }}
-                className={`nav-link${activeLink === link ? " active" : ""}`}
+              <Link
+                key={link.label}
+                href={link.href}
+                prefetch
+                aria-current={activeLink === link.label ? "page" : undefined}
+                className={`nav-link${activeLink === link.label ? " active" : ""}`}
               >
-                {link}
-              </button>
+                {link.label}
+              </Link>
             ))}
           </nav>
 
-          {/* ── Right side ── */}
-          <div
-            className="desktop-nav"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "14px",
-              flexShrink: 0,
-            }}
-          >
-            {/* Search pill */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "7px",
-                background: searchFocused
-                  ? "rgba(255,255,255,0.1)"
-                  : "rgba(255,255,255,0.07)",
-                border: `1px solid ${searchFocused ? "rgba(212,130,10,0.5)" : "rgba(255,255,255,0.12)"}`,
-                borderRadius: "20px",
-                padding: "6px 14px",
-                transition: "background 0.2s ease, border-color 0.2s ease",
-              }}
-            >
-              {/* Search icon */}
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="rgba(255,255,255,0.4)">
-                <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
-              </svg>
-              <input
-                className="search-input"
-                type="text"
-                placeholder="Search"
-                value={searchVal}
-                onChange={(e) => setSearchVal(e.target.value)}
-                onFocus={() => setSearchFocused(true)}
-                onBlur={() => setSearchFocused(false)}
-              />
-            </div>
-
-            {/* Cart Button */}
+          <div className="desktop-header-actions">
             <button
-              onClick={() => { if (isAuthenticated) { openCart(); } else { router.push("/login"); } }}
-              style={{
-                background: "rgba(255,255,255,0.07)",
-                border: "1px solid rgba(255,255,255,0.12)",
-                color: "#ffffff",
-                fontFamily: "'Inter', sans-serif",
-                fontSize: "14px",
-                fontWeight: 600,
-                cursor: "pointer",
-                padding: "7px 12px",
-                borderRadius: "999px",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
+              className="cart-btn"
+              onClick={() => {
+                if (isAuthenticated) {
+                  openCart();
+                } else {
+                  router.push("/login");
+                }
               }}
             >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 3h2l.4 2M7 13h10l3-8H6.4" /><circle cx="9" cy="20" r="1.5" /><circle cx="18" cy="20" r="1.5" /></svg>
-              Cart {cart.length}
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M3 3h2l.4 2M7 13h10l3-8H6.4" />
+                <circle cx="9" cy="20" r="1.5" />
+                <circle cx="18" cy="20" r="1.5" />
+              </svg>
+              <span>Cart</span>
+              <span className="cart-badge">{cart.length}</span>
             </button>
 
-            {/* Profile / Auth actions */}
             {isAuthenticated ? (
               <button
+                className="profile-btn"
                 onClick={() => router.push("/profile")}
-                style={{
-                  background: "transparent",
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  color: "#ffffff",
-                  fontFamily: "'Inter', sans-serif",
-                  fontSize: "14px",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  padding: "7px 12px",
-                  borderRadius: "999px",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                }}
               >
-                <span style={{ width: 24, height: 24, borderRadius: "50%", background: "rgba(212,130,10,0.2)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 12 }}>
+                <span
+                  style={{
+                    width: 24,
+                    height: 24,
+                    borderRadius: "50%",
+                    background:
+                      "linear-gradient(135deg, rgba(245, 158, 11, 0.4), rgba(217, 119, 6, 0.2))",
+                    border: "1px solid rgba(245, 158, 11, 0.4)",
+                    color: "#ffb84d",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 11,
+                    fontWeight: 700,
+                  }}
+                >
                   {user?.fullName?.charAt(0) || "P"}
                 </span>
                 Profile
@@ -264,26 +498,24 @@ export default function Header() {
             ) : (
               <>
                 {pathname === "/login" && (
-                  <span style={{ color: "rgba(255,255,255,0.5)", fontFamily: "'Inter', sans-serif", fontSize: "14px", marginRight: "4px" }}>
+                  <span
+                    className="auth-helper-text"
+                    style={{
+                      color: "rgba(255,255,255,0.5)",
+                      fontFamily: "'Inter', sans-serif",
+                      fontSize: "13px",
+                      marginRight: "4px",
+                    }}
+                  >
                     Need an account?
                   </span>
                 )}
                 {pathname !== "/login" && (
                   <button
+                    className="login-btn"
                     onClick={() => router.push("/login")}
-                    onMouseEnter={() => setLoginHov(true)}
-                    onMouseLeave={() => setLoginHov(false)}
                     style={{
-                      background: "transparent",
-                      border: "none",
-                      color: loginHov ? "#ffffff" : "rgba(255,255,255,0.75)",
-                      fontFamily: "'Inter', sans-serif",
-                      fontSize: "14px",
-                      fontWeight: 500,
-                      cursor: "pointer",
-                      padding: "6px 4px",
-                      transition: "color 0.2s ease",
-                      marginRight: pathname === "/signup" ? "8px" : "0"
+                      marginRight: pathname === "/signup" ? "8px" : "0",
                     }}
                   >
                     Log in
@@ -291,168 +523,147 @@ export default function Header() {
                 )}
 
                 {pathname === "/signup" && (
-                  <span style={{ color: "rgba(255,255,255,0.5)", fontFamily: "'Inter', sans-serif", fontSize: "14px", marginRight: "4px" }}>
+                  <span
+                    className="auth-helper-text"
+                    style={{
+                      color: "rgba(255,255,255,0.5)",
+                      fontFamily: "'Inter', sans-serif",
+                      fontSize: "13px",
+                      marginRight: "4px",
+                    }}
+                  >
                     Already a member?
                   </span>
                 )}
                 {pathname !== "/signup" && (
                   <button
+                    className="signup-btn"
                     onClick={() => router.push("/signup")}
-                    onMouseEnter={() => setSignupHov(true)}
-                    onMouseLeave={() => setSignupHov(false)}
-                    style={{
-                      background: signupHov ? "#e8920a" : "#d4820a",
-                      border: "none",
-                      color: "#000000",
-                      fontFamily: "'Inter', sans-serif",
-                      fontSize: "14px",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      padding: "7px 18px",
-                      borderRadius: "6px",
-                      transition: "background 0.2s ease, transform 0.15s ease",
-                      transform: signupHov ? "translateY(-1px)" : "translateY(0)",
-                      boxShadow: signupHov ? "0 4px 14px #d4820a55" : "none",
-                    }}
                   >
                     Sign up
                   </button>
                 )}
               </>
             )}
-          </div>
 
-          {/* ── Mobile hamburger ── */}
-          <button
-            className="mobile-menu-btn"
-            onClick={() => setMobileOpen((v) => !v)}
-            style={{
-              display: "none",
-              alignItems: "center",
-              justifyContent: "center",
-              background: "transparent",
-              border: "none",
-              color: "#ffffff",
-              cursor: "pointer",
-              padding: "4px",
-            }}
-          >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-              {mobileOpen ? (
-                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
-              ) : (
-                <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" />
-              )}
-            </svg>
-          </button>
+            <button
+              className="mobile-menu-btn"
+              onClick={() => setMobileOpen((v) => !v)}
+              aria-label="Toggle navigation menu"
+            >
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                {mobileOpen ? (
+                  <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+                ) : (
+                  <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" />
+                )}
+              </svg>
+            </button>
+          </div>
         </div>
 
-        {cartOpen && (
-          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 120, display: "flex", justifyContent: "flex-end" }} onClick={closeCart}>
-            <div onClick={(e) => e.stopPropagation()} style={{ width: "min(420px, 100%)", height: "100%", background: "#0f1117", borderLeft: "1px solid rgba(255,255,255,0.1)", boxShadow: "-16px 0 45px rgba(0,0,0,0.4)", padding: "24px", display: "flex", flexDirection: "column", gap: "16px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <h3 style={{ color: "#fff", fontSize: 20, margin: 0 }}>Your cart</h3>
-                <button onClick={closeCart} style={{ background: "transparent", border: "none", color: "#fff", cursor: "pointer", fontSize: 18 }}>✕</button>
-              </div>
-              {cart.length === 0 ? (
-                <div style={{ padding: "32px 0", color: "rgba(255,255,255,0.65)", textAlign: "center" }}>Your selected beats will appear here.</div>
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: "12px", overflowY: "auto" }}>
-                  {cart.map((item) => (
-                    <div key={item.id} style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "12px", padding: "12px", display: "flex", gap: "12px", alignItems: "center" }}>
-                      <img src={item.cover} alt={item.title} style={{ width: 56, height: 56, objectFit: "cover", borderRadius: 10 }} />
-                      <div style={{ flex: 1 }}>
-                        <div style={{ color: "#fff", fontWeight: 700 }}>{item.title}</div>
-                        <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 13 }}>{item.producer}</div>
-                      </div>
-                      <div style={{ color: "#fbbf24", fontWeight: 700 }}>{item.price ? `₹${item.price.toLocaleString("en-IN")}` : "Free"}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <div style={{ marginTop: "auto", paddingTop: "16px", borderTop: "1px solid rgba(255,255,255,0.08)", display: "flex", flexDirection: "column", gap: "12px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", color: "#fff" }}>
-                  <span>Total</span>
-                  <span>₹{cart.reduce((sum, item) => sum + (item.price || 0), 0).toLocaleString("en-IN")}</span>
-                </div>
-                <button onClick={() => { if (cart.length) { router.push("/profile"); closeCart(); } }} style={{ background: "#d4820a", border: "none", color: "#000", fontWeight: 700, borderRadius: 10, padding: "12px 16px", cursor: "pointer" }}>Proceed to checkout</button>
-              </div>
-            </div>
+        <div className="desktop-search-row">
+          <div className={`search-container${searchFocused ? " focused" : ""}`}>
+            <svg
+              className="search-icon"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="rgba(255,255,255,0.45)"
+            >
+              <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
+            </svg>
+            <input
+              className="search-input"
+              type="text"
+              placeholder="Search beats, artists..."
+              value={searchVal}
+              onChange={(e) => {
+                const nextValue = e.target.value;
+                setSearchVal(nextValue);
+                window.dispatchEvent(
+                  new CustomEvent("app-search-sync", {
+                    detail: { value: nextValue },
+                  }),
+                );
+              }}
+              onFocus={() => setSearchFocused(true)}
+              onBlur={() => {
+                setSearchFocused(false);
+                if (searchVal.trim()) submitSearch();
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  submitSearch();
+                }
+              }}
+            />
           </div>
-        )}
+        </div>
 
         {/* ── Mobile dropdown ── */}
         {mobileOpen && (
           <div
             className="mobile-nav"
             style={{
-              background: "transparent",
-              borderTop: "1px solid rgba(255,255,255,0.07)",
-              padding: "16px 32px 24px",
+              background: "rgba(14, 16, 22, 0.95)",
+              backdropFilter: "blur(20px)",
+              WebkitBackdropFilter: "blur(20px)",
+              borderTop: "1px solid rgba(255, 255, 255, 0.08)",
+              borderBottomLeftRadius: "18px",
+              borderBottomRightRadius: "18px",
+              padding: "20px 24px 24px",
               display: "flex",
               flexDirection: "column",
               gap: "16px",
             }}
           >
             {navLinks.map((link) => (
-              <button
-                key={link}
-                onClick={() => {
-                  setMobileOpen(false);
-                  if (link === "About") {
-                    router.push("/about");
-                  } else if (link === "Home") {
-                    router.push("/");
-                  } else if (link === "Services") {
-                    router.push("/services");
-                  } else if (link === "Beats") {
-                    router.push("/beat");
-                  }
-                }}
-                className={`nav-link${activeLink === link ? " active" : ""}`}
+              <Link
+                key={link.label}
+                href={link.href}
+                prefetch
+                onClick={() => setMobileOpen(false)}
+                aria-current={activeLink === link.label ? "page" : undefined}
+                className={`nav-link${activeLink === link.label ? " active" : ""}`}
                 style={{ textAlign: "left", width: "fit-content" }}
               >
-                {link}
-              </button>
+                {link.label}
+              </Link>
             ))}
-            <div style={{ display: "flex", gap: "12px", marginTop: "8px" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "12px",
+                marginTop: "12px",
+                paddingTop: "12px",
+                borderTop: "1px solid rgba(255, 255, 255, 0.08)",
+              }}
+            >
               {isAuthenticated ? (
                 <>
                   <button
+                    className="profile-btn"
                     onClick={() => {
                       router.push("/profile");
                       setMobileOpen(false);
-                    }}
-                    style={{
-                      background: "transparent",
-                      border: "1px solid rgba(255,255,255,0.12)",
-                      color: "#ffffff",
-                      fontFamily: "'Inter', sans-serif",
-                      fontSize: "14px",
-                      fontWeight: 600,
-                      cursor: "pointer",
-                      padding: "7px 12px",
-                      borderRadius: "999px",
                     }}
                   >
                     Profile
                   </button>
                   <button
+                    className="login-btn"
                     onClick={() => {
                       logout();
                       setMobileOpen(false);
                       router.push("/");
-                    }}
-                    style={{
-                      background: "transparent",
-                      border: "1px solid rgba(255,255,255,0.12)",
-                      color: "rgba(255,255,255,0.75)",
-                      fontFamily: "'Inter', sans-serif",
-                      fontSize: "14px",
-                      fontWeight: 600,
-                      cursor: "pointer",
-                      padding: "7px 12px",
-                      borderRadius: "999px",
                     }}
                   >
                     Log out
@@ -461,38 +672,19 @@ export default function Header() {
               ) : (
                 <>
                   <button
+                    className="login-btn"
                     onClick={() => {
                       router.push("/login");
                       setMobileOpen(false);
-                    }}
-                    style={{
-                      background: "transparent",
-                      border: "none",
-                      color: "rgba(255,255,255,0.75)",
-                      fontFamily: "'Inter', sans-serif",
-                      fontSize: "14px",
-                      fontWeight: 500,
-                      cursor: "pointer",
-                      padding: 0,
                     }}
                   >
                     Log in
                   </button>
                   <button
+                    className="signup-btn"
                     onClick={() => {
                       router.push("/signup");
                       setMobileOpen(false);
-                    }}
-                    style={{
-                      background: "#d4820a",
-                      border: "none",
-                      color: "#000",
-                      fontFamily: "'Inter', sans-serif",
-                      fontSize: "14px",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      padding: "7px 18px",
-                      borderRadius: "6px",
                     }}
                   >
                     Sign up

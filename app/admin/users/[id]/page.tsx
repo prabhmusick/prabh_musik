@@ -1,23 +1,23 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { useParams } from "next/navigation"
-import Link from "next/link"
-import { ArrowLeft } from "lucide-react"
+import * as React from "react";
+import { useParams } from "next/navigation";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 
-import { useUser } from "../../../../hooks/useUsers"
-import { Button } from "../../../../components/ui/button"
-import { UserProfileCard } from "../../../../components/admin/users/UserProfileCard"
-import { UserStatsCard } from "../../../../components/admin/users/UserStatsCard"
-import { UserOrdersTable } from "../../../../components/admin/users/UserOrdersTable"
-import { UserOwnershipTable } from "../../../../components/admin/users/UserOwnershipTable"
-import { UserActivityTimeline } from "../../../../components/admin/users/UserActivityTimeline"
+import { useUser } from "../../../../hooks/useUsers";
+import { Button } from "../../../../components/ui/button";
+import { UserProfileCard } from "../../../../components/admin/users/UserProfileCard";
+import { UserStatsCard } from "../../../../components/admin/users/UserStatsCard";
+import { UserOrdersTable } from "../../../../components/admin/users/UserOrdersTable";
+import { UserOwnershipTable } from "../../../../components/admin/users/UserOwnershipTable";
+import { UserActivityTimeline } from "../../../../components/admin/users/UserActivityTimeline";
 
 export default function UserDetailPage() {
-  const { id } = useParams()
-  const userId = Array.isArray(id) ? id[0] : id
+  const { id } = useParams();
+  const userId = Array.isArray(id) ? id[0] : id;
 
-  const { data: user, isLoading, error } = useUser(userId || "")
+  const { data: user, isLoading, error } = useUser(userId || "");
 
   if (isLoading) {
     return (
@@ -32,19 +32,21 @@ export default function UserDetailPage() {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   if (error || !user) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] text-center space-y-4">
-        <h2 className="text-xl font-bold text-white">Customer Profile Not Found</h2>
-        <p className="text-neutral-400 max-w-sm">The user ID does not exist or has been removed from the directory.</p>
+        <h2 className="text-xl font-bold text-white">User Profile Not Found</h2>
+        <p className="text-neutral-400 max-w-sm">
+          The user ID does not exist or has been removed from the directory.
+        </p>
         <Link href="/admin/users">
-          <Button>Back to Customer Directory</Button>
+          <Button>Back to User Directory</Button>
         </Link>
       </div>
-    )
+    );
   }
 
   return (
@@ -59,7 +61,9 @@ export default function UserDetailPage() {
             <ArrowLeft size={16} />
           </Button>
         </Link>
-        <span className="text-sm font-semibold text-neutral-500">Back to Customers</span>
+        <span className="text-sm font-semibold text-neutral-500">
+          Back to Users
+        </span>
       </div>
 
       {/* Profile Detail Layout Grid */}
@@ -78,5 +82,5 @@ export default function UserDetailPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }
