@@ -156,6 +156,12 @@ const seedBeats = async () => {
 };
 
 beforeAll(async () => {
+  try {
+    if (fs.existsSync(testDbPath)) {
+      fs.unlinkSync(testDbPath);
+    }
+  } catch (e) {}
+
   const schemaPath = path.join(__dirname, "..", "..", "..", "Database", "schema.sql");
   const schema = fs.readFileSync(schemaPath, "utf8");
   await new Promise((resolve, reject) => {

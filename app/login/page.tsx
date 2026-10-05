@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import LoginForm from "@/components/auth/LoginForm";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { CANONICAL_DOMAIN } from "@/lib/seo/schemas";
 
 // ─── SEO Metadata ───────────────────────────────────────────────────────────
 export const metadata: Metadata = {
@@ -9,13 +11,13 @@ export const metadata: Metadata = {
   description:
     "Log in to your Prabh Musik account to access premium studio-grade beats, downloads, and distribution tools.",
   alternates: {
-    canonical: "https://prabhmusik.com/login",
+    canonical: `${CANONICAL_DOMAIN}/login`,
   },
   openGraph: {
     title: "Login | Prabh Musik",
     description:
       "Log in to your Prabh Musik account to access premium studio-grade beats, downloads, and distribution tools.",
-    url: "https://prabhmusik.com/login",
+    url: `${CANONICAL_DOMAIN}/login`,
     siteName: "Prabh Musik",
     type: "website",
   },
@@ -100,28 +102,27 @@ const FEATURES = [
 // ─── Page Component ───────────────────────────────────────────────────────────
 export default function LoginPage() {
   const jsonLd = {
-    "@context": "https://schema.org",
     "@type": "LoginAction",
     name: "Log in to Prabh Musik",
     description:
       "Log in to your Prabh Musik account and unlock professional-grade beats and distribution tools.",
     target: {
       "@type": "EntryPoint",
-      urlTemplate: "https://prabhmusik.com/login",
+      urlTemplate: `${CANONICAL_DOMAIN}/login`,
       actionPlatform: [
         "http://schema.org/DesktopWebPlatform",
         "http://schema.org/MobileWebPlatform",
       ],
     },
+    publisher: {
+      "@id": `${CANONICAL_DOMAIN}/#organization`,
+    },
   };
 
   return (
     <div className="signup-page-container selection:bg-[#f59e0b] selection:text-black">
-      {/* Insert JSON-LD Structured Data */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
+      <JsonLd data={jsonLd} />
+
 
       {/* Local Fonts & form styling to avoid modifying globals.css */}
       <style>{`

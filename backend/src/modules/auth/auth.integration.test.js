@@ -22,12 +22,8 @@ const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {}
 
 const app = require("../../app");
 const { db } = require("../../config/db");
-const D1DatabaseMock = (new db.constructor()).constructor;
-["exec", "close", "serialize", "run", "get", "all"].forEach((method) => {
-  D1DatabaseMock.prototype[method] = function (...args) {
-    return this.sqliteDb[method](...args);
-  };
-});
+
+const { resetAllRateLimits } = require("../../middleware/rateLimit.middleware");
 const cookieUtil = require("../../utils/cookie");
 
 let server;
@@ -35,6 +31,14 @@ let port;
 let client;
 
 beforeAll(async () => {
+  resetAllRateLimits();
+  await new Promise((resolve) => db.close(() => setTimeout(resolve, 50)));
+  try {
+    if (fs.existsSync(testDbPath)) {
+      fs.unlinkSync(testDbPath);
+    }
+  } catch (e) {}
+
   // Initialize Schema on SQLite
   const schemaPath = path.join(__dirname, "..", "..", "..", "Database", "schema.sql");
   const schema = fs.readFileSync(schemaPath, "utf8");
@@ -1180,6 +1184,14 @@ describe("GET /api/auth/me - Current User Context", () => {
 
     expect(meRes.status).toBe(401);
     expect(meRes.data.errorCode).toBe("UNAUTHORIZED");
+  });
+
+  afterAll(async () => {
+    consoleLogSpy.mockRestore();
+    consoleErrorSpy.mockRestore();
+    jest.restoreAllMocks();
+    await new Promise((resolve) => server.close(resolve));
+    await new Promise((resolve) => db.close(() => setTimeout(resolve, 50)));
   });
 });
 

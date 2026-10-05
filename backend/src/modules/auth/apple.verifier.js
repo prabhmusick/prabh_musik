@@ -136,7 +136,8 @@ const verifyAppleIdToken = async (idToken, expectedNonce = null) => {
         }
 
         // 2. Audience validation (must match one of the allowed audiences in configuration)
-        const allowedAudiences = env.APPLE_ALLOWED_AUDIENCES || [];
+        const rawAudiences = env.APPLE_ALLOWED_AUDIENCES || process.env.APPLE_ALLOWED_AUDIENCES || "com.prabhmusik.app,com.prabhmusik.service,com.prabhmusik.web";
+        const allowedAudiences = Array.isArray(rawAudiences) ? rawAudiences : typeof rawAudiences === "string" ? rawAudiences.split(",").map(s => s.trim()) : [];
         if (!payload.aud || !allowedAudiences.includes(payload.aud)) {
           return reject(new AppError("Apple ID Token verification failed: Audience mismatch.", 401));
         }

@@ -24,12 +24,7 @@ const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {}
 
 const app = require("../../app");
 const { db } = require("../../config/db");
-const D1DatabaseMock = (new db.constructor()).constructor;
-["exec", "close", "serialize", "run", "get", "all"].forEach((method) => {
-  D1DatabaseMock.prototype[method] = function (...args) {
-    return this.sqliteDb[method](...args);
-  };
-});
+
 const audit = require("../../utils/audit");
 const cookieUtil = require("../../utils/cookie");
 const authService = require("./auth.service");

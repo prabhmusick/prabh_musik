@@ -27,10 +27,17 @@ class RateLimitStore {
  * In-Memory Storage Adapter
  * Default store implementation using JavaScript Map object.
  */
+const globalStores = new Set();
+
 class InMemoryStore extends RateLimitStore {
   constructor() {
     super();
     this.hits = new Map();
+    globalStores.add(this);
+  }
+
+  reset() {
+    this.hits.clear();
   }
 
   async increment(key, windowMs) {
@@ -63,6 +70,12 @@ class InMemoryStore extends RateLimitStore {
     };
   }
 }
+
+const resetAllRateLimits = () => {
+  for (const store of globalStores) {
+    store.hits.clear();
+  }
+};
 
 /**
  * Rate limiting middleware creator.
@@ -134,5 +147,6 @@ const rateLimit = (options = {}) => {
 module.exports = {
   rateLimit,
   RateLimitStore,
-  InMemoryStore
+  InMemoryStore,
+  resetAllRateLimits
 };

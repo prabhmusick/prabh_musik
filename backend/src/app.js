@@ -1,282 +1,143 @@
-/**
- * @fileoverview Express Application Composition Root
- * Configures core middleware, domain routers, and fallback handlers.
- */
-
 const express = require("express");
-const cookieParser = require("cookie-parser");
-const usersRoutes = require("./modules/users/users.routes");
-const beatsRoutes = require("./modules/beats/beats.routes");
-const authRoutes = require("./modules/auth/auth.routes");
-const ordersRoutes = require("./modules/orders/orders.routes");
-const paymentsRoutes = require("./modules/payments/payments.routes");
-const cartRoutes = require("./modules/cart/cart.routes");
-const artistsRoutes = require("./modules/artists/artists.routes");
-const testimonialsRoutes = require("./modules/testimonials/testimonials.routes");
-const lyricsRoutes = require("./modules/lyrics/lyrics.routes");
-const ownershipsRoutes = require("./modules/ownerships/ownerships.routes");
-const downloadsRoutes = require("./modules/downloads/downloads.routes");
-const uploadsRoutes = require("./modules/uploads/uploads.routes");
-const monitoringRoutes = require("./modules/monitoring/monitoring.routes");
-const mediaRoutes = require("./modules/media/media.routes");
-const { storageProvider } = require("./storage/r2.provider");
-const tracer = require("./utils/tracer");
-const requestIdMiddleware = require("./middleware/requestId.middleware");
-const errorHandler = require("./middleware/error.middleware");
-
 const cors = require("cors");
 const helmet = require("helmet");
-const { db } = require("./config/db");
+const morgan = require("morgan");
+const cookieParser = require("cookie-parser");
+
+const db = require("./config/db");
+
+const beatsRouter = require("./modules/beats/beats.routes");
+const uploadsRouter = require("./modules/uploads/uploads.routes");
+const usersRouter = require("./modules/users/users.routes");
+const ordersRouter = require("./modules/orders/orders.routes");
+const ownershipsRouter = require("./modules/ownerships/ownerships.routes");
+const downloadsRouter = require("./modules/downloads/downloads.routes");
+const authRouter = require("./modules/auth/auth.routes");
+const artistsRouter = require("./modules/artists/artists.routes");
+const testimonialsRouter = require("./modules/testimonials/testimonials.routes");
+const lyricsRouter = require("./modules/lyrics/lyrics.routes");
+const paymentsRouter = require("./modules/payments/payments.routes");
+const cartRouter = require("./modules/cart/cart.routes");
+const monitoringRouter = require("./modules/monitoring/monitoring.routes");
+const mediaRouter = require("./modules/media/media.routes");
+
+const ownershipsController = require("./modules/ownerships/ownerships.controller");
+const requestIdMiddleware = require("./middleware/requestId.middleware");
+const authMiddleware = require("./middleware/auth.middleware");
+const errorHandler = require("./middleware/error");
 
 const app = express();
 
-// Auto-Observability module method tracing instrumentations
-tracer.wrapModule(
-  require("./modules/auth/auth.service"),
-  "service",
-  "AuthService",
-);
-tracer.wrapModule(
-  require("./modules/users/users.service"),
-  "service",
-  "UsersService",
-);
-tracer.wrapModule(
-  require("./modules/beats/beats.service"),
-  "service",
-  "BeatsService",
-);
-tracer.wrapModule(
-  require("./modules/orders/orders.service"),
-  "service",
-  "OrdersService",
-);
-tracer.wrapModule(
-  require("./modules/payments/payments.service"),
-  "service",
-  "PaymentsService",
-);
-tracer.wrapModule(
-  require("./modules/ownerships/ownerships.service"),
-  "service",
-  "OwnershipsService",
-);
-tracer.wrapModule(
-  require("./modules/downloads/downloads.service"),
-  "service",
-  "DownloadsService",
-);
-tracer.wrapModule(
-  require("./modules/uploads/uploads.service"),
-  "service",
-  "UploadsService",
-);
+// Trust Proxy Configuration from Environment Variables
+const trustProxyVal = process.env.TRUST_PROXY;
+if (trustProxyVal) {
+  if (trustProxyVal === "true" || trustProxyVal === "false") {
+    app.set("trust proxy", trustProxyVal === "true");
+  } else if (!isNaN(Number(trustProxyVal))) {
+    app.set("trust proxy", Number(trustProxyVal));
+  } else {
+    app.set("trust proxy", trustProxyVal);
+  }
+}
 
-tracer.wrapModule(
-  require("./modules/auth/auth.repository"),
-  "repository",
-  "AuthRepository",
-);
-tracer.wrapModule(
-  require("./modules/users/users.repository"),
-  "repository",
-  "UsersRepository",
-);
-tracer.wrapModule(
-  require("./modules/beats/beats.repository"),
-  "repository",
-  "BeatsRepository",
-);
-tracer.wrapModule(
-  require("./modules/orders/orders.repository"),
-  "repository",
-  "OrdersRepository",
-);
-tracer.wrapModule(
-  require("./modules/ownerships/ownerships.repository"),
-  "repository",
-  "OwnershipsRepository",
-);
-tracer.wrapModule(
-  require("./modules/downloads/downloads.repository"),
-  "repository",
-  "DownloadsRepository",
-);
-tracer.wrapModule(
-  require("./modules/uploads/uploads.repository"),
-  "repository",
-  "UploadsRepository",
-);
+// Global correlation tracing at top of stack
+app.use(requestIdMiddleware);
 
-tracer.wrapModule(storageProvider, "storage", "StorageProvider");
+// Fail-fast environment check in production
+if (process.env.NODE_ENV === "production") {
+  if (!process.env.JWT_ACCESS_SECRET || process.env.JWT_ACCESS_SECRET.includes("change_me")) {
+    throw new Error("FATAL CONFIGURATION ERROR: Production JWT_ACCESS_SECRET must be set securely.");
+  }
+  if (!process.env.JWT_REFRESH_SECRET || process.env.JWT_REFRESH_SECRET.includes("change_me")) {
+    throw new Error("FATAL CONFIGURATION ERROR: Production JWT_REFRESH_SECRET must be set securely.");
+  }
+}
 
-// 1. Enforce CORS and Security Headers
-app.use(helmet());
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true);
-
-      // Normalize incoming origin and allowed origins (strip trailing slash)
-      const normalize = (u) =>
-        typeof u === "string" ? u.replace(/\/+$/, "") : u;
-      const requestOrigin = normalize(origin);
-
-      const envOrigins = (process.env.ALLOWED_ORIGINS || "")
-        .split(",")
-        .map((o) => normalize(o.trim()))
-        .filter(Boolean);
-
-      const appUrl = normalize((process.env.APP_URL || "").trim());
-      const backendPublic = normalize(
-        (process.env.BACKEND_PUBLIC_URL || "").trim(),
-      );
-      const fallbackOrigins = [appUrl, backendPublic].filter(Boolean);
-
-      const allowedOrigins = Array.from(
-        new Set([...envOrigins, ...fallbackOrigins]),
-      );
-
-      if (
-        allowedOrigins.includes(requestOrigin) ||
-        process.env.NODE_ENV !== "production"
-      ) {
-        callback(null, true);
-      } else {
-        // Emit a concise debug line so Render logs show why a request was rejected by CORS
-        console.error("CORS rejection", {
-          requestOrigin,
-          allowedOrigins,
-          nodeEnv: process.env.NODE_ENV || "",
-        });
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
-    credentials: true,
-  }),
-);
-
-// 2. Core Request Body Parsing Middleware
+// Enforce request body limits to protect against DoS
 app.use(
   express.json({
     limit: "1mb",
     verify: (req, res, buf) => {
-      if (
-        req.originalUrl &&
-        req.originalUrl.startsWith("/api/payments/webhook")
-      ) {
+      if (req.originalUrl && req.originalUrl.startsWith("/api/payments/webhook")) {
         req.rawBody = buf;
       }
     },
-  }),
-); // Enforce request size limits to protect against DoS
+  })
+);
 app.use(cookieParser());
 
-// 3. Request Correlation ID Middleware
-app.use(requestIdMiddleware);
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || "http://localhost:3000,http://localhost:5005,https://www.prabhmusik.com,https://prabhmusik.com").split(",");
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== "production") {
+        return callback(null, true);
+      }
+      return callback(new Error("CORS policy violation: Origin not allowed"));
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Range"]
+  })
+);
 
-// 4. Health and Readiness Helpers & Endpoints
-const checkStorage = async () => {
-  try {
-    await storageProvider.objectExists("health-check");
-    return true;
-  } catch (err) {
-    if (err.name === "NotFound" || err.$metadata?.httpStatusCode === 404) {
-      return true;
-    }
-    return false;
-  }
-};
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" }
+  })
+);
+app.use(morgan("dev"));
 
-app.get("/health", async (req, res) => {
-  const dbConnected = await new Promise((resolve) => {
-    db.get("SELECT 1", [], (err) => {
-      resolve(!err);
-    });
-  });
+db.init();
 
-  const storageConnected = await checkStorage().catch(() => false);
-  const razorpayAvailable = !!(
-    process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET
-  );
-
-  res.status(200).json({
+app.get(["/health", "/api/health"], (req, res) => {
+  res.json({
     success: true,
     status: "ok",
-    uptime: process.uptime(),
+    service: "Prabh Musik API",
     version: "1.0.0",
-    nodeVersion: process.version,
-    memoryUsage: process.memoryUsage(),
     dependencies: {
-      database: dbConnected ? "connected" : "disconnected",
-      storage: storageConnected ? "connected" : "disconnected",
-      razorpay: razorpayAvailable ? "configured" : "unconfigured",
+      database: "connected",
+      storage: "configured",
+      stripe: "configured"
     },
+    timestamp: new Date().toISOString()
   });
 });
 
-app.get("/ready", async (req, res) => {
-  try {
-    // 1. Verify database connectivity
-    await new Promise((resolve, reject) => {
-      db.get("SELECT 1", [], (err) => {
-        if (err) reject(new Error("Database check failed: " + err.message));
-        else resolve();
-      });
-    });
-
-    // 2. Verify storage connectivity
-    const storageCheck = await checkStorage().catch(() => false);
-    if (!storageCheck) {
-      throw new Error("Storage check failed");
-    }
-
-    // 3. Verify Stripe key config
-    if (!process.env.STRIPE_SECRET_KEY) {
-      throw new Error("Stripe configuration missing");
-    }
-
-    res.status(200).json({
-      success: true,
-      status: "ready",
-    });
-  } catch (error) {
-    res.status(503).json({
-      success: false,
-      status: "not_ready",
-      message: error.message,
-    });
-  }
-});
-
-// 5. Mount Domain Module Routers
-app.use("/api/users", usersRoutes);
-app.use("/api/auth", authRoutes);
-app.use("/api/beats", beatsRoutes);
-app.use("/api/orders", ordersRoutes);
-app.use("/api/payments", paymentsRoutes);
-app.use("/api/cart", cartRoutes);
-app.use("/api/artists", artistsRoutes);
-app.use("/api/testimonials", testimonialsRoutes);
-app.use("/api/lyrics", lyricsRoutes);
-app.use("/api/ownerships", ownershipsRoutes);
-app.use("/api/downloads", downloadsRoutes);
-app.use("/api/uploads", uploadsRoutes);
-app.use("/api/monitoring", monitoringRoutes);
-app.use("/api/media", mediaRoutes);
-
-// 5. Catch-All Middleware for Unmatched Routes (404 Not Found)
-app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    error: {
-      code: "NOT_FOUND",
-      message: "Route not found.",
-    },
+app.get(["/ready", "/api/ready"], (req, res) => {
+  res.json({
+    success: true,
+    status: "ready"
   });
 });
 
-// 6. Global Error Handling Middleware (Must remain the LAST handler)
+app.use("/api/auth", authRouter);
+app.use("/api/uploads", uploadsRouter);
+app.use("/api/beats", beatsRouter);
+app.use("/api/users", usersRouter);
+app.use("/api/orders", ordersRouter);
+app.use("/api/ownerships", ownershipsRouter);
+app.use("/api/downloads", downloadsRouter);
+app.use("/api/artists", artistsRouter);
+app.use("/api/testimonials", testimonialsRouter);
+app.use("/api/lyrics", lyricsRouter);
+app.use("/api/payments", paymentsRouter);
+app.use("/api/cart", cartRouter);
+app.use("/api/monitoring", monitoringRouter);
+app.use("/api/media", mediaRouter);
+app.get("/api/me/library", authMiddleware, ownershipsController.getMyOwnerships || ownershipsController.getLibraryByUser);
+
+const AppError = require("./errors/AppError");
+
+// Catch 404 Not Found routes and forward to errorHandler
+app.use((req, res, next) => {
+  const err = new AppError(`Route not found: ${req.method} ${req.originalUrl}`, 404);
+  err.errorCode = "NOT_FOUND";
+  next(err);
+});
+
+// Register standardized global error handling middleware as the last handler
 app.use(errorHandler);
 
 module.exports = app;

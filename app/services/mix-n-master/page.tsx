@@ -1,6 +1,49 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { CANONICAL_DOMAIN, createBreadcrumbSchema } from "@/lib/seo/schemas";
 import { WorkedWithArtistsSection } from "../../../components/services/WorkedWithArtistsSection";
+
+const mixMasterWebPageSchema = {
+  "@type": "WebPage",
+  "@id": `${CANONICAL_DOMAIN}/services/mix-n-master#webpage`,
+  url: `${CANONICAL_DOMAIN}/services/mix-n-master`,
+  name: "Mixing & Mastering Services | Prabh Musik",
+  description:
+    "Professional audio mixing and mastering by Prabh Musik. Streaming-ready LUFS targeting, stem mixing, and full bundle delivery.",
+  isPartOf: {
+    "@id": `${CANONICAL_DOMAIN}/#website`,
+  },
+  breadcrumb: {
+    "@id": `${CANONICAL_DOMAIN}/services/mix-n-master#breadcrumb`,
+  },
+};
+
+const mixMasterBreadcrumbSchema = createBreadcrumbSchema(
+  `${CANONICAL_DOMAIN}/services/mix-n-master`,
+  [
+    { name: "Home", url: CANONICAL_DOMAIN },
+    { name: "Services", url: `${CANONICAL_DOMAIN}/services` },
+    {
+      name: "Mix n Master",
+      url: `${CANONICAL_DOMAIN}/services/mix-n-master`,
+    },
+  ]
+);
+
+const mixMasterServiceSchema = {
+  "@type": "Service",
+  "@id": `${CANONICAL_DOMAIN}/services/mix-n-master#service`,
+  name: "Mix n Master",
+  serviceType: "Audio Mixing & Mastering",
+  description:
+    "We deliver clean, balanced mixes and loud, professional masters ready for all major streaming platforms.",
+  url: `${CANONICAL_DOMAIN}/services/mix-n-master`,
+  provider: {
+    "@id": `${CANONICAL_DOMAIN}/#organization`,
+  },
+};
+
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
 
@@ -330,6 +373,14 @@ export default function MixMasterPage() {
         overflowX: "hidden",
       }}
     >
+      <JsonLd
+        data={[
+          mixMasterWebPageSchema,
+          mixMasterBreadcrumbSchema,
+          mixMasterServiceSchema,
+        ]}
+      />
+
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700;800&display=swap');
 

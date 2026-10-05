@@ -119,7 +119,7 @@ const testDbPath = path.join(__dirname, "..", "..", "..", "Database", "beats_app
 process.env.DB_FILE = testDbPath;
 process.env.JWT_ACCESS_SECRET = "integration_test_access_secret_key";
 process.env.JWT_REFRESH_SECRET = "integration_test_refresh_secret_key";
-// Removed APPLE_ALLOWED_AUDIENCES for Apple sign-in feature removal
+process.env.APPLE_ALLOWED_AUDIENCES = "com.prabhmusik.app";
 process.env.ACCESS_TOKEN_EXPIRY_SECONDS = "900";
 process.env.SESSION_EXPIRY_DAYS = "30";
 
@@ -137,6 +137,13 @@ let port;
 let client;
 
 beforeAll(async () => {
+  await new Promise((resolve) => db.close(() => resolve()));
+  try {
+    if (fs.existsSync(testDbPath)) {
+      fs.unlinkSync(testDbPath);
+    }
+  } catch (e) {}
+
   // Initialize SQLite Schema
   const schemaPath = path.join(__dirname, "..", "..", "..", "Database", "schema.sql");
   const schema = fs.readFileSync(schemaPath, "utf8");
@@ -449,6 +456,12 @@ describe("Apple Sign-In Integration Tests", () => {
 
     const credentials = await new Promise((res) => db.all("SELECT * FROM user_credentials WHERE provider = 'apple' AND provider_id = 'apple-concurrent-sub'", [], (e, rows) => res(rows)));
     expect(credentials).toHaveLength(1);
+  });
+
+  afterAll(async () => {
+    jwt.verify = originalVerify;
+    jwt.decode = originalDecode;
+    await new Promise((res) => server.close(res));
   });
 
 });

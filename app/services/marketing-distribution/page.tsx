@@ -1,6 +1,49 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { CANONICAL_DOMAIN, createBreadcrumbSchema } from "@/lib/seo/schemas";
 import { WorkedWithArtistsSection } from "../../../components/services/WorkedWithArtistsSection";
+
+const mktgDistWebPageSchema = {
+  "@type": "WebPage",
+  "@id": `${CANONICAL_DOMAIN}/services/marketing-distribution#webpage`,
+  url: `${CANONICAL_DOMAIN}/services/marketing-distribution`,
+  name: "Music Marketing & Distribution Services | Prabh Musik",
+  description:
+    "Strategic music marketing, global streaming distribution, and release strategy by Prabh Musik.",
+  isPartOf: {
+    "@id": `${CANONICAL_DOMAIN}/#website`,
+  },
+  breadcrumb: {
+    "@id": `${CANONICAL_DOMAIN}/services/marketing-distribution#breadcrumb`,
+  },
+};
+
+const mktgDistBreadcrumbSchema = createBreadcrumbSchema(
+  `${CANONICAL_DOMAIN}/services/marketing-distribution`,
+  [
+    { name: "Home", url: CANONICAL_DOMAIN },
+    { name: "Services", url: `${CANONICAL_DOMAIN}/services` },
+    {
+      name: "Marketing & Distribution",
+      url: `${CANONICAL_DOMAIN}/services/marketing-distribution`,
+    },
+  ]
+);
+
+const mktgDistServiceSchema = {
+  "@type": "Service",
+  "@id": `${CANONICAL_DOMAIN}/services/marketing-distribution#service`,
+  name: "Marketing & Distribution",
+  serviceType: "Music Marketing & Distribution",
+  description:
+    "We help you reach the right audience and get your music on all major platforms worldwide.",
+  url: `${CANONICAL_DOMAIN}/services/marketing-distribution`,
+  provider: {
+    "@id": `${CANONICAL_DOMAIN}/#organization`,
+  },
+};
+
 
 const stats = [
   { value: "200M+", label: "Units Sold Worldwide" },
@@ -111,6 +154,14 @@ export default function BeatsMarketingPage() {
         overflowX: "hidden",
       }}
     >
+      <JsonLd
+        data={[
+          mktgDistWebPageSchema,
+          mktgDistBreadcrumbSchema,
+          mktgDistServiceSchema,
+        ]}
+      />
+
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,300&display=swap');
 

@@ -42,6 +42,13 @@ let client;
 let oauthClientMock;
 
 beforeAll(async () => {
+  await new Promise((resolve) => db.close(() => resolve()));
+  try {
+    if (fs.existsSync(testDbPath)) {
+      fs.unlinkSync(testDbPath);
+    }
+  } catch (e) {}
+
   // Initialize Schema on SQLite
   const schemaPath = path.join(__dirname, "..", "..", "..", "Database", "schema.sql");
   const schema = fs.readFileSync(schemaPath, "utf8");

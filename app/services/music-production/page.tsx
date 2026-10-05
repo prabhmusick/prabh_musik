@@ -1,9 +1,52 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { CANONICAL_DOMAIN, createBreadcrumbSchema } from "@/lib/seo/schemas";
 import {
   getWorkedWithArtists,
   WorkedWithArtist,
 } from "../../../services/artist.service";
+
+const musicProdWebPageSchema = {
+  "@type": "WebPage",
+  "@id": `${CANONICAL_DOMAIN}/services/music-production#webpage`,
+  url: `${CANONICAL_DOMAIN}/services/music-production`,
+  name: "Custom Music Production Services | Prabh Musik",
+  description:
+    "Tailored music production, custom Punjabi & Hip-Hop beats, arrangement, and audio engineering by Prabh Musik.",
+  isPartOf: {
+    "@id": `${CANONICAL_DOMAIN}/#website`,
+  },
+  breadcrumb: {
+    "@id": `${CANONICAL_DOMAIN}/services/music-production#breadcrumb`,
+  },
+};
+
+const musicProdBreadcrumbSchema = createBreadcrumbSchema(
+  `${CANONICAL_DOMAIN}/services/music-production`,
+  [
+    { name: "Home", url: CANONICAL_DOMAIN },
+    { name: "Services", url: `${CANONICAL_DOMAIN}/services` },
+    {
+      name: "Music Production",
+      url: `${CANONICAL_DOMAIN}/services/music-production`,
+    },
+  ]
+);
+
+const musicProdServiceSchema = {
+  "@type": "Service",
+  "@id": `${CANONICAL_DOMAIN}/services/music-production#service`,
+  name: "Music Production",
+  serviceType: "Music Production & Beatmaking",
+  description:
+    "Custom music production tailored to your artistic identity — from concept to final session file.",
+  url: `${CANONICAL_DOMAIN}/services/music-production`,
+  provider: {
+    "@id": `${CANONICAL_DOMAIN}/#organization`,
+  },
+};
+
 
 const style = `
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700;1,900&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
@@ -344,21 +387,31 @@ const style = `
     border: 1px solid var(--border);
     border-radius: 16px;
     overflow: hidden;
-    transition: border-color 0.3s, transform 0.3s, box-shadow 0.3s;
+    transition: border-color 0.35s, transform 0.35s, box-shadow 0.35s;
     cursor: pointer;
   }
   .artist-card:hover {
     border-color: var(--border-hover);
     transform: translateY(-6px);
-    box-shadow: 0 24px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(240,123,32,0.08);
+    box-shadow: 0 24px 60px rgba(0,0,0,0.5), 0 0 20px rgba(240,123,32,0.15);
+  }
+  .artist-card:hover .artist-vis img {
+    transform: scale(1.07);
   }
   .artist-vis {
-    height: 220px; position: relative; overflow: hidden;
+    height: 280px; position: relative; overflow: hidden;
     background: #0c0a08;
+  }
+  .artist-vis img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    object-position: top center;
+    transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
   }
   .artist-overlay {
     position: absolute; inset: 0;
-    background: linear-gradient(to bottom, transparent 30%, var(--surface) 100%);
+    background: linear-gradient(to bottom, transparent 65%, var(--surface) 100%);
+    pointer-events: none;
     z-index: 1;
   }
   .artist-tag {
@@ -764,6 +817,7 @@ function ArtistCard({
               width: "100%",
               height: "100%",
               objectFit: "cover",
+              objectPosition: "top center",
             }}
           />
         ) : name === "Karan Aujla" ? (
@@ -1371,9 +1425,9 @@ export default function MusicProductionPage() {
 
   useEffect(() => {
     getWorkedWithArtists()
-      .then((artists) =>
+      .then((artists: WorkedWithArtist[]) =>
         setWorkedWithArtists(
-          artists.filter((artist) => artist.showOnMusicProduction),
+          artists.filter((artist: WorkedWithArtist) => artist.showOnMusicProduction),
         ),
       )
       .catch(() => setWorkedWithArtists([]));
@@ -1435,7 +1489,15 @@ export default function MusicProductionPage() {
 
   return (
     <>
+      <JsonLd
+        data={[
+          musicProdWebPageSchema,
+          musicProdBreadcrumbSchema,
+          musicProdServiceSchema,
+        ]}
+      />
       <style>{style}</style>
+
 
       {/* HERO */}
       <section className="hero" id="services">

@@ -101,6 +101,7 @@ const errorHandler = (err, req, res, next) => {
   // 4. Construct Standardized Error Payload Structure
   const responsePayload = {
     success: false,
+    requestId: req.id || req.requestId || (req.headers && req.headers["x-request-id"]) || undefined,
     error: {
       code: errorCode,
       message,

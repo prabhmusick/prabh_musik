@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import SignupForm from "@/components/auth/SignupForm";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { CANONICAL_DOMAIN } from "@/lib/seo/schemas";
 
 // ─── SEO Metadata ───────────────────────────────────────────────────────────
 export const metadata: Metadata = {
@@ -17,30 +19,21 @@ export const metadata: Metadata = {
     "Prabh Musik sign up",
   ],
   alternates: {
-    canonical: "https://prabhmusik.com/signup",
+    canonical: `${CANONICAL_DOMAIN}/signup`,
   },
   openGraph: {
     title: "Create Account | Prabh Musik",
     description:
       "Join Prabh Musik — access premium studio-grade beats, instant audio downloads, and exclusive distribution tools built for serious music producers and artists.",
-    url: "https://prabhmusik.com/signup",
+    url: `${CANONICAL_DOMAIN}/signup`,
     siteName: "Prabh Musik",
     type: "website",
-    images: [
-      {
-        url: "https://prabhmusik.com/og-image.jpg",
-        width: 1200,
-        height: 630,
-        alt: "Join Prabh Musik today",
-      },
-    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "Create Account | Prabh Musik",
     description:
       "Join Prabh Musik — access premium studio-grade beats, instant audio downloads, and exclusive distribution tools built for serious music producers.",
-    images: ["https://prabhmusik.com/og-image.jpg"],
   },
   robots: {
     index: true,
@@ -134,38 +127,28 @@ const FEATURES = [
 
 // ─── Page Component ───────────────────────────────────────────────────────────
 export default function SignupPage() {
-  // Structured Data (JSON-LD) for Search Engine Rich Snippets
   const jsonLd = {
-    "@context": "https://schema.org",
     "@type": "RegisterAction",
     name: "Sign up for Prabh Musik",
     description:
       "Create your account and unlock professional-grade beats, exclusive services, and tools built for serious artists.",
     target: {
       "@type": "EntryPoint",
-      urlTemplate: "https://prabhmusik.com/signup",
+      urlTemplate: `${CANONICAL_DOMAIN}/signup`,
       actionPlatform: [
         "http://schema.org/DesktopWebPlatform",
         "http://schema.org/MobileWebPlatform",
       ],
     },
     publisher: {
-      "@type": "Organization",
-      name: "Prabh Musik",
-      logo: {
-        "@type": "ImageObject",
-        url: "https://prabhmusik.com/logo.png",
-      },
+      "@id": `${CANONICAL_DOMAIN}/#organization`,
     },
   };
 
   return (
     <div className="signup-page-container selection:bg-[#f59e0b] selection:text-black">
-      {/* Insert JSON-LD Structured Data */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
+      <JsonLd data={jsonLd} />
+
 
       {/* Local Fonts & form styling to avoid modifying globals.css */}
       <style>{`

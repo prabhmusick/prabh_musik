@@ -45,7 +45,7 @@ if (isProduction && !googleClientId) {
 
 // Apple sign-in configuration removed. Keep optional var for compatibility but
 // do not enforce it in production.
-const appleAllowedAudiences = process.env.APPLE_ALLOWED_AUDIENCES || "";
+const appleAllowedAudiences = process.env.APPLE_ALLOWED_AUDIENCES || "com.prabhmusik.app,com.prabhmusik.service,com.prabhmusik.web";
 
 if (missingOrInsecure.length > 0) {
   throw new Error(

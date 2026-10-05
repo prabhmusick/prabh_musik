@@ -96,6 +96,12 @@ const constructMultipart = (fieldName, filename, fileBuffer, mimeType, otherFiel
 };
 
 beforeAll(async () => {
+  try {
+    if (fs.existsSync(testDbPath)) {
+      fs.unlinkSync(testDbPath);
+    }
+  } catch (e) {}
+
   adminToken = jwtUtil.generateAccessToken({ sub: 1, role: "admin", sid: "sess_admin" });
   customerToken = jwtUtil.generateAccessToken({ sub: 2, role: "customer", sid: "sess_customer" });
 

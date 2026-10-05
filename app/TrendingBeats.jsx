@@ -1,9 +1,9 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { getTrendingBeats } from "@/services/beat.service";
-import { useAudioPlayer } from "./contexts/audio-player-context";
+import { fetchBeats } from "@/lib/api/beats";
 import { useAppShell } from "./contexts/app-shell-context";
+import { useAudioPlayer } from "./contexts/audio-player-context";
 
 // Color palettes for visual variety
 const colorPalettes = [
@@ -31,30 +31,16 @@ const colorPalettes = [
 ];
 
 // Map API beat to display format
-const DEFAULT_PREVIEW_URL =
-  "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3";
-
 function formatBeatForDisplay(beat, index) {
   const palette = colorPalettes[index % colorPalettes.length];
-  const previewUrl =
-    beat.previewUrl ||
-    beat.preview_url ||
-    beat.audio_url ||
-    (beat.assets && (beat.assets.previewAudio || beat.assets.wavFile)) ||
-    DEFAULT_PREVIEW_URL;
-
   return {
     ...beat,
+    songs: 412, // Default fallback
     ...palette,
-    id: String(beat.id),
+    id: beat.id,
     genre: beat.genre || "MUSIC",
-    // Support both backend raw shape and mapped frontend shape
-    label: beat.title || beat.beat_name,
-    previewUrl,
-    img:
-      (beat.assets && (beat.assets.coverImage || beat.assets.bannerImage)) ||
-      beat.cover_image_url ||
-      beat.banner_image_url,
+    label: beat.beat_name,
+    img: beat.cover_image_url || beat.banner_image_url,
   };
 }
 
@@ -82,36 +68,53 @@ function PlayIcon() {
   );
 }
 
-function ChevronIcon({ direction }) {
+function PauseIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-      <path
-        d={
-          direction === "left"
-            ? "M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"
-            : "M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"
-        }
-      />
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
     </svg>
   );
 }
 
-function BeatCard({ beat, index, onPurchase, onPlay }) {
+function ChevronIcon({ direction }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+      <path d={direction === "left" ? "M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" : "M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"} />
+    </svg>
+  );
+}
+
+function BeatCard({ beat, index, onPurchase }) {
   const [hovered, setHovered] = useState(false);
   const [playHovered, setPlayHovered] = useState(false);
   const [cartHovered, setCartHovered] = useState(false);
+  const { currentBeat, isPlaying, playBeat } = useAudioPlayer();
+
+  const isCurrentPlaying = currentBeat?.id === beat.id && isPlaying;
+
+  const handlePlayClick = (e) => {
+    e.stopPropagation();
+    playBeat({
+      id: beat.id,
+      title: beat.label || beat.title || beat.beat_name || "Untitled",
+      producer: beat.producer || beat.artist_name || "Unknown Artist",
+      price: beat.price ?? null,
+      cover: beat.cover || beat.img || beat.cover_image_url || beat.banner_image_url || "",
+      genre: beat.genre,
+      bpm: beat.bpm,
+      previewUrl: beat.previewUrl || beat.audio_url || "",
+    });
+  };
 
   return (
     <div
       className="beat-card-container"
-      onClick={() => onPlay(beat)}
       style={{
         display: "flex",
         flexDirection: "column",
         gap: "14px",
         animation: `fadeSlideUp 0.5s ease both`,
         animationDelay: `${index * 0.1}s`,
-        cursor: "pointer",
       }}
     >
       {/* Image Card */}
@@ -159,70 +162,51 @@ function BeatCard({ beat, index, onPurchase, onPlay }) {
         {/* City glow effect for card 4 */}
         {beat.cityGlow && (
           <>
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                background:
-                  "radial-gradient(ellipse at 30% 70%, #ff00ff44 0%, transparent 60%), radial-gradient(ellipse at 70% 40%, #00ffff33 0%, transparent 50%)",
-              }}
-            />
-            <div
-              style={{
-                position: "absolute",
-                bottom: 0,
-                left: 0,
-                right: 0,
-                height: "60%",
-                background: "linear-gradient(to top, #1a003088, transparent)",
-              }}
-            />
+            <div style={{
+              position: "absolute",
+              inset: 0,
+              background: "radial-gradient(ellipse at 30% 70%, #ff00ff44 0%, transparent 60%), radial-gradient(ellipse at 70% 40%, #00ffff33 0%, transparent 50%)",
+            }} />
+            <div style={{
+              position: "absolute",
+              bottom: 0,
+              left: 0,
+              right: 0,
+              height: "60%",
+              background: "linear-gradient(to top, #1a003088, transparent)",
+            }} />
             {/* Fake city skyline */}
             {[...Array(12)].map((_, i) => (
-              <div
-                key={i}
-                style={{
-                  position: "absolute",
-                  bottom: 0,
-                  left: `${i * 8.5}%`,
-                  width: `${5 + (i % 3) * 2}%`,
-                  height: `${20 + (i % 5) * 15}%`,
-                  background:
-                    i % 3 === 0
-                      ? "#ff00ff55"
-                      : i % 3 === 1
-                        ? "#0000aa66"
-                        : "#00008866",
-                  borderTop: `1px solid ${i % 2 === 0 ? "#ff00ff88" : "#00ffff44"}`,
-                }}
-              />
+              <div key={i} style={{
+                position: "absolute",
+                bottom: 0,
+                left: `${i * 8.5}%`,
+                width: `${5 + (i % 3) * 2}%`,
+                height: `${20 + (i % 5) * 15}%`,
+                background: i % 3 === 0 ? "#ff00ff55" : i % 3 === 1 ? "#0000aa66" : "#00008866",
+                borderTop: `1px solid ${i % 2 === 0 ? "#ff00ff88" : "#00ffff44"}`,
+              }} />
             ))}
           </>
         )}
 
         {/* Card 1 green tones */}
         {beat.id === 1 && (
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              background:
-                "radial-gradient(ellipse at 50% 30%, #00ff8822 0%, transparent 70%)",
-            }}
-          />
+          <div style={{
+            position: "absolute",
+            inset: 0,
+            background: "radial-gradient(ellipse at 50% 30%, #00ff8822 0%, transparent 70%)",
+          }} />
         )}
 
         {/* Card 3 B&W silhouette */}
         {beat.id === 3 && (
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              background:
-                "linear-gradient(180deg, #3a3a3a 0%, #1a1a1a 50%, #000 100%)",
-              opacity: 0.9,
-            }}
-          />
+          <div style={{
+            position: "absolute",
+            inset: 0,
+            background: "linear-gradient(180deg, #3a3a3a 0%, #1a1a1a 50%, #000 100%)",
+            opacity: 0.9,
+          }} />
         )}
 
         {/* Text overlay (POPPIN') */}
@@ -247,31 +231,27 @@ function BeatCard({ beat, index, onPurchase, onPlay }) {
 
         {/* Small badge top-left for card 1 */}
         {beat.id === 1 && (
-          <div
-            style={{
-              position: "absolute",
-              top: "10px",
-              left: "10px",
-              background: "#ff6600",
-              borderRadius: "50%",
-              width: "10px",
-              height: "10px",
-            }}
-          />
+          <div style={{
+            position: "absolute",
+            top: "10px",
+            left: "10px",
+            background: "#ff6600",
+            borderRadius: "50%",
+            width: "10px",
+            height: "10px",
+          }} />
         )}
 
         {/* Number badge */}
         {beat.id === 1 && (
-          <div
-            style={{
-              position: "absolute",
-              bottom: "10px",
-              right: "10px",
-              color: "rgba(255,255,255,0.5)",
-              fontSize: "11px",
-              fontFamily: "monospace",
-            }}
-          >
+          <div style={{
+            position: "absolute",
+            bottom: "10px",
+            right: "10px",
+            color: "rgba(255,255,255,0.5)",
+            fontSize: "11px",
+            fontFamily: "monospace",
+          }}>
             07
           </div>
         )}
@@ -290,10 +270,7 @@ function BeatCard({ beat, index, onPurchase, onPlay }) {
         >
           <button
             className="play-button"
-            onClick={(event) => {
-              event.stopPropagation();
-              onPlay(beat);
-            }}
+            onClick={handlePlayClick}
             onMouseEnter={() => setPlayHovered(true)}
             onMouseLeave={() => setPlayHovered(false)}
             style={{
@@ -310,10 +287,10 @@ function BeatCard({ beat, index, onPurchase, onPlay }) {
               transform: playHovered ? "scale(1.12)" : "scale(1)",
               transition: "transform 0.2s ease, background 0.2s ease",
               boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
-              paddingLeft: "2px",
+              paddingLeft: isCurrentPlaying ? "0" : "2px",
             }}
           >
-            <PlayIcon />
+            {isCurrentPlaying ? <PauseIcon /> : <PlayIcon />}
           </button>
         </div>
       </div>
@@ -328,10 +305,24 @@ function BeatCard({ beat, index, onPurchase, onPlay }) {
             fontWeight: "700",
             color: "#ffffff",
             letterSpacing: "0.5px",
-            marginBottom: "14px",
+            marginBottom: "4px",
           }}
         >
           {beat.genre}
+        </div>
+        <div
+          className="beat-card-songs"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "5px",
+            color: "rgba(255,255,255,0.5)",
+            fontSize: "12px",
+            marginBottom: "14px",
+          }}
+        >
+          <MusicIcon />
+          <span>{beat.songs} Songs</span>
         </div>
 
         {/* Add to Cart Button */}
@@ -358,8 +349,7 @@ function BeatCard({ beat, index, onPurchase, onPlay }) {
             alignItems: "center",
             justifyContent: "center",
             gap: "7px",
-            transition:
-              "background 0.2s ease, border-color 0.2s ease, transform 0.15s ease",
+            transition: "background 0.2s ease, border-color 0.2s ease, transform 0.15s ease",
             transform: cartHovered ? "translateY(-1px)" : "translateY(0)",
           }}
         >
@@ -378,59 +368,7 @@ export default function TrendingTypeBeats() {
   const [leftHovered, setLeftHovered] = useState(false);
   const [rightHovered, setRightHovered] = useState(false);
   const router = useRouter();
-  const { playBeat } = useAudioPlayer();
   const { isAuthenticated, addToCart } = useAppShell();
-
-  const handlePlay = (beat) => {
-    const resolvedBeat = {
-      id: String(beat.id),
-      title: beat.label || beat.title || beat.beat_name || "Untitled",
-      producer: beat.producer || beat.artist_name || "Unknown Artist",
-      price: beat.price ?? null,
-      cover:
-        beat.cover ||
-        beat.img ||
-        beat.cover_image_url ||
-        beat.banner_image_url ||
-        "",
-      genre: beat.genre,
-      bpm: beat.bpm,
-      duration: beat.duration ?? 0,
-      previewUrl:
-        beat.previewUrl ||
-        beat.preview_url ||
-        beat.audio_url ||
-        (beat.assets && (beat.assets.previewAudio || beat.assets.wavFile)) ||
-        DEFAULT_PREVIEW_URL,
-      plays: beat.plays || 0,
-    };
-
-    playBeat(
-      resolvedBeat,
-      beats.map((item) => ({
-        id: String(item.id),
-        title: item.label || item.title || item.beat_name || "Untitled",
-        producer: item.producer || item.artist_name || "Unknown Artist",
-        price: item.price ?? null,
-        cover:
-          item.cover ||
-          item.img ||
-          item.cover_image_url ||
-          item.banner_image_url ||
-          "",
-        genre: item.genre,
-        bpm: item.bpm,
-        duration: item.duration ?? 0,
-        previewUrl:
-          item.previewUrl ||
-          item.preview_url ||
-          item.audio_url ||
-          (item.assets && (item.assets.previewAudio || item.assets.wavFile)) ||
-          DEFAULT_PREVIEW_URL,
-        plays: item.plays || 0,
-      })),
-    );
-  };
 
   const handlePurchase = (beat) => {
     if (!isAuthenticated) {
@@ -442,12 +380,7 @@ export default function TrendingTypeBeats() {
       title: beat.label || beat.title || beat.beat_name || "Untitled",
       producer: beat.producer || beat.artist_name || "Unknown Artist",
       price: beat.price ?? null,
-      cover:
-        beat.cover ||
-        beat.img ||
-        beat.cover_image_url ||
-        beat.banner_image_url ||
-        "",
+      cover: beat.cover || beat.img || beat.cover_image_url || beat.banner_image_url || "",
       genre: beat.genre,
       bpm: beat.bpm,
       previewUrl: beat.previewUrl || beat.audio_url || "",
@@ -456,14 +389,13 @@ export default function TrendingTypeBeats() {
   };
 
   useEffect(() => {
-    async function getBeatsFromApi() {
+    async function getBeats() {
       try {
         setLoading(true);
         setError(null);
-        const data = await getTrendingBeats();
-        const formattedBeats = data.map((beat, i) =>
-          formatBeatForDisplay(beat, i),
-        );
+        const data = await fetchBeats();
+        // Format beats for display with color palettes
+        const formattedBeats = data.slice(0, 4).map((beat, i) => formatBeatForDisplay(beat, i));
         setBeats(formattedBeats);
       } catch (err) {
         console.error("Error fetching beats:", err);
@@ -474,10 +406,8 @@ export default function TrendingTypeBeats() {
       }
     }
 
-    getBeatsFromApi();
+    getBeats();
   }, []);
-
-  const visibleBeats = beats.slice(0, 4);
 
   return (
     <>
@@ -604,34 +534,24 @@ export default function TrendingTypeBeats() {
         }}
       >
         {loading && (
-          <div
-            style={{ textAlign: "center", padding: "60px 20px", color: "#fff" }}
-          >
+          <div style={{ textAlign: "center", padding: "60px 20px", color: "#fff" }}>
             <p>Loading beats...</p>
           </div>
         )}
 
         {error && (
-          <div
-            style={{
-              textAlign: "center",
-              padding: "60px 20px",
-              color: "#ff6b6b",
-            }}
-          >
+          <div style={{ textAlign: "center", padding: "60px 20px", color: "#ff6b6b" }}>
             <p>Error: {error}</p>
           </div>
         )}
 
-        {!loading && !error && visibleBeats.length === 0 && (
-          <div
-            style={{ textAlign: "center", padding: "60px 20px", color: "#aaa" }}
-          >
+        {!loading && !error && beats.length === 0 && (
+          <div style={{ textAlign: "center", padding: "60px 20px", color: "#aaa" }}>
             <p>No beats available</p>
           </div>
         )}
 
-        {!loading && !error && visibleBeats.length > 0 && (
+        {!loading && !error && beats.length > 0 && (
           <>
             {/* Header */}
             <div
@@ -667,47 +587,32 @@ export default function TrendingTypeBeats() {
                     maxWidth: "320px",
                   }}
                 >
-                  Say goodbye to interruptions and enjoy uninterrupted music
-                  streaming. With our ad-free platform, you&apos;ll have access
-                  to millions to songs
+                  Say goodbye to interruptions and enjoy uninterrupted music streaming.
+                  With our ad-free platform, you'll have access to millions to songs
                 </p>
               </div>
 
               {/* Nav arrows */}
-              <div
-                className="trending-nav"
-                style={{ display: "flex", gap: "10px", paddingTop: "8px" }}
-              >
+              <div className="trending-nav" style={{ display: "flex", gap: "10px", paddingTop: "8px" }}>
                 {["left", "right"].map((dir) => {
                   const isHov = dir === "left" ? leftHovered : rightHovered;
                   return (
                     <button
                       key={dir}
-                      onMouseEnter={() =>
-                        dir === "left"
-                          ? setLeftHovered(true)
-                          : setRightHovered(true)
-                      }
-                      onMouseLeave={() =>
-                        dir === "left"
-                          ? setLeftHovered(false)
-                          : setRightHovered(false)
-                      }
+                      onMouseEnter={() => dir === "left" ? setLeftHovered(true) : setRightHovered(true)}
+                      onMouseLeave={() => dir === "left" ? setLeftHovered(false) : setRightHovered(false)}
                       style={{
                         width: "36px",
                         height: "36px",
                         borderRadius: "50%",
                         border: "1.5px solid rgba(255,255,255,0.2)",
-                        background: isHov
-                          ? "rgba(255,255,255,0.12)"
-                          : "transparent",
+                        background: isHov ? "rgba(255,255,255,0.12)" : "transparent",
                         color: "#ffffff",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
                         cursor: "pointer",
-                        transition:
-                          "background 0.2s ease, transform 0.15s ease",
+                        transition: "background 0.2s ease, transform 0.15s ease",
                         transform: isHov ? "scale(1.08)" : "scale(1)",
                       }}
                     >
@@ -727,14 +632,8 @@ export default function TrendingTypeBeats() {
                 gap: "28px",
               }}
             >
-              {visibleBeats.map((beat, i) => (
-                <BeatCard
-                  key={beat.id}
-                  beat={beat}
-                  index={i}
-                  onPurchase={handlePurchase}
-                  onPlay={handlePlay}
-                />
+              {beats.map((beat, i) => (
+                <BeatCard key={beat.id} beat={beat} index={i} onPurchase={handlePurchase} />
               ))}
             </div>
           </>

@@ -1,5 +1,6 @@
-import { Artist } from "../types/admin";
-import api from "../lib/api";
+import { localArtists, localBeats, localOrders } from './db';
+import { Artist } from '../types/admin';
+import api from '../lib/api';
 
 export interface WorkedWithArtist {
   id: number;
@@ -22,13 +23,36 @@ export interface WorkedWithArtistVisibility {
 }
 
 export async function getArtists(): Promise<Artist[]> {
-  const response = await api.get("/artists");
-  return response.data.data || [];
+  // Simulate network delay
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  
+  return localArtists.map(artist => {
+    const artistBeats = localBeats.filter(b => b.artistId === artist.id);
+    const totalBeats = artistBeats.length;
+    
+    // Count how many of this artist's beats are in completed orders
+    const totalSales = localOrders
+      .filter(o => o.status === 'COMPLETED')
+      .reduce((sum, o) => {
+        const artistBeatsInOrder = o.beatIds.filter(bid => artistBeats.some(ab => ab.id === bid));
+        return sum + artistBeatsInOrder.length;
+      }, 0);
+
+    return {
+      ...artist,
+      totalBeats,
+      totalSales
+    };
+  });
 }
 
 export async function getWorkedWithArtists(): Promise<WorkedWithArtist[]> {
-  const response = await api.get("/artists/worked-with");
-  return response.data.data || [];
+  try {
+    const response = await api.get('/artists/worked-with');
+    return response.data.data || [];
+  } catch {
+    return [];
+  }
 }
 
 export async function createWorkedWithArtist(data: {
@@ -42,7 +66,7 @@ export async function createWorkedWithArtist(data: {
   show_on_lyrics: boolean;
   show_on_marketing_distribution: boolean;
 }): Promise<WorkedWithArtist> {
-  const response = await api.post("/artists/worked-with", data);
+  const response = await api.post('/artists/worked-with', data);
   return response.data.data;
 }
 
@@ -63,7 +87,7 @@ export async function deleteWorkedWithArtist(id: number): Promise<void> {
 
 export async function getArtistById(id: string): Promise<Artist | undefined> {
   const artists = await getArtists();
-  return artists.find((artist) => artist.id === id);
+  return artists.find(artist => artist.id === id);
 }
 
 export async function createArtist(data: {
@@ -72,6 +96,6 @@ export async function createArtist(data: {
   email?: string;
   image_key?: string;
 }): Promise<Artist> {
-  const response = await api.post("/artists", data);
+  const response = await api.post('/artists', data);
   return response.data.data;
 }

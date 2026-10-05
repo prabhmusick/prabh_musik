@@ -1,7 +1,50 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { getLyrics } from "../../../services/lyrics.service";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { CANONICAL_DOMAIN, createBreadcrumbSchema } from "@/lib/seo/schemas";
+import { getLyrics, Lyric } from "../../../services/lyrics.service";
 import { WorkedWithArtistsSection } from "../../../components/services/WorkedWithArtistsSection";
+
+const lyricsWebPageSchema = {
+  "@type": "WebPage",
+  "@id": `${CANONICAL_DOMAIN}/services/lyrics#webpage`,
+  url: `${CANONICAL_DOMAIN}/services/lyrics`,
+  name: "Lyrics & Songwriting Services | Prabh Musik",
+  description:
+    "Professional lyrics writing and songwriting services by Prabh Musik. Punjabi, Hip-Hop, Pop & R&B lyrics.",
+  isPartOf: {
+    "@id": `${CANONICAL_DOMAIN}/#website`,
+  },
+  breadcrumb: {
+    "@id": `${CANONICAL_DOMAIN}/services/lyrics#breadcrumb`,
+  },
+};
+
+const lyricsBreadcrumbSchema = createBreadcrumbSchema(
+  `${CANONICAL_DOMAIN}/services/lyrics`,
+  [
+    { name: "Home", url: CANONICAL_DOMAIN },
+    { name: "Services", url: `${CANONICAL_DOMAIN}/services` },
+    {
+      name: "Lyrics",
+      url: `${CANONICAL_DOMAIN}/services/lyrics`,
+    },
+  ]
+);
+
+const lyricsServiceSchema = {
+  "@type": "Service",
+  "@id": `${CANONICAL_DOMAIN}/services/lyrics#service`,
+  name: "Lyrics",
+  serviceType: "Songwriting & Lyrics",
+  description:
+    "Powerful words, real emotion. We write lyrics that connect, inspire, and make your music unforgettable.",
+  url: `${CANONICAL_DOMAIN}/services/lyrics`,
+  provider: {
+    "@id": `${CANONICAL_DOMAIN}/#organization`,
+  },
+};
+
 
 const DEFAULT_COMMISSIONS = [
   {
@@ -1051,10 +1094,10 @@ export default function LyricsPage() {
   useEffect(() => {
     let isMounted = true;
     getLyrics()
-      .then((items) => {
+      .then((items: Lyric[]) => {
         if (!isMounted || items.length === 0) return;
         setCommissions(
-          items.map((item, index) => ({
+          items.map((item: Lyric, index: number) => ({
             num: String(index + 1).padStart(3, "0"),
             title: item.title,
             genre: item.genre,
@@ -1097,7 +1140,15 @@ export default function LyricsPage() {
 
   return (
     <>
+      <JsonLd
+        data={[
+          lyricsWebPageSchema,
+          lyricsBreadcrumbSchema,
+          lyricsServiceSchema,
+        ]}
+      />
       <style>{style}</style>
+
 
       {/* HERO */}
       <section className="hero" id="services">

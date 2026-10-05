@@ -59,6 +59,12 @@ describe("Monitoring Integration Tests", () => {
   let customerUserId = 102;
 
   beforeAll(async () => {
+    try {
+      if (fs.existsSync(testDbPath)) {
+        fs.unlinkSync(testDbPath);
+      }
+    } catch (e) {}
+
     // 1. Establish SQLite DB tables
     await run(`DROP TABLE IF EXISTS users`);
     await run(`

@@ -237,12 +237,60 @@ class D1PreparedStatement {
   }
 }
 
+// 2. Initialize the Local Development Driver Instance
+const sqlite3 = require("sqlite3").verbose();
+
+if (isCloudflareD1) {
+  const missing = Object.entries(cloudflareD1Config)
+    .filter(([, value]) => !value)
+    .map(([name]) => name);
+  if (missing.length > 0) {
+    throw new Error(`DB_MODE=cloudflare requires: ${missing.join(", ")}`);
+  }
+}
+
+let activeSqliteDb = null;
+let activeDbPath = null;
+
+function getSqliteDb() {
+  if (isCloudflareD1) return null;
+  const currentDbPath =
+    process.env.DB_FILE ||
+    path.join(__dirname, "..", "..", "Database", "beats.db");
+  if (!activeSqliteDb || activeDbPath !== currentDbPath) {
+    if (activeSqliteDb) {
+      try {
+        activeSqliteDb.close();
+      } catch (e) {}
+    }
+    activeDbPath = currentDbPath;
+    activeSqliteDb = new sqlite3.Database(currentDbPath);
+    activeSqliteDb.run("PRAGMA foreign_keys = ON;");
+  }
+  return activeSqliteDb;
+}
+
+function closeSqliteDb(callback) {
+  if (activeSqliteDb) {
+    const dbToClose = activeSqliteDb;
+    activeSqliteDb = null;
+    activeDbPath = null;
+    dbToClose.close(callback);
+  } else if (typeof callback === "function") {
+    callback(null);
+  }
+}
+
 /**
  * Emulates Cloudflare D1's D1Database API using local sqlite3.
  */
 class D1DatabaseMock {
   constructor(sqliteDb) {
-    this.sqliteDb = sqliteDb;
+    this._sqliteDb = sqliteDb;
+  }
+
+  get sqliteDb() {
+    return this._sqliteDb || getSqliteDb();
   }
 
   /**
@@ -296,36 +344,24 @@ class D1DatabaseMock {
 }
 
 // Ensure prototype has fallback methods pointing directly to sqliteDb for local environment runtime safety
-["exec", "close", "serialize", "run", "get", "all"].forEach((method) => {
+["exec", "serialize", "run", "get", "all"].forEach((method) => {
   D1DatabaseMock.prototype[method] = function (...args) {
     return this.sqliteDb[method](...args);
   };
 });
 
-// 2. Initialize the Local Development Driver Instance
-const sqlite3 = require("sqlite3").verbose();
-const dbFile =
-  process.env.DB_FILE ||
-  path.join(__dirname, "..", "..", "Database", "beats.db");
-if (isCloudflareD1) {
-  const missing = Object.entries(cloudflareD1Config)
-    .filter(([, value]) => !value)
-    .map(([name]) => name);
-  if (missing.length > 0) {
-    throw new Error(`DB_MODE=cloudflare requires: ${missing.join(", ")}`);
+D1DatabaseMock.prototype.close = function (callback) {
+  if (this._sqliteDb) {
+    const dbToClose = this._sqliteDb;
+    this._sqliteDb = null;
+    return dbToClose.close(callback);
   }
-}
-
-const sqliteDb = isCloudflareD1 ? null : new sqlite3.Database(dbFile);
-
-// Enable SQLite foreign keys on connection startup
-if (sqliteDb) {
-  sqliteDb.run("PRAGMA foreign_keys = ON;");
-}
+  return closeSqliteDb(callback);
+};
 
 const localD1Instance = isCloudflareD1
   ? new CloudflareD1Database(cloudflareD1Config)
-  : new D1DatabaseMock(sqliteDb);
+  : new D1DatabaseMock();
 
 const logger = require("../utils/logger");
 const metrics = require("../utils/metrics");
@@ -547,6 +583,9 @@ const dbProxy = new Proxy(
 
 // 4. Initialisation interface (maintained for application bootstrap compatibility)
 function init() {
+  if (process.env.NODE_ENV === "test") {
+    return Promise.resolve();
+  }
   if (isCloudflareD1) {
     return localD1Instance
       .prepare(

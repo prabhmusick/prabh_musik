@@ -1,17 +1,17 @@
-/**
- * @fileoverview Users Router Module
- * Declares HTTP URL path mappings for the User domain module.
- */
-
 const express = require("express");
 const controller = require("./users.controller");
+const catchAsync = require("../../utils/catchAsync");
+const authMiddleware = require("../../middleware/auth.middleware");
+const { requireAdmin } = require("../../middleware/role.middleware");
 
 const router = express.Router();
 
-// POST /api/users - Creates a new user profile record
-router.post("/", controller.createUser);
+router.use(authMiddleware);
 
-// GET /api/users - List user profiles (admin)
-router.get("/", controller.listUsers);
+router.get("/", requireAdmin, catchAsync(controller.getAllUsers));
+router.get("/:id", catchAsync(controller.getUser));
+router.post("/", requireAdmin, catchAsync(controller.createUser));
+router.put("/:id", catchAsync(controller.updateUser));
+router.patch("/:id/status", requireAdmin, catchAsync(controller.updateUserStatus));
 
 module.exports = router;
