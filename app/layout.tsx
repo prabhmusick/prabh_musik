@@ -50,6 +50,7 @@ export const metadata: Metadata = {
 };
 
 import Providers from "./providers";
+import { GlobalAudioPlayer } from "@/components/audio/GlobalAudioPlayer";
 
 export default function RootLayout({
   children,
@@ -69,6 +70,7 @@ export default function RootLayout({
           <Header />
           <main className="flex-1">{children}</main>
           <Footer />
+          <GlobalAudioPlayer />
         </Providers>
         {process.env.NODE_ENV === "development" && <Agentation />}
         <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" />

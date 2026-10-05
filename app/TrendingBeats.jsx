@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { fetchBeats } from "@/lib/api/beats";
 import { useAppShell } from "./contexts/app-shell-context";
+import { useAudioPlayer } from "./contexts/audio-player-context";
 
 // Color palettes for visual variety
 const colorPalettes = [
@@ -67,6 +68,14 @@ function PlayIcon() {
   );
 }
 
+function PauseIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+    </svg>
+  );
+}
+
 function ChevronIcon({ direction }) {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -79,6 +88,23 @@ function BeatCard({ beat, index, onPurchase }) {
   const [hovered, setHovered] = useState(false);
   const [playHovered, setPlayHovered] = useState(false);
   const [cartHovered, setCartHovered] = useState(false);
+  const { currentBeat, isPlaying, playBeat } = useAudioPlayer();
+
+  const isCurrentPlaying = currentBeat?.id === beat.id && isPlaying;
+
+  const handlePlayClick = (e) => {
+    e.stopPropagation();
+    playBeat({
+      id: beat.id,
+      title: beat.label || beat.title || beat.beat_name || "Untitled",
+      producer: beat.producer || beat.artist_name || "Unknown Artist",
+      price: beat.price ?? null,
+      cover: beat.cover || beat.img || beat.cover_image_url || beat.banner_image_url || "",
+      genre: beat.genre,
+      bpm: beat.bpm,
+      previewUrl: beat.previewUrl || beat.audio_url || "",
+    });
+  };
 
   return (
     <div
@@ -244,6 +270,7 @@ function BeatCard({ beat, index, onPurchase }) {
         >
           <button
             className="play-button"
+            onClick={handlePlayClick}
             onMouseEnter={() => setPlayHovered(true)}
             onMouseLeave={() => setPlayHovered(false)}
             style={{
@@ -260,10 +287,10 @@ function BeatCard({ beat, index, onPurchase }) {
               transform: playHovered ? "scale(1.12)" : "scale(1)",
               transition: "transform 0.2s ease, background 0.2s ease",
               boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
-              paddingLeft: "2px",
+              paddingLeft: isCurrentPlaying ? "0" : "2px",
             }}
           >
-            <PlayIcon />
+            {isCurrentPlaying ? <PauseIcon /> : <PlayIcon />}
           </button>
         </div>
       </div>

@@ -1,8 +1,9 @@
 'use client';
-import { useState, useEffect, useCallback, useRef } from "react";
-import { fetchBeats as fetchBeatsAPI } from "@/lib/api/beats";
+import { useState, useEffect, useCallback, Suspense } from "react";
+import { fetchBeatsWithFilters, fetchBeats as fetchBeatsAPI } from "@/lib/api/beats";
 import { useAppShell } from "../contexts/app-shell-context";
-import { useRouter } from "next/navigation";
+import { useAudioPlayer } from "../contexts/audio-player-context";
+import { useRouter, useSearchParams } from "next/navigation";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { CANONICAL_DOMAIN, createBreadcrumbSchema } from "@/lib/seo/schemas";
 
@@ -29,7 +30,6 @@ const beatCatalogBreadcrumbSchema = createBreadcrumbSchema(
   ]
 );
 
-
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface Beat {
@@ -47,6 +47,7 @@ interface Beat {
 // ─── API Integration ──────────────────────────────────────────────────────────
 
 interface ApiResponse {
+  id: number;
   beat_name: string;
   artist_name: string;
   price: number;
@@ -59,32 +60,34 @@ interface ApiResponse {
 }
 
 function formatApiBeats(apiBeats: ApiResponse[]): Beat[] {
-  return apiBeats.map((beat: ApiResponse) => ({
-    id: Math.random(), // Generate unique IDs
+  return apiBeats.map((beat: ApiResponse, index: number) => ({
+    id: beat.id || index + 1,
     title: beat.beat_name || "Untitled",
-    producer: beat.artist_name || "Unknown Artist",
+    producer: beat.artist_name || "Prabh Musik",
     price: beat.price || null,
-    cover: beat.cover_image_url || beat.banner_image_url || "https://via.placeholder.com/400?text=No+Cover",
+    cover: beat.cover_image_url || beat.banner_image_url || "/beats_bg.png",
     genre: beat.genre || "Music",
     bpm: beat.bpm || 120,
     previewUrl: beat.audio_url || "",
-    plays: Math.floor(Math.random() * 5000),
+    plays: Math.floor(Math.random() * 5000) + 120,
   }));
 }
 
-async function fetchBeats(page: number): Promise<{ beats: Beat[]; total: number; pages: number }> {
+async function fetchBeats(page: number, search?: string, genre?: string): Promise<{ beats: Beat[]; total: number; pages: number }> {
   try {
-    const allBeats = await fetchBeatsAPI();
-    const formattedBeats = formatApiBeats(allBeats);
+    const filters: Record<string, string | number> = { page, limit: 20 };
+    if (search) filters.search = search;
+    if (genre) filters.genre = genre;
+
+    const allBeats = await fetchBeatsWithFilters(filters);
+    const formattedBeats = formatApiBeats(allBeats as any);
     const perPage = 20;
     const total = formattedBeats.length;
-    const pages = Math.ceil(total / perPage);
-    const start = (page - 1) * perPage;
-    const paginatedBeats = formattedBeats.slice(start, start + perPage);
-    return { beats: paginatedBeats, total, pages };
+    const pages = Math.max(1, Math.ceil(total / perPage));
+    return { beats: formattedBeats, total, pages };
   } catch (error) {
     console.error("Failed to fetch beats from API:", error);
-    return { beats: [], total: 0, pages: 0 };
+    return { beats: [], total: 0, pages: 1 };
   }
 }
 
@@ -508,34 +511,39 @@ function TrendingHeader({ search, onSearch, isMobile, beats, filters, onFilterCh
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
-export default function BeatMarketplace() {
+function BeatMarketplaceContent() {
+  const searchParams = useSearchParams();
+  const initialQuery = searchParams ? (searchParams.get("q") || searchParams.get("search") || "") : "";
   const [beats, setBeats] = useState<Beat[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(initialQuery);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [currentBeat, setCurrentBeat] = useState<Beat | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [isLooping, setIsLooping] = useState(false);
-  const [isLiked, setIsLiked] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [filters, setFilters] = useState<FilterState>({ genre: null, mood: null, priceRange: null, bpmRange: null });
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const router = useRouter();
   const { isAuthenticated, addToCart } = useAppShell();
+  const { currentBeat: globalCurrentBeat, isPlaying: globalIsPlaying, playBeat: playBeatGlobal } = useAudioPlayer();
 
-  const load = useCallback(async (p: number) => {
+  useEffect(() => {
+    const q = searchParams ? (searchParams.get("q") || searchParams.get("search") || "") : "";
+    if (q && q !== search) {
+      setSearch(q);
+    }
+  }, [searchParams]);
+
+  const load = useCallback(async (p: number, sText?: string, gGenre?: string | null) => {
     setLoading(true);
-    const data = await fetchBeats(p);
+    const data = await fetchBeats(p, sText, gGenre || undefined);
     setBeats(data.beats);
     setTotalPages(data.pages);
     setLoading(false);
   }, []);
 
-  useEffect(() => { load(page); }, [page, load]);
+  useEffect(() => {
+    load(page, search, filters.genre);
+  }, [page, search, filters.genre, load]);
 
   useEffect(() => {
     const update = () => setIsMobile(window.innerWidth <= 900);
@@ -544,46 +552,9 @@ export default function BeatMarketplace() {
     return () => window.removeEventListener("resize", update);
   }, []);
 
-  useEffect(() => {
-    const audio = new Audio();
-    audio.preload = "metadata";
-    audio.loop = isLooping;
-
-    const onTimeUpdate = () => setCurrentTime(audio.currentTime || 0);
-    const onLoaded = () => setDuration(audio.duration || 0);
-    const onPlay = () => setIsPlaying(true);
-    const onPause = () => setIsPlaying(false);
-
-    audio.addEventListener("timeupdate", onTimeUpdate);
-    audio.addEventListener("loadedmetadata", onLoaded);
-    audio.addEventListener("play", onPlay);
-    audio.addEventListener("pause", onPause);
-
-    audioRef.current = audio;
-
-    return () => {
-      audio.pause();
-      audio.removeEventListener("timeupdate", onTimeUpdate);
-      audio.removeEventListener("loadedmetadata", onLoaded);
-      audio.removeEventListener("play", onPlay);
-      audio.removeEventListener("pause", onPause);
-      audioRef.current = null;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.loop = isLooping;
-    }
-  }, [isLooping]);
-
   const filtered = beats.filter((b) => {
     const matchesSearch = b.title.toLowerCase().includes(search.toLowerCase()) || b.producer.toLowerCase().includes(search.toLowerCase());
-    
     const matchesGenre = !filters.genre || b.genre === filters.genre;
-    
-    const matchesMood = true; // Mood filter can be added when API data includes it
-    
     let matchesBpm = true;
     if (filters.bpmRange) {
       if (filters.bpmRange.includes("60-90")) matchesBpm = b.bpm >= 60 && b.bpm <= 90;
@@ -591,7 +562,6 @@ export default function BeatMarketplace() {
       else if (filters.bpmRange.includes("130-160")) matchesBpm = b.bpm > 130 && b.bpm <= 160;
       else if (filters.bpmRange.includes("160+")) matchesBpm = b.bpm > 160;
     }
-
     let matchesPrice = true;
     if (filters.priceRange) {
       if (filters.priceRange === "Free") matchesPrice = !b.price || b.price === 0;
@@ -599,8 +569,7 @@ export default function BeatMarketplace() {
       else if (filters.priceRange === "₹500-1000") matchesPrice = (b.price || 0) > 500 && (b.price || 0) <= 1000;
       else if (filters.priceRange === "₹1000+") matchesPrice = (b.price || 0) > 1000;
     }
-
-    return matchesSearch && matchesGenre && matchesMood && matchesBpm && matchesPrice;
+    return matchesSearch && matchesGenre && matchesBpm && matchesPrice;
   });
 
   const handlePurchase = useCallback((beat: Beat) => {
@@ -611,95 +580,19 @@ export default function BeatMarketplace() {
     addToCart(beat);
   }, [addToCart, isAuthenticated, router]);
 
-  const playBeat = useCallback(async (beat: Beat) => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    if (currentBeat?.id === beat.id) {
-      if (audio.paused) {
-        await audio.play().catch(() => {});
-      } else {
-        audio.pause();
-      }
-      return;
-    }
-
-    if (!beat.previewUrl) {
-      console.warn("No preview URL available for this beat");
-      return;
-    }
-
-    audio.src = beat.previewUrl;
-    audio.currentTime = 0;
-    setCurrentBeat(beat);
-    setCurrentTime(0);
-    setDuration(0);
-    await audio.play().catch(() => {});
-  }, [currentBeat?.id]);
-
-  const playAdjacent = useCallback(async (direction: -1 | 1) => {
-    if (filtered.length === 0) return;
-    if (!currentBeat) {
-      await playBeat(filtered[0]);
-      return;
-    }
-
-    const currentIdx = filtered.findIndex((b) => b.id === currentBeat.id);
-    const baseIndex = currentIdx >= 0 ? currentIdx : 0;
-    const nextIndex = (baseIndex + direction + filtered.length) % filtered.length;
-    await playBeat(filtered[nextIndex]);
-  }, [currentBeat, filtered, playBeat]);
-
-  const togglePlayback = useCallback(async () => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    if (!currentBeat && filtered.length > 0) {
-      await playBeat(filtered[0]);
-      return;
-    }
-
-    if (audio.paused) {
-      await audio.play().catch(() => {});
-    } else {
-      audio.pause();
-    }
-  }, [currentBeat, filtered, playBeat]);
-
-  const closePlayer = () => {
-    const audio = audioRef.current;
-    if (audio) {
-      audio.pause();
-      audio.currentTime = 0;
-      audio.src = "";
-    }
-    setIsPlaying(false);
-    setCurrentTime(0);
-    setDuration(0);
-    setCurrentBeat(null);
-  };
-
-  const formatTime = (secs: number) => {
-    const safe = Math.max(0, Math.floor(secs));
-    const m = Math.floor(safe / 60);
-    const s = safe % 60;
-    return `${m}:${String(s).padStart(2, "0")}`;
-  };
-
-  const progressRatio = duration > 0 ? currentTime / duration : 0;
-  const seekByRatio = (ratio: number) => {
-    const audio = audioRef.current;
-    if (!audio || duration <= 0) return;
-    const clampedRatio = Math.max(0, Math.min(1, ratio));
-    const next = clampedRatio * duration;
-    audio.currentTime = next;
-    setCurrentTime(next);
-  };
-  const waveformBars = Array.from({ length: 210 }, (_, i) => {
-    const wave = Math.sin(i * 0.21) + Math.sin(i * 0.09 + 1.3) + Math.sin(i * 0.045 + 2.2);
-    const normalized = Math.abs(wave / 3);
-    return 7 + Math.round(normalized * 30);
-  });
+  const handlePlayBeat = useCallback((beat: Beat) => {
+    playBeatGlobal({
+      id: beat.id,
+      title: beat.title,
+      producer: beat.producer,
+      price: beat.price,
+      cover: beat.cover,
+      genre: beat.genre,
+      bpm: beat.bpm,
+      previewUrl: beat.previewUrl,
+      plays: beat.plays,
+    });
+  }, [playBeatGlobal]);
 
   return (
     <>
@@ -738,36 +631,35 @@ export default function BeatMarketplace() {
 
         <div style={{ position: "relative", zIndex: 1, maxWidth: 1360, margin: "0 auto", padding: isMobile ? "0 16px 70px" : "0 32px 70px" }}>
 
-            {/* ── Hero: Beats background + title (full-bleed) ── */}
-<div style={{ position: "relative", left: "50%", right: "50%", marginLeft: "-50vw", marginRight: "-50vw", width: "100vw", maxWidth: "100vw", boxSizing: "border-box", paddingBottom: 40, overflowX: "hidden" }}>
+          {/* ── Hero: Beats background + title (full-bleed) ── */}
+          <div style={{ position: "relative", left: "50%", right: "50%", marginLeft: "-50vw", marginRight: "-50vw", width: "100vw", maxWidth: "100vw", boxSizing: "border-box", paddingBottom: 40, overflowX: "hidden" }}>
             <div style={{ position: "relative", height: 360, overflow: "hidden" }}>
               <img src="/beats_bg.png" alt="Beats background" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
               <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.12) 0%, rgba(0,0,0,0.5) 40%, rgba(0,0,0,0.78) 100%)" }} />
               <div style={{ position: "relative", zIndex: 2, height: "100%", display: "flex", alignItems: "center" }}>
                 <div style={{ maxWidth: 1360, margin: isMobile ? "0 auto 0 20px" : "0 auto 0 92px", padding: isMobile ? "22px 18px 22px 16px" : "36px 48px 36px 20px" }}>
-                  {/* <p style={{ fontFamily: "var(--font-mono)", color: "rgba(255,255,255,0.75)", letterSpacing: "0.26em", textTransform: "uppercase", fontSize: 12, marginBottom: 8 }}>Industry</p> */}
                   <h1 style={{ fontFamily: "'Jacques Francois', serif", fontWeight: 400, fontSize: isMobile ? 42 : "clamp(56px, 6vw, 94px)", color: "#fff", lineHeight: isMobile ? 1.05 : 0.84, marginBottom: 10 }}>Industry<br />Ready beats for Artists</h1>
                   <p style={{ fontFamily: "'Inter', sans-serif", fontStyle: "italic", fontWeight: 500, color: "rgba(255,255,255,0.9)", maxWidth: 720, marginBottom: 6, fontSize: isMobile ? 20 : 38.88, lineHeight: isMobile ? 1.5 : 2 }}>~who wants to stand out</p>
                   <p style={{ fontFamily: "'Inter', sans-serif", fontWeight: 400, color: "rgba(255,255,255,0.68)", maxWidth: 760, marginTop: 8, fontSize: isMobile ? 15 : 18.66, lineHeight: isMobile ? 1.5 : 1 }}>Premium Trap, Drill, Punjabi, Emotional and commercial beats crafted for independent artists and labels.</p>
                 </div>
               </div>
-              </div>
             </div>
+          </div>
 
-            {/* ── NEW: Trending Beat Types header ── */}
-            <TrendingHeader search={search} onSearch={setSearch} isMobile={isMobile} beats={beats} filters={filters} onFilterChange={setFilters} />
+          {/* ── Trending Beat Types header ── */}
+          <TrendingHeader search={search} onSearch={setSearch} isMobile={isMobile} beats={beats} filters={filters} onFilterChange={setFilters} />
 
           {/* ── Toolbar ── */}
           <div style={{ display: "flex", justifyContent: isMobile ? "space-between" : "flex-end", flexWrap: "wrap", marginTop: 18, marginBottom: 18, gap: 8 }}>
-              {(["grid", "list"] as const).map((m) => (
+            {(["grid", "list"] as const).map((m) => (
               <button
                 key={m}
-                disabled
+                onClick={() => setViewMode(m)}
                 style={{
-                  width: 38, height: 38, borderRadius: 9, cursor: "not-allowed",
+                  width: 38, height: 38, borderRadius: 9, cursor: "pointer",
                   border: viewMode === m ? "1px solid rgba(251,191,36,0.55)" : "1px solid rgba(255,255,255,0.1)",
                   background: viewMode === m ? "rgba(251,191,36,0.14)" : "rgba(255,255,255,0.04)",
-                  color: viewMode === m ? "#fbbf24" : "rgba(255,255,255,0.24)",
+                  color: viewMode === m ? "#fbbf24" : "rgba(255,255,255,0.6)",
                   display: "flex", alignItems: "center", justifyContent: "center",
                   transition: "all 0.15s",
                 }}
@@ -780,20 +672,20 @@ export default function BeatMarketplace() {
             ))}
           </div>
 
-          {/* ── Grid ── */}
+          {/* ── Grid / List ── */}
           {viewMode === "grid" ? (
             <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, minmax(0, 1fr))" : "repeat(5, 1fr)", gap: isMobile ? 12 : 16 }}>
               {loading
-                ? Array.from({ length: 18 }).map((_, i) => <SkeletonCard key={i} />)
+                ? Array.from({ length: 15 }).map((_, i) => <SkeletonCard key={i} />)
                 : filtered.map((beat, i) => (
                   <BeatCard
                     key={beat.id}
                     beat={beat}
                     index={i}
-                    onPlay={playBeat}
+                    onPlay={handlePlayBeat}
                     onPurchase={handlePurchase}
-                    isActive={currentBeat?.id === beat.id}
-                    isPlaying={isPlaying}
+                    isActive={String(globalCurrentBeat?.id) === String(beat.id)}
+                    isPlaying={String(globalCurrentBeat?.id) === String(beat.id) && globalIsPlaying}
                   />
                 ))
               }
@@ -814,7 +706,7 @@ export default function BeatMarketplace() {
                     animation: "fadeUp 0.35s ease both",
                     cursor: "pointer", transition: "background 0.15s, border-color 0.15s",
                   }}
-                    onClick={() => playBeat(beat)}
+                    onClick={() => handlePlayBeat(beat)}
                     onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(251,191,36,0.06)"; e.currentTarget.style.borderColor = "rgba(251,191,36,0.2)"; }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = "#1a1409"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.07)"; }}
                   >
@@ -827,7 +719,7 @@ export default function BeatMarketplace() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          playBeat(beat);
+                          handlePlayBeat(beat);
                         }}
                         style={{
                           width: 36,
@@ -843,7 +735,7 @@ export default function BeatMarketplace() {
                           flexShrink: 0,
                         }}
                       >
-                        {currentBeat?.id === beat.id && isPlaying ? (
+                        {String(globalCurrentBeat?.id) === String(beat.id) && globalIsPlaying ? (
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M7 6h4v12H7zm6 0h4v12h-4z"/></svg>
                         ) : (
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
@@ -877,289 +769,15 @@ export default function BeatMarketplace() {
             />
           )}
         </div>
-
-        {currentBeat && (
-          <div style={{
-            position: "fixed",
-            left: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: 30,
-            background: "rgba(2, 5, 7, 0.98)",
-            borderTop: "1px solid rgba(255,255,255,0.08)",
-            boxShadow: "0 -18px 48px rgba(0,0,0,0.6)",
-            backdropFilter: "blur(10px)",
-            padding: isMobile ? "10px 12px 14px" : "8px 20px 12px",
-          }}>
-            <div
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                right: 0,
-                height: 2,
-                background: "linear-gradient(90deg, rgba(251,191,36,0.25) 0%, #fbbf24 50%, rgba(251,191,36,0.25) 100%)",
-              }}
-            />
-            <button
-              onClick={closePlayer}
-              aria-label="Close player"
-              style={{
-                position: "absolute",
-                top: 8,
-                right: 12,
-                width: 26,
-                height: 26,
-                borderRadius: 6,
-                border: "1px solid rgba(251,191,36,0.35)",
-                background: "rgba(251,191,36,0.08)",
-                color: "#f6d47b",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-                fontSize: 14,
-                lineHeight: 1,
-              }}
-            >
-              ×
-            </button>
-            <div style={{ maxWidth: 1360, margin: "0 auto", paddingRight: isMobile ? 0 : 34 }}>
-              <div style={{
-                height: 42,
-                marginBottom: 8,
-                display: "grid",
-                gridTemplateColumns: isMobile ? "1fr" : "56px 1fr 56px",
-                alignItems: "center",
-                gap: 8,
-              }}>
-                <span style={{
-                  fontSize: 14,
-                  fontWeight: 700,
-                  color: "#dbe4e4",
-                  textAlign: "left",
-                }}>
-                  {formatTime(currentTime)}
-                </span>
-
-                <div
-                  onClick={(e) => {
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    seekByRatio((e.clientX - rect.left) / rect.width);
-                  }}
-                  style={{
-                    height: 32,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: 2,
-                    cursor: "pointer",
-                    overflow: "hidden",
-                  }}
-                >
-                  {waveformBars.map((barHeight, i) => {
-                    const barProgress = i / (waveformBars.length - 1);
-                    const played = barProgress <= progressRatio;
-                    return (
-                      <span
-                        key={i}
-                        style={{
-                          width: 3,
-                          height: barHeight,
-                          borderRadius: 999,
-                          background: played ? "#f3f6f6" : "rgba(255,255,255,0.14)",
-                          transition: "background 0.14s linear",
-                        }}
-                      />
-                    );
-                  })}
-                </div>
-
-                <span style={{
-                  fontSize: 14,
-                  fontWeight: 700,
-                  color: "#dbe4e4",
-                  textAlign: "right",
-                }}>
-                  {formatTime(duration || 0)}
-                </span>
-              </div>
-
-              <div style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: 18,
-                minHeight: 56,
-                flexWrap: "wrap",
-              }}>
-                <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "flex-start" : "center", gap: 12, minWidth: 240, flex: "1 1 320px" }}>
-                  <img
-                    src={currentBeat.cover}
-                    alt={currentBeat.title}
-                    style={{ width: 62, height: 62, borderRadius: 7, objectFit: "cover", flexShrink: 0 }}
-                  />
-                  <div style={{ minWidth: 0, width: isMobile ? "100%" : "auto" }}>
-                    <p style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      maxWidth: 430,
-                      fontSize: 15,
-                      fontWeight: 700,
-                      lineHeight: 1,
-                      color: "#f4f6f8",
-                    }}>
-                      <span style={{
-                        fontSize: 13,
-                        letterSpacing: "0.06em",
-                        fontWeight: 600,
-                        color: "rgba(255,255,255,0.55)",
-                        background: "rgba(255,255,255,0.08)",
-                        borderRadius: 4,
-                        padding: "3px 6px",
-                        flexShrink: 0,
-                      }}>AD</span>
-                      <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                        "{currentBeat.title}" - Afro Fusion Instrumental x Afr...
-                      </span>
-                    </p>
-                    <p style={{
-                      marginTop: 4,
-                      fontSize: 13,
-                      color: "rgba(255,255,255,0.56)",
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      maxWidth: 430,
-                    }}>
-                      {currentBeat.producer} • {currentBeat.bpm} BPM • {currentBeat.plays} plays
-                    </p>
-                  </div>
-                </div>
-
-                <div style={{ display: "flex", alignItems: "center", gap: 14, flex: "0 1 auto", flexWrap: "wrap", justifyContent: isMobile ? "flex-start" : "flex-end" }}>
-                  <button
-                    onClick={() => setIsLiked((v) => !v)}
-                    style={{ border: "none", background: "transparent", color: isLiked ? "#ffffff" : "rgba(255,255,255,0.8)", cursor: "pointer", padding: 4 }}
-                    aria-label="Toggle favourite"
-                  >
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-                    </svg>
-                  </button>
-
-                  <button
-                    onClick={() => playAdjacent(-1)}
-                    style={{ border: "none", background: "transparent", color: "#fff", cursor: "pointer", padding: 4 }}
-                    aria-label="Previous beat"
-                  >
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6L18 5v14z"/></svg>
-                  </button>
-
-                  <button
-                    onClick={togglePlayback}
-                    style={{
-                      width: 44,
-                      height: 44,
-                      borderRadius: "50%",
-                      border: "none",
-                      background: "#fff",
-                      color: "#000",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      cursor: "pointer",
-                    }}
-                    aria-label={isPlaying ? "Pause" : "Play"}
-                  >
-                    {isPlaying ? (
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M7 5h4v14H7zm6 0h4v14h-4z"/></svg>
-                    ) : (
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-                    )}
-                  </button>
-
-                  <button
-                    onClick={() => playAdjacent(1)}
-                    style={{ border: "none", background: "transparent", color: "#fff", cursor: "pointer", padding: 4 }}
-                    aria-label="Next beat"
-                  >
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M16 6h2v12h-2zM6 19V5l8.5 7z"/></svg>
-                  </button>
-
-                  <button
-                    style={{ border: "none", background: "transparent", color: "rgba(255,255,255,0.85)", cursor: "pointer", padding: 4 }}
-                    aria-label="Queue"
-                  >
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="14" y2="12"/><line x1="4" y1="18" x2="14" y2="18"/><circle cx="18" cy="18" r="2"/>
-                    </svg>
-                  </button>
-                </div>
-
-                <div style={{ display: "flex", alignItems: "center", gap: 16, justifyContent: isMobile ? "space-between" : "flex-end", flex: "1 1 400px", minWidth: 240, flexWrap: "wrap" }}>
-                  <button style={{ border: "none", background: "transparent", color: "rgba(255,255,255,0.9)", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
-                    ✪ Edit
-                  </button>
-
-                  <button
-                    onClick={() => setIsLooping((v) => !v)}
-                    style={{
-                      border: "none",
-                      background: "transparent",
-                      color: isLooping ? "#fbbf24" : "rgba(255,255,255,0.9)",
-                      fontSize: 13,
-                      fontWeight: 600,
-                      cursor: "pointer",
-                    }}
-                  >
-                    ↻ Loop
-                  </button>
-
-                  <button style={{ border: "none", background: "transparent", color: "rgba(255,255,255,0.9)", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
-                    ♬ Lyrics
-                  </button>
-
-                  <button style={{ border: "none", background: "transparent", color: "rgba(255,255,255,0.92)", fontSize: 18, cursor: "pointer" }} aria-label="Volume">
-                    🔉
-                  </button>
-
-                  <button style={{ border: "none", background: "transparent", color: "rgba(255,255,255,0.88)", fontSize: 23, fontWeight: 600, cursor: "pointer", lineHeight: 1 }}>⋯</button>
-
-                  <button
-                    style={{
-                      border: "none",
-                      background: "#0f6bff",
-                      color: "#fff",
-                      borderRadius: 10,
-                      height: 38,
-                      padding: "0 14px",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 9,
-                      fontSize: 16,
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      boxShadow: "0 8px 22px rgba(15,107,255,0.32)",
-                    }}
-                  >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M6 2l3 4h9a2 2 0 0 1 2 2v3H4V6a2 2 0 0 1 2-2z"/>
-                      <path d="M4 11h16l-1.4 8.2a2 2 0 0 1-2 1.8H7.4a2 2 0 0 1-2-1.8z"/>
-                    </svg>
-                    {currentBeat.price === null ? "Free" : `₹${currentBeat.price.toLocaleString("en-IN")}`}
-                  </button>
-                </div>
-              </div>
-
-            </div>
-          </div>
-        )}
       </div>
     </>
+  );
+}
+
+export default function BeatMarketplace() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: "100vh", background: "#120e06" }} />}>
+      <BeatMarketplaceContent />
+    </Suspense>
   );
 }
