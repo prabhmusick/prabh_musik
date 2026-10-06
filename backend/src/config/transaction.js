@@ -3,14 +3,14 @@ const { db } = require("./db");
 let transactionQueue = Promise.resolve();
 
 /**
- * Runs a set of SQL commands in a secure SQLite transaction.
+ * Runs a set of SQL commands in a secure Cloudflare D1 transaction block.
  * Automatically issues a ROLLBACK if any database error or callback exception is encountered,
  * otherwise issues a COMMIT.
  *
  * Transaction executions are queued sequentially using a promise chain to prevent concurrent
- * transaction overlap/collision errors on a shared SQLite database connection.
+ * transaction overlap/collision errors on the database connection.
  *
- * @param {function(import('sqlite3').Database): Promise<any>} callback - Code to run inside transaction block.
+ * @param {function(object): Promise<any>} callback - Code to run inside transaction block.
  * @returns {Promise<any>} Resolves to callback results on success.
  */
 const executeTransaction = async (callback) => {

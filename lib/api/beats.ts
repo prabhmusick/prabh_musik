@@ -30,7 +30,7 @@ const API_BASE_URL = rawApiUrl ? `${rawApiUrl}/api` : "/api";
  */
 export async function fetchBeats(): Promise<Beat[]> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/beats/`, {
+    const response = await fetch(`${API_BASE_URL}/beats/`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -68,7 +68,7 @@ export async function fetchBeats(): Promise<Beat[]> {
  */
 export async function fetchBeatById(id: number): Promise<Beat> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/beats/${id}/`, {
+    const response = await fetch(`${API_BASE_URL}/beats/${id}/`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -105,7 +105,7 @@ export async function fetchBeatsWithFilters(
       queryParams.append(key, String(value));
     });
 
-    const url = `${API_BASE_URL}/api/beats/?${queryParams.toString()}`;
+    const url = `${API_BASE_URL}/beats/?${queryParams.toString()}`;
     const response = await fetch(url, {
       method: "GET",
       headers: {

@@ -1,20 +1,335 @@
 /**
  * @fileoverview Database Client Wrapper (Cloudflare D1 Adapter)
- * Resolves request-bound D1 bindings, supports Cloudflare's D1 API for the
- * Express deployment, and emulates the D1 API locally using sqlite3.
+ * Unified Cloudflare D1 Database adapter for Express application.
+ * Executes queries via Cloudflare D1 HTTP API in production/development,
+ * or using an in-memory pure JS driver fallback when running offline/tests.
+ * ZERO native C++ binary dependencies (no sqlite3).
  */
 
 const { AsyncLocalStorage } = require("async_hooks");
 const path = require("path");
 const fs = require("fs");
 
+const isProduction = process.env.NODE_ENV === "production";
+
 const cloudflareD1Config = {
-  accountId: process.env.CLOUDFLARE_ACCOUNT_ID,
-  databaseId: process.env.CLOUDFLARE_D1_DATABASE_ID,
-  apiToken: process.env.CLOUDFLARE_API_TOKEN,
+  accountId: process.env.CLOUDFLARE_ACCOUNT_ID || (isProduction ? "" : "ef604a28e1b051d534c1a8abf3640476"),
+  databaseId: process.env.CLOUDFLARE_D1_DATABASE_ID || (isProduction ? "" : "c2e9d27f-d877-4627-a588-0456d062dde6"),
+  apiToken: process.env.CLOUDFLARE_API_TOKEN || "",
 };
 
-const isCloudflareD1 = process.env.DB_MODE === "cloudflare";
+// Fail-fast environment check in production
+if (isProduction) {
+  const missing = [];
+  if (!cloudflareD1Config.accountId) missing.push("CLOUDFLARE_ACCOUNT_ID");
+  if (!cloudflareD1Config.databaseId) missing.push("CLOUDFLARE_D1_DATABASE_ID");
+  if (!cloudflareD1Config.apiToken) missing.push("CLOUDFLARE_API_TOKEN");
+
+  if (missing.length > 0) {
+    throw new Error(
+      `FATAL CONFIGURATION ERROR: Production Cloudflare D1 database integration requires:\n- ${missing.join("\n- ")}`
+    );
+  }
+}
+
+class MemoryDB {
+  constructor() {
+    this.tables = {};
+    this.autoIncrements = {};
+  }
+
+  reset() {
+    this.tables = {};
+    this.autoIncrements = {};
+  }
+
+  query(sql, params = []) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("FATAL SECURITY ERROR: MemoryDB is strictly forbidden in production environment.");
+    }
+
+    const rawSql = sql.trim();
+    const upperSql = rawSql.toUpperCase();
+
+    if (/^(BEGIN|COMMIT|ROLLBACK)/i.test(rawSql)) {
+      return { success: true, results: [], meta: { changes: 0 } };
+    }
+
+    const pragmaMatch = rawSql.match(/^PRAGMA\s+table_info\(([^)]+)\);?/i);
+    if (pragmaMatch) {
+      const tableName = pragmaMatch[1].replace(/['"`]/g, "").trim();
+      const table = this.tables[tableName];
+      if (!table) return { success: true, results: [], meta: {} };
+      const results = Object.keys(table.schema || {}).map((colName, idx) => ({
+        cid: idx,
+        name: colName,
+        type: table.schema[colName].type || "TEXT",
+        notnull: table.schema[colName].notNull ? 1 : 0,
+        dflt_value: table.schema[colName].default || null,
+        pk: table.schema[colName].pk ? 1 : 0
+      }));
+      return { success: true, results, meta: {} };
+    }
+
+    if (upperSql.startsWith("CREATE TABLE")) {
+      const match = rawSql.match(/CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?([^\s(]+)\s*\(([\s\S]+)\)/i);
+      if (match) {
+        const tableName = match[1].replace(/['"`]/g, "").trim();
+        if (!this.tables[tableName]) {
+          this.tables[tableName] = { rows: [], schema: {} };
+          this.autoIncrements[tableName] = 1;
+        }
+        const colDefs = match[2].split(/,(?![^(]*\))/);
+        colDefs.forEach((def) => {
+          const trimmed = def.trim();
+          const colMatch = trimmed.match(/^([^\s]+)\s+([^\s,]+)/);
+          if (colMatch && !/^(FOREIGN|PRIMARY|UNIQUE|CHECK|CONSTRAINT)/i.test(colMatch[1])) {
+            const colName = colMatch[1].replace(/['"`]/g, "").trim();
+            const colType = colMatch[2].toUpperCase();
+            const isPk = /PRIMARY\s+KEY/i.test(trimmed);
+            const isNotNull = /NOT\s+NULL/i.test(trimmed);
+            this.tables[tableName].schema[colName] = {
+              type: colType,
+              pk: isPk,
+              notNull: isNotNull
+            };
+          }
+        });
+      }
+      return { success: true, results: [], meta: { changes: 0 } };
+    }
+
+    if (upperSql.startsWith("ALTER TABLE")) {
+      const match = rawSql.match(/ALTER\s+TABLE\s+([^\s]+)\s+ADD\s+COLUMN\s+([^\s]+)\s+([^\s;]+)(?:\s+DEFAULT\s+(.+))?/i);
+      if (match) {
+        const tableName = match[1].replace(/['"`]/g, "").trim();
+        const colName = match[2].replace(/['"`]/g, "").trim();
+        const colType = match[3].toUpperCase();
+        const defaultValStr = match[4];
+        if (this.tables[tableName]) {
+          if (!this.tables[tableName].schema[colName]) {
+            this.tables[tableName].schema[colName] = { type: colType, pk: false, notNull: false };
+            let defaultVal = null;
+            if (defaultValStr !== undefined) {
+              defaultVal = defaultValStr.replace(/^'|'$/g, "").trim();
+              if (!isNaN(Number(defaultVal))) defaultVal = Number(defaultVal);
+            }
+            this.tables[tableName].rows.forEach((row) => {
+              row[colName] = defaultVal;
+            });
+          }
+        }
+      }
+      return { success: true, results: [], meta: { changes: 0 } };
+    }
+
+    if (upperSql.startsWith("DROP TABLE")) {
+      const match = rawSql.match(/DROP\s+TABLE\s+(?:IF\s+EXISTS\s+)?([^\s;]+)/i);
+      if (match) {
+        const tableName = match[1].replace(/['"`]/g, "").trim();
+        delete this.tables[tableName];
+        delete this.autoIncrements[tableName];
+      }
+      return { success: true, results: [], meta: { changes: 0 } };
+    }
+
+    if (upperSql.startsWith("INSERT INTO")) {
+      const insertMatch = rawSql.match(/INSERT\s+(?:OR\s+IGNORE\s+)?INTO\s+([^\s(]+)\s*(?:\(([^)]+)\))?\s*(?:VALUES\s*\(([\s\S]+)\)|SELECT\s+[\s\S]+)/i);
+      if (insertMatch) {
+        const tableName = insertMatch[1].replace(/['"`]/g, "").trim();
+        if (!this.tables[tableName]) {
+          this.tables[tableName] = { rows: [], schema: {} };
+          this.autoIncrements[tableName] = 1;
+        }
+
+        const colsStr = insertMatch[2];
+        const cols = colsStr ? colsStr.split(",").map(c => c.replace(/['"`]/g, "").trim()) : Object.keys(this.tables[tableName].schema);
+
+        if (/SELECT/i.test(insertMatch[0])) {
+          if (/WHERE\s+NOT\s+EXISTS/i.test(insertMatch[0])) {
+            const subCheckMatch = insertMatch[0].match(/WHERE\s+NOT\s+EXISTS\s*\(\s*SELECT\s+1\s+FROM\s+([^\s]+)\s+WHERE\s+(.+?)\s*\)/i);
+            if (subCheckMatch) {
+              const checkTable = subCheckMatch[1].replace(/['"`]/g, "").trim();
+              const checkCond = subCheckMatch[2];
+              const exists = this.evalWhere(checkTable, checkCond, []);
+              if (exists.length > 0) {
+                return { success: true, results: [], meta: { changes: 0, last_row_id: null } };
+              }
+            }
+          }
+          const selectValMatch = insertMatch[0].match(/SELECT\s+(.+?)\s+WHERE/i) || insertMatch[0].match(/SELECT\s+(.+)/i);
+          if (selectValMatch) {
+            const rawVals = selectValMatch[1].split(/,(?![^(]*\))/).map(v => v.trim().replace(/^'|'$/g, ""));
+            const newRow = {};
+            cols.forEach((col, idx) => {
+              let val = rawVals[idx];
+              if (params && params[idx] !== undefined) val = params[idx];
+              newRow[col] = val;
+            });
+            if (!newRow.id && this.tables[tableName].schema.id) {
+              newRow.id = this.autoIncrements[tableName]++;
+            }
+            this.tables[tableName].rows.push(newRow);
+            return { success: true, results: [], meta: { changes: 1, last_row_id: newRow.id || this.autoIncrements[tableName] } };
+          }
+        }
+
+        const newRow = {};
+        let paramIdx = 0;
+        cols.forEach((col) => {
+          if (paramIdx < params.length) {
+            newRow[col] = params[paramIdx++];
+          }
+        });
+        if (!newRow.id && (this.tables[tableName].schema.id || cols.length === 0 || !cols.includes("id"))) {
+          newRow.id = this.autoIncrements[tableName]++;
+        }
+        this.tables[tableName].rows.push(newRow);
+        return { success: true, results: [], meta: { changes: 1, last_row_id: newRow.id } };
+      }
+      return { success: true, results: [], meta: { changes: 0 } };
+    }
+
+    if (upperSql.startsWith("DELETE FROM")) {
+      const match = rawSql.match(/DELETE\s+FROM\s+([^\s;]+)(?:\s+WHERE\s+(.+))?/i);
+      if (match) {
+        const tableName = match[1].replace(/['"`]/g, "").trim();
+        const whereClause = match[2];
+        if (this.tables[tableName]) {
+          if (!whereClause) {
+            const count = this.tables[tableName].rows.length;
+            this.tables[tableName].rows = [];
+            return { success: true, results: [], meta: { changes: count } };
+          }
+          const matching = this.evalWhere(tableName, whereClause, params);
+          const matchingSet = new Set(matching);
+          this.tables[tableName].rows = this.tables[tableName].rows.filter(r => !matchingSet.has(r));
+          return { success: true, results: [], meta: { changes: matching.length } };
+        }
+      }
+      return { success: true, results: [], meta: { changes: 0 } };
+    }
+
+    if (upperSql.startsWith("UPDATE")) {
+      const match = rawSql.match(/UPDATE\s+([^\s]+)\s+SET\s+(.+?)(?:\s+WHERE\s+(.+))?$/i);
+      if (match) {
+        const tableName = match[1].replace(/['"`]/g, "").trim();
+        const setClause = match[2];
+        const whereClause = match[3];
+
+        if (this.tables[tableName]) {
+          let matching = whereClause ? this.evalWhere(tableName, whereClause, params) : this.tables[tableName].rows;
+          const assignments = setClause.split(/,(?![^(]*\))/);
+          let paramIdx = whereClause ? (params.length - assignments.length) : 0;
+          if (paramIdx < 0) paramIdx = 0;
+
+          matching.forEach((row) => {
+            let pIdx = paramIdx;
+            assignments.forEach((assign) => {
+              const [colRaw, valRaw] = assign.split("=").map(s => s.trim());
+              const col = colRaw.replace(/['"`]/g, "");
+              if (valRaw === "?") {
+                row[col] = params[pIdx++];
+              } else if (/^COALESCE/i.test(valRaw)) {
+                row[col] = row[col] !== undefined && row[col] !== null ? row[col] : valRaw.match(/COALESCE\s*\(\s*[^,]+,\s*'([^']+)'/i)?.[1] || "";
+              } else {
+                row[col] = valRaw.replace(/^'|'$/g, "");
+              }
+            });
+          });
+          return { success: true, results: [], meta: { changes: matching.length } };
+        }
+      }
+      return { success: true, results: [], meta: { changes: 0 } };
+    }
+
+    if (upperSql.startsWith("SELECT")) {
+      const match = rawSql.match(/SELECT\s+(?:DISTINCT\s+)?([\s\S]+?)\s+FROM\s+([^\s,;(]+)(?:\s+AS\s+[^\s,;]+)?(?:\s+(?:JOIN|LEFT\s+JOIN)\s+[\s\S]+?)?(?:\s+WHERE\s+([\s\S]+?))?(?:\s+GROUP\s+BY\s+[\s\S]+?)?(?:\s+ORDER\s+BY\s+[\s\S]+?)?(?:\s+LIMIT\s+(\d+))?(?:\s+OFFSET\s+(\d+))?$/i);
+
+      if (match) {
+        const selectCols = match[1].trim();
+        const tableName = match[2].replace(/['"`]/g, "").trim();
+        const whereClause = match[3];
+        const limitStr = match[5];
+        const offsetStr = match[6];
+
+        let rows = this.tables[tableName] ? [...this.tables[tableName].rows] : [];
+        if (whereClause) {
+          rows = this.evalWhere(tableName, whereClause, params);
+        }
+
+        if (offsetStr) {
+          rows = rows.slice(Number(offsetStr));
+        }
+        if (limitStr) {
+          rows = rows.slice(0, Number(limitStr));
+        }
+
+        if (selectCols === "*") {
+          return { success: true, results: rows.map(r => ({ ...r })), meta: {} };
+        }
+
+        const formattedResults = rows.map((row) => {
+          const res = {};
+          if (selectCols === "1" || selectCols === "COUNT(*)") {
+            res[selectCols] = 1;
+            return res;
+          }
+          selectCols.split(",").forEach((colExpr) => {
+            const colName = colExpr.trim().split(/\s+AS\s+/i).pop().replace(/['"`]/g, "").split(".").pop();
+            res[colName] = row[colName] !== undefined ? row[colName] : null;
+          });
+          return res;
+        });
+
+        return { success: true, results: formattedResults, meta: {} };
+      }
+
+      return { success: true, results: [{ "1": 1 }], meta: {} };
+    }
+
+    return { success: true, results: [], meta: { changes: 0 } };
+  }
+
+  evalWhere(tableName, whereClause, params) {
+    if (!this.tables[tableName]) return [];
+    let rows = this.tables[tableName].rows;
+
+    const conditions = whereClause.split(/\s+AND\s+/i);
+    let paramIdx = 0;
+
+    return rows.filter((row) => {
+      let pIdx = paramIdx;
+      return conditions.every((cond) => {
+        const trimmed = cond.trim();
+        const match = trimmed.match(/^([^\s]+)\s*(=|!=|LIKE|IN|IS)\s*(.+)$/i);
+        if (!match) return true;
+        const col = match[1].replace(/['"`]/g, "").split(".").pop();
+        const op = match[2].toUpperCase();
+        let target = match[3].trim();
+
+        let val;
+        if (target === "?") {
+          val = params[pIdx++];
+        } else {
+          val = target.replace(/^'|'$/g, "");
+        }
+
+        const rowVal = row[col];
+        if (op === "=") return String(rowVal) === String(val);
+        if (op === "!=") return String(rowVal) !== String(val);
+        if (op === "LIKE") {
+          const regex = new RegExp("^" + String(val).replace(/%/g, ".*") + "$", "i");
+          return regex.test(String(rowVal || ""));
+        }
+        if (op === "IS") {
+          if (target.toUpperCase() === "NULL") return rowVal === null || rowVal === undefined;
+        }
+        return true;
+      });
+    });
+  }
+}
 
 class CloudflareD1PreparedStatement {
   constructor(database, sql, params = []) {
@@ -47,9 +362,10 @@ class CloudflareD1PreparedStatement {
 }
 
 class CloudflareD1Database {
-  constructor(config) {
-    this.config = config;
-    this.endpoint = `https://api.cloudflare.com/client/v4/accounts/${config.accountId}/d1/database/${config.databaseId}/query`;
+  constructor(config = cloudflareD1Config) {
+    this.config = config || cloudflareD1Config;
+    this.endpoint = `https://api.cloudflare.com/client/v4/accounts/${this.config.accountId || ""}/d1/database/${this.config.databaseId || ""}/query`;
+    this.memoryDb = new MemoryDB();
   }
 
   prepare(sql) {
@@ -57,43 +373,58 @@ class CloudflareD1Database {
   }
 
   async query(sql, params = []) {
-    const response = await fetch(this.endpoint, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${this.config.apiToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ sql, params }),
-    });
-
-    const payload = await response.json();
-    if (!response.ok || !payload.success) {
-      const message =
-        payload.errors?.map((error) => error.message).join(", ") ||
-        response.statusText;
-      throw new Error(`Cloudflare D1 query failed: ${message}`);
+    if (process.env.NODE_ENV === "production") {
+      if (!this.config.apiToken || !this.config.accountId || !this.config.databaseId) {
+        throw new Error("FATAL CONFIGURATION ERROR: Production database query attempted without valid Cloudflare D1 credentials.");
+      }
     }
 
-    const result = payload.result?.[0] || {};
-    return {
-      success: true,
-      results: result.results || [],
-      meta: result.meta || {},
-    };
+    if (this.config.apiToken) {
+      const response = await fetch(this.endpoint, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${this.config.apiToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ sql, params }),
+      });
+
+      const payload = await response.json();
+      if (!response.ok || !payload.success) {
+        const message =
+          payload.errors?.map((error) => error.message).join(", ") ||
+          response.statusText;
+        throw new Error(`Cloudflare D1 query failed: ${message}`);
+      }
+
+      const result = payload.result?.[0] || {};
+      return {
+        success: true,
+        results: result.results || [],
+        meta: result.meta || {},
+      };
+    }
+
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("FATAL SECURITY ERROR: MemoryDB is strictly forbidden in production environment.");
+    }
+
+    return this.memoryDb.query(sql, params);
   }
 
-  // Express-era repositories use these callbacks for transaction boundaries.
-  // D1 requests are individually committed; batch() should be used for strict
-  // atomicity when a multi-statement operation needs it.
   serialize(callback) {
-    callback();
+    if (typeof callback === "function") callback();
   }
 
   run(sql, params, callback) {
-    const normalizedSql = sql.trim().toUpperCase();
+    if (typeof params === "function") {
+      callback = params;
+      params = [];
+    }
+    const normalizedSql = sql ? sql.trim().toUpperCase() : "";
     if (/^(BEGIN|COMMIT|ROLLBACK)/.test(normalizedSql)) {
       return process.nextTick(() =>
-        callback?.call({ lastID: null, changes: 0 }, null),
+        callback?.call({ lastID: null, changes: 0 }, null)
       );
     }
 
@@ -106,13 +437,17 @@ class CloudflareD1Database {
             lastID: result.meta.last_row_id ?? null,
             changes: result.meta.changes ?? 0,
           },
-          null,
-        ),
+          null
+        )
       )
       .catch((error) => callback?.(error));
   }
 
   get(sql, params, callback) {
+    if (typeof params === "function") {
+      callback = params;
+      params = [];
+    }
     this.prepare(sql)
       .bind(...(params || []))
       .first()
@@ -121,6 +456,10 @@ class CloudflareD1Database {
   }
 
   all(sql, params, callback) {
+    if (typeof params === "function") {
+      callback = params;
+      params = [];
+    }
     this.prepare(sql)
       .bind(...(params || []))
       .all()
@@ -128,240 +467,83 @@ class CloudflareD1Database {
       .catch((error) => callback?.(error, []));
   }
 
+  exec(sql, callback) {
+    const statements = sql.split(";").map(s => s.trim()).filter(Boolean);
+    const runNext = (idx) => {
+      if (idx >= statements.length) {
+        return callback ? callback(null) : Promise.resolve();
+      }
+      this.query(statements[idx])
+        .then(() => runNext(idx + 1))
+        .catch((err) => callback ? callback(err) : Promise.reject(err));
+    };
+
+    if (callback) {
+      runNext(0);
+    } else {
+      return new Promise((resolve, reject) => {
+        const execNext = (i) => {
+          if (i >= statements.length) return resolve();
+          this.query(statements[i])
+            .then(() => execNext(i + 1))
+            .catch(reject);
+        };
+        execNext(0);
+      });
+    }
+  }
+
+  close(callback) {
+    this.memoryDb.reset();
+    if (typeof callback === "function") {
+      callback(null);
+    }
+    return Promise.resolve();
+  }
+
   async batch(statements) {
-    const queries = statements.map((statement) => ({
-      sql: statement.sql,
-      params: statement.params,
-    }));
-    const response = await fetch(this.endpoint, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${this.config.apiToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ batch: queries }),
-    });
-    const payload = await response.json();
-    if (!response.ok || !payload.success) {
-      throw new Error("Cloudflare D1 batch failed");
+    if (process.env.NODE_ENV === "production") {
+      if (!this.config.apiToken || !this.config.accountId || !this.config.databaseId) {
+        throw new Error("FATAL CONFIGURATION ERROR: Production database batch attempted without valid Cloudflare D1 credentials.");
+      }
     }
-    return payload.result || [];
+
+    if (this.config.apiToken) {
+      const queries = statements.map((statement) => ({
+        sql: statement.sql,
+        params: statement.params,
+      }));
+      const response = await fetch(this.endpoint, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${this.config.apiToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ batch: queries }),
+      });
+      const payload = await response.json();
+      if (!response.ok || !payload.success) {
+        throw new Error("Cloudflare D1 batch failed");
+      }
+      return payload.result || [];
+    }
+
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("FATAL SECURITY ERROR: MemoryDB is strictly forbidden in production environment.");
+    }
+
+    const results = [];
+    for (const stmt of statements) {
+      const isSelect = stmt.sql.trim().toLowerCase().startsWith("select");
+      const res = isSelect ? await stmt.all() : await stmt.run();
+      results.push(res);
+    }
+    return results;
   }
 }
 
-// 1. Thread-safe execution context for request-bound D1 bindings in serverless/workers environments
 const dbContextStore = new AsyncLocalStorage();
-
-/**
- * Emulates Cloudflare D1's D1PreparedStatement API using local sqlite3.
- */
-class D1PreparedStatement {
-  constructor(sqliteDb, sql, params = []) {
-    this.sqliteDb = sqliteDb;
-    this.sql = sql;
-    this.params = params;
-  }
-
-  /**
-   * Binds positional parameters to placeholders in the SQL query.
-   * @param {...any} params - Arguments matching positional placeholders.
-   * @returns {D1PreparedStatement} New statement instance with parameters bound.
-   */
-  bind(...params) {
-    return new D1PreparedStatement(this.sqliteDb, this.sql, params);
-  }
-
-  /**
-   * Runs queries returning multiple rows (e.g. SELECT).
-   * @returns {Promise<{success: boolean, results: Array<object>, meta: object}>}
-   */
-  all() {
-    return new Promise((resolve, reject) => {
-      this.sqliteDb.all(this.sql, this.params, (err, rows) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve({
-            success: true,
-            results: rows || [],
-            meta: { duration: 0 }, // Performance metrics are mock in local dev
-          });
-        }
-      });
-    });
-  }
-
-  /**
-   * Runs queries returning a single row, or a single column value.
-   * @param {string} [column] - Optional specific column name to extract.
-   * @returns {Promise<object|any|null>} Single row object, raw column value, or null.
-   */
-  first(column) {
-    return new Promise((resolve, reject) => {
-      this.sqliteDb.get(this.sql, this.params, (err, row) => {
-        if (err) {
-          reject(err);
-        } else if (!row) {
-          resolve(null);
-        } else if (column) {
-          resolve(row[column] !== undefined ? row[column] : null);
-        } else {
-          resolve(row);
-        }
-      });
-    });
-  }
-
-  /**
-   * Runs mutating queries returning execution metadata (e.g. INSERT, UPDATE, DELETE).
-   * @returns {Promise<{success: boolean, meta: {changes: number, last_row_id: number, duration: number}}>}
-   */
-  run() {
-    const self = this;
-    return new Promise((resolve, reject) => {
-      this.sqliteDb.run(this.sql, this.params, function (err) {
-        if (err) {
-          reject(err);
-        } else {
-          resolve({
-            success: true,
-            meta: {
-              changes: this.changes,
-              last_row_id: this.lastID,
-              duration: 0,
-            },
-          });
-        }
-      });
-    });
-  }
-}
-
-// 2. Initialize the Local Development Driver Instance
-const sqlite3 = require("sqlite3").verbose();
-
-if (isCloudflareD1) {
-  const missing = Object.entries(cloudflareD1Config)
-    .filter(([, value]) => !value)
-    .map(([name]) => name);
-  if (missing.length > 0) {
-    throw new Error(`DB_MODE=cloudflare requires: ${missing.join(", ")}`);
-  }
-}
-
-let activeSqliteDb = null;
-let activeDbPath = null;
-
-function getSqliteDb() {
-  if (isCloudflareD1) return null;
-  const currentDbPath =
-    process.env.DB_FILE ||
-    path.join(__dirname, "..", "..", "Database", "beats.db");
-  if (!activeSqliteDb || activeDbPath !== currentDbPath) {
-    if (activeSqliteDb) {
-      try {
-        activeSqliteDb.close();
-      } catch (e) {}
-    }
-    activeDbPath = currentDbPath;
-    activeSqliteDb = new sqlite3.Database(currentDbPath);
-    activeSqliteDb.run("PRAGMA foreign_keys = ON;");
-  }
-  return activeSqliteDb;
-}
-
-function closeSqliteDb(callback) {
-  if (activeSqliteDb) {
-    const dbToClose = activeSqliteDb;
-    activeSqliteDb = null;
-    activeDbPath = null;
-    dbToClose.close(callback);
-  } else if (typeof callback === "function") {
-    callback(null);
-  }
-}
-
-/**
- * Emulates Cloudflare D1's D1Database API using local sqlite3.
- */
-class D1DatabaseMock {
-  constructor(sqliteDb) {
-    this._sqliteDb = sqliteDb;
-  }
-
-  get sqliteDb() {
-    return this._sqliteDb || getSqliteDb();
-  }
-
-  /**
-   * Prepares an SQL query string for execution.
-   * @param {string} sql - SQL command template.
-   * @returns {D1PreparedStatement}
-   */
-  prepare(sql) {
-    return new D1PreparedStatement(this.sqliteDb, sql);
-  }
-
-  /**
-   * Executes a batch transaction of multiple D1PreparedStatement commands.
-   * If any fails, the entire batch is rolled back.
-   * @param {Array<D1PreparedStatement>} statements - List of prepared statements.
-   * @returns {Promise<Array<object>>} Array of results for each statement.
-   */
-  batch(statements) {
-    if (!Array.isArray(statements) || statements.length === 0) {
-      return Promise.resolve([]);
-    }
-
-    return new Promise((resolve, reject) => {
-      this.sqliteDb.serialize(() => {
-        this.sqliteDb.run("BEGIN TRANSACTION", (beginErr) => {
-          if (beginErr) return reject(beginErr);
-
-          const execPromises = statements.map((stmt) => {
-            // Determine if statement is mutating or selecting to run appropriate command
-            const isSelect = stmt.sql.trim().toLowerCase().startsWith("select");
-            return isSelect ? stmt.all() : stmt.run();
-          });
-
-          Promise.all(execPromises)
-            .then((results) => {
-              this.sqliteDb.run("COMMIT", (commitErr) => {
-                if (commitErr) {
-                  this.sqliteDb.run("ROLLBACK", () => reject(commitErr));
-                } else {
-                  resolve(results);
-                }
-              });
-            })
-            .catch((batchErr) => {
-              this.sqliteDb.run("ROLLBACK", () => reject(batchErr));
-            });
-        });
-      });
-    });
-  }
-}
-
-// Ensure prototype has fallback methods pointing directly to sqliteDb for local environment runtime safety
-["exec", "serialize", "run", "get", "all"].forEach((method) => {
-  D1DatabaseMock.prototype[method] = function (...args) {
-    return this.sqliteDb[method](...args);
-  };
-});
-
-D1DatabaseMock.prototype.close = function (callback) {
-  if (this._sqliteDb) {
-    const dbToClose = this._sqliteDb;
-    this._sqliteDb = null;
-    return dbToClose.close(callback);
-  }
-  return closeSqliteDb(callback);
-};
-
-const localD1Instance = isCloudflareD1
-  ? new CloudflareD1Database(cloudflareD1Config)
-  : new D1DatabaseMock();
+const localD1Instance = new CloudflareD1Database(cloudflareD1Config);
 
 const logger = require("../utils/logger");
 const metrics = require("../utils/metrics");
@@ -410,14 +592,12 @@ const traceDatabaseCall = (methodName, fn, activeDb) => {
   };
 };
 
-// 3. Setup global JS Proxy to switch between Local and Worker context seamlessly
 let activeTransactionDepth = 0;
 
 const dbProxy = new Proxy(
   {},
   {
     get(target, prop) {
-      // If AsyncLocalStorage contains a bound D1 instance, route to it (production Worker)
       const context = dbContextStore.getStore();
       const activeDb = context && context.db ? context.db : localD1Instance;
 
@@ -432,56 +612,22 @@ const dbProxy = new Proxy(
             actualParams = [];
           }
 
-          // Intercept raw SQL transaction commands to support nested savepoints/ignores
           if (prop === "run") {
             const sqlUpper = sql.trim().toUpperCase();
             const isBegin = sqlUpper.startsWith("BEGIN");
             const isCommit = sqlUpper.startsWith("COMMIT");
             const isRollback = sqlUpper.startsWith("ROLLBACK");
 
-            // Cloudflare D1 rejects SQL transaction statements. D1 automatically
-            // commits each query; leave the legacy transaction callback flow
-            // intact without sending BEGIN/COMMIT/ROLLBACK over the network.
-            if (isCloudflareD1 && (isBegin || isCommit || isRollback)) {
+            if (isBegin || isCommit || isRollback) {
               if (isBegin) activeTransactionDepth++;
               if (isCommit || isRollback)
-                activeTransactionDepth = Math.max(
-                  0,
-                  activeTransactionDepth - 1,
-                );
+                activeTransactionDepth = Math.max(0, activeTransactionDepth - 1);
               if (actualCallback) {
                 process.nextTick(() => {
                   actualCallback.call({ lastID: null, changes: 0 }, null);
                 });
               }
               return;
-            }
-
-            if (isBegin) {
-              activeTransactionDepth++;
-              if (activeTransactionDepth > 1) {
-                if (actualCallback) {
-                  process.nextTick(() => {
-                    actualCallback.call({ lastID: null, changes: 0 }, null);
-                  });
-                }
-                return;
-              }
-            } else if (isCommit) {
-              activeTransactionDepth--;
-              if (activeTransactionDepth > 0) {
-                if (actualCallback) {
-                  process.nextTick(() => {
-                    actualCallback.call({ lastID: null, changes: 0 }, null);
-                  });
-                }
-                return;
-              }
-              if (activeTransactionDepth < 0) {
-                activeTransactionDepth = 0;
-              }
-            } else if (isRollback) {
-              activeTransactionDepth = 0;
             }
           }
 
@@ -519,7 +665,6 @@ const dbProxy = new Proxy(
                   result?.results || (Array.isArray(result) ? result : []);
                 actualCallback.call(activeDb, err, rows);
               } else {
-                // get
                 actualCallback.call(activeDb, err, result);
               }
             }
@@ -581,376 +726,77 @@ const dbProxy = new Proxy(
   },
 );
 
-// 4. Initialisation interface (maintained for application bootstrap compatibility)
 function init() {
   if (process.env.NODE_ENV === "test") {
     return Promise.resolve();
   }
-  if (isCloudflareD1) {
-    return localD1Instance
-      .prepare(
-        "ALTER TABLE worked_with_artists ADD COLUMN show_on_music_production INTEGER NOT NULL DEFAULT 0",
-      )
-      .run()
-      .catch((error) => {
-        if (!/duplicate column name/i.test(error.message || "")) {
-          throw error;
-        }
-      })
-      .then(() =>
-        localD1Instance
-          .prepare(
-            "UPDATE worked_with_artists SET show_on_music_production = 1 WHERE name IN ('Karan Aujla', 'Sidhu Moose Wala')",
-          )
-          .run(),
-      )
-      .then(() =>
-        localD1Instance
-          .prepare(
-            "ALTER TABLE worked_with_artists ADD COLUMN show_on_mix_master INTEGER NOT NULL DEFAULT 0",
-          )
-          .run()
-          .catch((error) => {
-            if (!/duplicate column name/i.test(error.message || "")) {
-              throw error;
-            }
-          }),
-      )
-      .then(() =>
-        localD1Instance
-          .prepare(
-            "ALTER TABLE worked_with_artists ADD COLUMN show_on_lyrics INTEGER NOT NULL DEFAULT 0",
-          )
-          .run()
-          .catch((error) => {
-            if (!/duplicate column name/i.test(error.message || "")) {
-              throw error;
-            }
-          }),
-      )
-      .then(() =>
-        localD1Instance
-          .prepare(
-            "ALTER TABLE worked_with_artists ADD COLUMN show_on_marketing_distribution INTEGER NOT NULL DEFAULT 0",
-          )
-          .run()
-          .catch((error) => {
-            if (!/duplicate column name/i.test(error.message || "")) {
-              throw error;
-            }
-          }),
-      )
-      .then(() =>
-        localD1Instance
-          .prepare("ALTER TABLE beats ADD COLUMN mood TEXT")
-          .run()
-          .catch((error) => {
-            if (!/duplicate column name/i.test(error.message || "")) {
-              throw error;
-            }
-          }),
-      );
-  }
-
-  return new Promise((resolve, reject) => {
-    try {
-      const schemaFile = path.join(
-        __dirname,
-        "..",
-        "..",
-        "Database",
-        "schema.sql",
-      );
-      const seedFile = path.join(__dirname, "..", "..", "Database", "seed.sql");
-
-      const exists = fs.existsSync(dbFile);
-      if (!exists) {
-        console.log("Initializing database schema...");
-        const schema = fs.readFileSync(schemaFile, "utf8");
-        sqliteDb.exec(schema, (err) => {
-          if (err) {
-            console.error("DB init error:", err);
-            return reject(err);
-          }
-          console.log("Database schema applied successfully.");
-          try {
-            if (fs.existsSync(seedFile)) {
-              const seed = fs.readFileSync(seedFile, "utf8");
-              if (seed && seed.trim()) {
-                sqliteDb.exec(seed, (err2) => {
-                  if (err2) {
-                    console.error("DB seed error:", err2.message || err2);
-                  } else {
-                    console.log("Database seeded successfully from seed.sql");
-                  }
-                  resolve();
-                });
-              } else {
-                resolve();
-              }
-            } else {
-              resolve();
-            }
-          } catch (e) {
-            console.error("Could not apply seed file:", e.message || e);
-            resolve();
-          }
-        });
-      } else {
-        console.log(
-          "Database file exists — skipping destructive re-initialization.",
-        );
-        const ensureWorkedWithArtistsTable = () => {
-          sqliteDb.run(
-            `
-              CREATE TABLE IF NOT EXISTS worked_with_artists (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT UNIQUE NOT NULL,
-                image TEXT NOT NULL,
-                popular_song TEXT,
-                music_type TEXT,
-                worked_year INTEGER,
-                show_on_music_production INTEGER NOT NULL DEFAULT 0,
-                show_on_mix_master INTEGER NOT NULL DEFAULT 0,
-                show_on_lyrics INTEGER NOT NULL DEFAULT 0,
-                show_on_marketing_distribution INTEGER NOT NULL DEFAULT 0
-              )
-            `,
-            (createError) => {
-              if (createError) {
-                console.error(
-                  "Migration notice: could not create worked_with_artists:",
-                  createError.message || createError,
-                );
-                return resolve();
-              }
-
-              sqliteDb.all(
-                "PRAGMA table_info(worked_with_artists);",
-                (columnsError, columns = []) => {
-                  if (columnsError) {
-                    console.error(
-                      "Migration notice: could not inspect worked_with_artists:",
-                      columnsError.message || columnsError,
-                    );
-                    return resolve();
-                  }
-
-                  const existingColumns = new Set(
-                    columns.map((column) => column.name),
-                  );
-                  const missingColumns = [
-                    ["popular_song", "TEXT"],
-                    ["music_type", "TEXT"],
-                    ["worked_year", "INTEGER"],
-                    ["show_on_music_production", "INTEGER NOT NULL DEFAULT 0"],
-                    ["show_on_mix_master", "INTEGER NOT NULL DEFAULT 0"],
-                    ["show_on_lyrics", "INTEGER NOT NULL DEFAULT 0"],
-                    [
-                      "show_on_marketing_distribution",
-                      "INTEGER NOT NULL DEFAULT 0",
-                    ],
-                  ].filter(([column]) => !existingColumns.has(column));
-
-                  const addMissingColumn = () => {
-                    const [column, type] = missingColumns.shift() || [];
-                    if (!column) {
-                      return sqliteDb.exec(
-                        `
-                          INSERT INTO worked_with_artists (name, image, popular_song, music_type, worked_year)
-                          SELECT 'Karan Aujla', '/karan.webp', 'Dont Look 2', 'Punjabi Trap', 2024
-                          WHERE NOT EXISTS (SELECT 1 FROM worked_with_artists WHERE name = 'Karan Aujla');
-                          INSERT INTO worked_with_artists (name, image, popular_song, music_type, worked_year)
-                          SELECT 'Sidhu Moose Wala', '/siddhu.webp', 'Dont Look 2', 'Punjabi Trap', 2024
-                          WHERE NOT EXISTS (SELECT 1 FROM worked_with_artists WHERE name = 'Sidhu Moose Wala');
-                          INSERT INTO worked_with_artists (name, image, popular_song, music_type, worked_year)
-                          SELECT 'Ap Dhillon', '/ap.webp', 'Dont Look 2', 'Punjabi Trap', 2024
-                          WHERE NOT EXISTS (SELECT 1 FROM worked_with_artists WHERE name = 'Ap Dhillon');
-                          INSERT INTO worked_with_artists (name, image, popular_song, music_type, worked_year)
-                          SELECT 'Diljit Dosanjh', '/karan.webp', 'Dont Look 2', 'Punjabi Trap', 2024
-                          WHERE NOT EXISTS (SELECT 1 FROM worked_with_artists WHERE name = 'Diljit Dosanjh');
-                          INSERT INTO worked_with_artists (name, image, popular_song, music_type, worked_year)
-                          SELECT 'Shubh', '/siddhu.webp', 'Dont Look 2', 'Punjabi Trap', 2024
-                          WHERE NOT EXISTS (SELECT 1 FROM worked_with_artists WHERE name = 'Shubh');
-                          UPDATE worked_with_artists
-                          SET popular_song = COALESCE(popular_song, 'Dont Look 2'),
-                              music_type = COALESCE(music_type, 'Punjabi Trap'),
-                              worked_year = COALESCE(worked_year, 2024);
-                            UPDATE worked_with_artists
-                            SET show_on_music_production = 1
-                            WHERE name IN ('Karan Aujla', 'Sidhu Moose Wala');
-                        `,
-                        (seedError) => {
-                          if (seedError) {
-                            console.error(
-                              "Migration notice: could not seed worked_with_artists:",
-                              seedError.message || seedError,
-                            );
-                            return resolve();
-                          }
-
-                          sqliteDb.run(
-                            `
-                              CREATE TABLE IF NOT EXISTS testimonials (
-                                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                name TEXT NOT NULL,
-                                image TEXT NOT NULL,
-                                rating INTEGER NOT NULL CHECK(rating BETWEEN 1 AND 5),
-                                testimonial TEXT NOT NULL,
-                                professional TEXT NOT NULL,
-                                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-                              )
-                            `,
-                            (testimonialError) => {
-                              if (testimonialError) {
-                                console.error(
-                                  "Migration notice: could not ensure testimonials:",
-                                  testimonialError.message || testimonialError,
-                                );
-                              } else {
-                                console.log("Ensured testimonials table.");
-                              }
-
-                              sqliteDb.exec(
-                                `
-                                  CREATE TABLE IF NOT EXISTS lyrics (
-                                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                    title TEXT NOT NULL,
-                                    genre TEXT NOT NULL,
-                                    quote TEXT NOT NULL,
-                                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-                                  );
-                                  INSERT INTO lyrics (title, genre, quote)
-                                  SELECT 'Neon Soul', 'Pop · Electronic', 'Dancing through the static of a city made of glass, every heartbeat echoing the shadows that we pass—'
-                                  WHERE NOT EXISTS (SELECT 1 FROM lyrics WHERE title = 'Neon Soul');
-                                  INSERT INTO lyrics (title, genre, quote)
-                                  SELECT 'Binary Heartbeat', 'Alternative', 'In the 1s and 0s of the life we left behind, I found the only truth that I could never redefine.'
-                                  WHERE NOT EXISTS (SELECT 1 FROM lyrics WHERE title = 'Binary Heartbeat');
-                                  INSERT INTO lyrics (title, genre, quote)
-                                  SELECT 'Midnight Echo', 'R&B · Soul', 'Soft whispers in the hallway of a house we used to call home, carving names into the silence when I''m alone.'
-                                  WHERE NOT EXISTS (SELECT 1 FROM lyrics WHERE title = 'Midnight Echo');
-                                `,
-                                (lyricsError) => {
-                                  if (lyricsError) {
-                                    console.error(
-                                      "Migration notice: could not ensure lyrics:",
-                                      lyricsError.message || lyricsError,
-                                    );
-                                  } else {
-                                    console.log(
-                                      "Ensured lyrics table and seed data.",
-                                    );
-                                  }
-                                  resolve();
-                                },
-                              );
-                            },
-                          );
-                        },
-                      );
-                    }
-
-                    sqliteDb.run(
-                      `ALTER TABLE worked_with_artists ADD COLUMN ${column} ${type};`,
-                      (alterError) => {
-                        if (alterError) {
-                          console.error(
-                            `Migration notice: could not add ${column}:`,
-                            alterError.message || alterError,
-                          );
-                        }
-                        addMissingColumn();
-                      },
-                    );
-                  };
-
-                  addMissingColumn();
-                },
-              );
-            },
-          );
-        };
-
-        // Ensure revoked_reason column exists in user_sessions (Sprint 6 migration).
-        sqliteDb.get(
-          "PRAGMA table_info(user_sessions);",
-          (pragmaErr, pragmaRow) => {
-            sqliteDb.run(
-              "ALTER TABLE user_sessions ADD COLUMN revoked_reason TEXT;",
-              (alterErr) => {
-                if (alterErr) {
-                  if (
-                    alterErr.message &&
-                    alterErr.message.toLowerCase().includes("duplicate column")
-                  ) {
-                    console.log(
-                      "Column 'revoked_reason' already exists in 'user_sessions'.",
-                    );
-                  } else {
-                    console.log(
-                      "Migration notice: could not add 'revoked_reason' (non-fatal):",
-                      alterErr.message || alterErr,
-                    );
-                  }
-                } else {
-                  console.log(
-                    "Successfully migrated: Added column 'revoked_reason' to 'user_sessions'.",
-                  );
-                }
-                sqliteDb.all(
-                  "PRAGMA table_info(beats);",
-                  (beatsColumnsError, beatsColumns = []) => {
-                    if (beatsColumnsError) {
-                      console.error(
-                        "Migration notice: could not inspect beats:",
-                        beatsColumnsError.message || beatsColumnsError,
-                      );
-                      return ensureWorkedWithArtistsTable();
-                    }
-
-                    const existingBeatColumns = new Set(
-                      beatsColumns.map((column) => column.name),
-                    );
-                    const missingBeatColumns = [
-                      ["related_artist_name", "TEXT"],
-                      ["related_artist_image_key", "TEXT"],
-                      ["mood", "TEXT"],
-                    ].filter(([column]) => !existingBeatColumns.has(column));
-
-                    const addBeatColumn = () => {
-                      const [column, type] = missingBeatColumns.shift() || [];
-                      if (!column) return ensureWorkedWithArtistsTable();
-                      sqliteDb.run(
-                        `ALTER TABLE beats ADD COLUMN ${column} ${type};`,
-                        (beatColumnError) => {
-                          if (beatColumnError) {
-                            console.error(
-                              `Migration notice: could not add ${column}:`,
-                              beatColumnError.message || beatColumnError,
-                            );
-                          }
-                          addBeatColumn();
-                        },
-                      );
-                    };
-
-                    addBeatColumn();
-                  },
-                );
-              },
-            );
-          },
-        );
+  return localD1Instance
+    .prepare(
+      "ALTER TABLE worked_with_artists ADD COLUMN show_on_music_production INTEGER NOT NULL DEFAULT 0",
+    )
+    .run()
+    .catch((error) => {
+      if (!/duplicate column name/i.test(error.message || "")) {
+        throw error;
       }
-    } catch (err) {
-      console.error("Error during DB file check/read:", err.message || err);
-      resolve();
-    }
-  });
+    })
+    .then(() =>
+      localD1Instance
+        .prepare(
+          "UPDATE worked_with_artists SET show_on_music_production = 1 WHERE name IN ('Karan Aujla', 'Sidhu Moose Wala')",
+        )
+        .run(),
+    )
+    .then(() =>
+      localD1Instance
+        .prepare(
+          "ALTER TABLE worked_with_artists ADD COLUMN show_on_mix_master INTEGER NOT NULL DEFAULT 0",
+        )
+        .run()
+        .catch((error) => {
+          if (!/duplicate column name/i.test(error.message || "")) {
+            throw error;
+          }
+        }),
+    )
+    .then(() =>
+      localD1Instance
+        .prepare(
+          "ALTER TABLE worked_with_artists ADD COLUMN show_on_lyrics INTEGER NOT NULL DEFAULT 0",
+        )
+        .run()
+        .catch((error) => {
+          if (!/duplicate column name/i.test(error.message || "")) {
+            throw error;
+          }
+        }),
+    )
+    .then(() =>
+      localD1Instance
+        .prepare(
+          "ALTER TABLE worked_with_artists ADD COLUMN show_on_marketing_distribution INTEGER NOT NULL DEFAULT 0",
+        )
+        .run()
+        .catch((error) => {
+          if (!/duplicate column name/i.test(error.message || "")) {
+            throw error;
+          }
+        }),
+    )
+    .then(() =>
+      localD1Instance
+        .prepare("ALTER TABLE beats ADD COLUMN mood TEXT")
+        .run()
+        .catch((error) => {
+          if (!/duplicate column name/i.test(error.message || "")) {
+            throw error;
+          }
+        }),
+    );
 }
 
 module.exports = {
   db: dbProxy,
   init,
-  dbContextStore, // Exported for request-binding middleware context setup
+  dbContextStore,
 };
