@@ -38,7 +38,7 @@ const USER_COLUMNS = `
  * Fetches a single user record by its internal numeric ID.
  *
  * @param {number} id - Internal database ID.
- * @param {import('sqlite3').Database|null} tx - Optional transaction handle.
+ * @param {object|null} tx - Optional transaction handle.
  * @returns {Promise<Object|null>} The user profile object.
  */
 const getUserById = async (id, tx = null) => {
@@ -64,7 +64,7 @@ const getUserById = async (id, tx = null) => {
  * Finds a user profile by their normalized email address.
  *
  * @param {string} email - The normalized email address.
- * @param {import('sqlite3').Database|null} tx - Optional transaction handle.
+ * @param {object|null} tx - Optional transaction handle.
  * @returns {Promise<Object|null>} The user profile object.
  */
 const findUserByEmail = async (email, tx = null) => {
@@ -93,7 +93,7 @@ const getUserByEmail = findUserByEmail;
  * Creates a new user record.
  * REQUIRES an explicit transaction handle `tx`.
  *
- * @param {import('sqlite3').Database} tx - Required transaction handle.
+ * @param {object} tx - Required transaction handle.
  * @param {Object} user - The user registration data.
  * @returns {Promise<Object>} Object containing the generated identifiers: { id, public_id }.
  */
@@ -175,7 +175,7 @@ const updateUser = async (id, user) => {
  * Updates a user's last_login_at timestamp.
  * REQUIRES an explicit transaction handle `tx`.
  *
- * @param {import('sqlite3').Database} tx - Required transaction handle.
+ * @param {object} tx - Required transaction handle.
  * @param {number} userId - Internal user ID.
  * @param {string} timestamp - ISO-8601 formatted date string.
  * @returns {Promise<boolean>} Resolves with true if successfully updated.
@@ -204,7 +204,7 @@ const updateLastLoginAt = async (tx, userId, timestamp) => {
  * Locates a user record matching a given public UUID.
  *
  * @param {string} publicId - User public UUID.
- * @param {import('sqlite3').Database|null} tx - Optional transaction handle.
+ * @param {object|null} tx - Optional transaction handle.
  * @returns {Promise<Object|null>} Mapped user profile row.
  */
 const findUserByPublicId = async (publicId, tx = null) => {
