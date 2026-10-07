@@ -66,13 +66,18 @@ app.use(
 );
 app.use(cookieParser());
 
-const allowedOrigins = (
-  process.env.ALLOWED_ORIGINS ||
-  "http://localhost:3000,http://localhost:5005,https://www.prabhmusik.com,https://prabhmusik.com"
-)
-  .split(",")
-  .map((o) => o.trim().replace(/^['"]|['"]$/g, ""))
-  .filter(Boolean);
+const defaultOrigins = [
+  "http://localhost:3000",
+  "http://localhost:5005",
+  "https://www.prabhmusik.com",
+  "https://prabhmusik.com",
+];
+
+const envOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(",").map((o) => o.trim().replace(/^['"]|['"]$/g, "")).filter(Boolean)
+  : [];
+
+const allowedOrigins = Array.from(new Set([...defaultOrigins, ...envOrigins]));
 
 app.use(
   cors({
