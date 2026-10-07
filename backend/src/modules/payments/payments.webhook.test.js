@@ -8,10 +8,7 @@ const path = require("path");
 const fs = require("fs");
 const crypto = require("crypto");
 
-const testDbPath = path.join(__dirname, "..", "..", "..", "Database", "payments_webhook_test.db");
-
 // Configure overrides before loading modules
-process.env.DB_FILE = testDbPath;
 process.env.JWT_ACCESS_SECRET = "webhook_test_access_secret_key";
 process.env.JWT_REFRESH_SECRET = "webhook_test_refresh_secret_key";
 process.env.STRIPE_WEBHOOK_SECRET = "test_webhook_sec";
@@ -123,22 +120,8 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  // consoleLogSpy.mockRestore();
-  // consoleWarnSpy.mockRestore();
-  // consoleErrorSpy.mockRestore();
-
   await new Promise((resolve) => server.close(resolve));
-  await new Promise((resolve, reject) => {
-    db.close((err) => {
-      if (err) return reject(err);
-      try {
-        if (fs.existsSync(testDbPath)) {
-          fs.unlinkSync(testDbPath);
-        }
-      } catch (e) {}
-      resolve();
-    });
-  });
+  await new Promise((resolve) => db.close(resolve));
 });
 
 describe("Stripe Webhooks & Fulfillments Integration Tests", () => {

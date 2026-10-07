@@ -22,7 +22,7 @@ router.get("/history", authMiddleware, controller.getDownloadHistory);
 router.get("/:ownershipPublicId", authMiddleware, downloadRateLimiter, controller.generateDownload);
 
 // Legacy token endpoints (defined with unique prefix to avoid wildcard collisions)
-router.post("/:ownershipId/request", controller.requestDownload);
+router.post("/:ownershipId/request", authMiddleware, controller.requestDownload);
 router.get("/token/:token", controller.downloadFile);
 
 module.exports = router;

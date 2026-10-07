@@ -7,10 +7,7 @@ const axios = require("axios");
 const path = require("path");
 const fs = require("fs");
 
-const testDbPath = path.join(__dirname, "..", "..", "..", "Database", "beats_integration_test.db");
-
-// Set env variables and database overrides before loading modules
-process.env.DB_FILE = testDbPath;
+// Set env variables before loading modules
 process.env.JWT_ACCESS_SECRET = "integration_test_access_secret_key";
 process.env.JWT_REFRESH_SECRET = "integration_test_refresh_secret_key";
 process.env.ACCESS_TOKEN_EXPIRY_SECONDS = "900";
@@ -32,14 +29,8 @@ let client;
 
 beforeAll(async () => {
   resetAllRateLimits();
-  await new Promise((resolve) => db.close(() => setTimeout(resolve, 50)));
-  try {
-    if (fs.existsSync(testDbPath)) {
-      fs.unlinkSync(testDbPath);
-    }
-  } catch (e) {}
 
-  // Initialize Schema on SQLite
+  // Initialize Schema
   const schemaPath = path.join(__dirname, "..", "..", "..", "Database", "schema.sql");
   const schema = fs.readFileSync(schemaPath, "utf8");
   await new Promise((resolve, reject) => {
@@ -92,17 +83,7 @@ afterAll(async () => {
   consoleErrorSpy.mockRestore();
 
   await new Promise((resolve) => server.close(resolve));
-  await new Promise((resolve, reject) => {
-    db.close((err) => {
-      if (err) return reject(err);
-      try {
-        if (fs.existsSync(testDbPath)) {
-          fs.unlinkSync(testDbPath);
-        }
-      } catch (e) {}
-      resolve();
-    });
-  });
+  await new Promise((resolve) => db.close(resolve));
 });
 
 beforeEach(async () => {

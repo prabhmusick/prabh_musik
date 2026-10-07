@@ -7,10 +7,7 @@ const axios = require("axios");
 const path = require("path");
 const fs = require("fs");
 
-const testDbPath = path.join(__dirname, "..", "..", "..", "Database", "orders_integration_test.db");
-
 // Set environment variables before loading modules
-process.env.DB_FILE = testDbPath;
 process.env.JWT_ACCESS_SECRET = "orders_integration_test_access_secret_key";
 process.env.JWT_REFRESH_SECRET = "orders_integration_test_refresh_secret_key";
 process.env.STRIPE_SECRET_KEY = "sk_test_mock_integration_key";
@@ -23,12 +20,6 @@ const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {}
 
 const app = require("../../app");
 const { db } = require("../../config/db");
-const D1DatabaseMock = (new db.constructor()).constructor;
-["exec", "close", "serialize", "run", "get", "all"].forEach((method) => {
-  D1DatabaseMock.prototype[method] = function (...args) {
-    return this.sqliteDb[method](...args);
-  };
-});
 
 const ordersService = require("./orders.service");
 const ordersRepository = require("./orders.repository");
@@ -99,11 +90,6 @@ afterAll(async () => {
   await new Promise((resolve, reject) => {
     db.close((err) => {
       if (err) return reject(err);
-      try {
-        if (fs.existsSync(testDbPath)) {
-          fs.unlinkSync(testDbPath);
-        }
-      } catch (e) {}
       resolve();
     });
   });

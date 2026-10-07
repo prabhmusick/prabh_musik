@@ -113,10 +113,7 @@ jwt.verify = jest.fn().mockImplementation((token, key, options, cb) => {
   return originalVerify(token, key, options, cb);
 });
 
-const testDbPath = path.join(__dirname, "..", "..", "..", "Database", "beats_apple_integration_test.db");
-
 // Set environment overrides before loading app/config modules
-process.env.DB_FILE = testDbPath;
 process.env.JWT_ACCESS_SECRET = "integration_test_access_secret_key";
 process.env.JWT_REFRESH_SECRET = "integration_test_refresh_secret_key";
 process.env.APPLE_ALLOWED_AUDIENCES = "com.prabhmusik.app";
@@ -137,12 +134,6 @@ let port;
 let client;
 
 beforeAll(async () => {
-  await new Promise((resolve) => db.close(() => resolve()));
-  try {
-    if (fs.existsSync(testDbPath)) {
-      fs.unlinkSync(testDbPath);
-    }
-  } catch (e) {}
 
   // Initialize SQLite Schema
   const schemaPath = path.join(__dirname, "..", "..", "..", "Database", "schema.sql");
@@ -200,11 +191,6 @@ afterAll(async () => {
   await new Promise((resolve, reject) => {
     db.close((err) => {
       if (err) return reject(err);
-      try {
-        if (fs.existsSync(testDbPath)) {
-          fs.unlinkSync(testDbPath);
-        }
-      } catch (e) {}
       resolve();
     });
   });

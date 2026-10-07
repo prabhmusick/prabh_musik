@@ -65,7 +65,9 @@ const createOrder = async (orderData) => {
   const validated = validator.validateCreateOrder(orderData);
 
   // 1. Verify customer exists
-  const customer = await usersRepository.getUserById(validated.customerId);
+  const customer = /^\d+$/.test(String(validated.customerId))
+    ? await usersRepository.getUserById(Number(validated.customerId))
+    : await usersRepository.findUserByPublicId(String(validated.customerId));
   if (!customer) {
     throw new AppError("Customer not found", 404);
   }
@@ -82,7 +84,7 @@ const createOrder = async (orderData) => {
       throw new AppError(`Beat not found: ID ${beatId}`, 404);
     }
     if (beat.status === "archived") {
-      throw new AppError(`Cannot purchase archived beat: "${beat.title}"`, 400);
+      throw new AppError(`Cannot purchase archived beat: "${beat.title}"`, 409);
     }
     if (beat.status !== "published") {
       throw new AppError(
@@ -102,7 +104,7 @@ const createOrder = async (orderData) => {
 
   // 3. Create the order using transaction rollback on failure
   const orderId = await repository.createOrder(
-    validated.customerId,
+    customer.id,
     calculatedTotal,
     validated.paymentMethod,
     validated.status,

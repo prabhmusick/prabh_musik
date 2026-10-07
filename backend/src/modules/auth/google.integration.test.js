@@ -16,10 +16,7 @@ jest.mock("google-auth-library", () => {
   };
 });
 
-const testDbPath = path.join(__dirname, "..", "..", "..", "Database", "beats_google_integration_test.db");
-
-// Set env variables and database overrides before loading modules
-process.env.DB_FILE = testDbPath;
+// Set env variables before loading modules
 process.env.JWT_ACCESS_SECRET = "integration_test_access_secret_key";
 process.env.JWT_REFRESH_SECRET = "integration_test_refresh_secret_key";
 process.env.GOOGLE_CLIENT_ID = "mock-google-client-id";
@@ -42,14 +39,7 @@ let client;
 let oauthClientMock;
 
 beforeAll(async () => {
-  await new Promise((resolve) => db.close(() => resolve()));
-  try {
-    if (fs.existsSync(testDbPath)) {
-      fs.unlinkSync(testDbPath);
-    }
-  } catch (e) {}
-
-  // Initialize Schema on SQLite
+  // Initialize Schema
   const schemaPath = path.join(__dirname, "..", "..", "..", "Database", "schema.sql");
   const schema = fs.readFileSync(schemaPath, "utf8");
   await new Promise((resolve, reject) => {
@@ -104,17 +94,7 @@ afterAll(async () => {
   consoleErrorSpy.mockRestore();
 
   await new Promise((resolve) => server.close(resolve));
-  await new Promise((resolve, reject) => {
-    db.close((err) => {
-      if (err) return reject(err);
-      try {
-        if (fs.existsSync(testDbPath)) {
-          fs.unlinkSync(testDbPath);
-        }
-      } catch (e) {}
-      resolve();
-    });
-  });
+  await new Promise((resolve) => db.close(resolve));
 });
 
 beforeEach(async () => {

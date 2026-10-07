@@ -6,8 +6,6 @@ const { db } = require("../../config/db");
 const jwtUtil = require("../../utils/jwt");
 const { storageProvider } = require("../../storage/r2.provider");
 
-const testDbPath = path.join(__dirname, "..", "..", "..", "Database", "uploads_integration_test.db");
-process.env.DB_FILE = testDbPath;
 process.env.JWT_ACCESS_SECRET = "uploads_integration_test_access_secret_key";
 process.env.JWT_REFRESH_SECRET = "uploads_integration_test_refresh_secret_key";
 process.env.R2_ENDPOINT = "https://mock.r2.endpoint.com";
@@ -19,13 +17,6 @@ process.env.R2_BUCKET = "mock-bucket";
 jest.spyOn(console, "log").mockImplementation(() => {});
 jest.spyOn(console, "warn").mockImplementation(() => {});
 jest.spyOn(console, "error").mockImplementation(() => {});
-
-const D1DatabaseMock = (new db.constructor()).constructor;
-["exec", "close", "serialize", "run", "get", "all"].forEach((method) => {
-  D1DatabaseMock.prototype[method] = function (...args) {
-    return this.sqliteDb[method](...args);
-  };
-});
 
 let server;
 let port;
@@ -96,12 +87,6 @@ const constructMultipart = (fieldName, filename, fileBuffer, mimeType, otherFiel
 };
 
 beforeAll(async () => {
-  try {
-    if (fs.existsSync(testDbPath)) {
-      fs.unlinkSync(testDbPath);
-    }
-  } catch (e) {}
-
   adminToken = jwtUtil.generateAccessToken({ sub: 1, role: "admin", sid: "sess_admin" });
   customerToken = jwtUtil.generateAccessToken({ sub: 2, role: "customer", sid: "sess_customer" });
 
@@ -114,9 +99,6 @@ afterAll(async () => {
   await new Promise((resolve, reject) => {
     db.close((err) => {
       if (err) return reject(err);
-      try {
-        fs.unlinkSync(testDbPath);
-      } catch (e) {}
       resolve();
     });
   });

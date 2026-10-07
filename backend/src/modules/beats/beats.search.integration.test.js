@@ -7,18 +7,9 @@ const axios = require("axios");
 const path = require("path");
 const fs = require("fs");
 
-const testDbPath = path.join(
-  __dirname,
-  "..",
-  "..",
-  "..",
-  "Database",
-  "beats_search_test.db",
-);
-
-process.env.DB_FILE = testDbPath;
+// Set environment variables before loading modules
 process.env.JWT_ACCESS_SECRET = "beats_search_test_access_secret_key";
-process.env.JWT_REFRESH_SECRET = "beats_search_test_refresh_secret_key";
+process.env.JWT_REFRESH_SECRET = "beats_search_test_access_secret_key";
 
 const consoleLogSpy = jest.spyOn(console, "log").mockImplementation(() => {});
 const consoleWarnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
@@ -26,12 +17,6 @@ const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {}
 
 const app = require("../../app");
 const { db } = require("../../config/db");
-const D1DatabaseMock = (new db.constructor()).constructor;
-["exec", "close", "serialize", "run", "get", "all"].forEach((method) => {
-  D1DatabaseMock.prototype[method] = function (...args) {
-    return this.sqliteDb[method](...args);
-  };
-});
 
 let server;
 let port;
@@ -156,12 +141,6 @@ const seedBeats = async () => {
 };
 
 beforeAll(async () => {
-  try {
-    if (fs.existsSync(testDbPath)) {
-      fs.unlinkSync(testDbPath);
-    }
-  } catch (e) {}
-
   const schemaPath = path.join(__dirname, "..", "..", "..", "Database", "schema.sql");
   const schema = fs.readFileSync(schemaPath, "utf8");
   await new Promise((resolve, reject) => {
@@ -196,11 +175,6 @@ afterAll(async () => {
   }
   await new Promise((resolve) => {
     db.close(() => {
-      try {
-        if (fs.existsSync(testDbPath)) {
-          fs.unlinkSync(testDbPath);
-        }
-      } catch (e) {}
       resolve();
     });
   });

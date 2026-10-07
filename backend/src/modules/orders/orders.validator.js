@@ -15,13 +15,10 @@ const validateCreateOrder = (data) => {
   }
 
   const rawCust = String(data.customerId || "").trim();
-  if (!/^\d+$/.test(rawCust)) {
+  if (!rawCust) {
     throw new AppError("Invalid or missing customerId", 400);
   }
-  const customerId = parseInt(rawCust, 10);
-  if (customerId <= 0) {
-    throw new AppError("Invalid or missing customerId", 400);
-  }
+  const customerId = rawCust;
 
   if (!Array.isArray(data.beatIds) || data.beatIds.length === 0) {
     throw new AppError("beatIds must be a non-empty array", 400);

@@ -7,10 +7,7 @@ const axios = require("axios");
 const path = require("path");
 const fs = require("fs");
 
-const testDbPath = path.join(__dirname, "..", "..", "..", "Database", "downloads_integration_test.db");
-
 // Set environment variables before loading modules
-process.env.DB_FILE = testDbPath;
 process.env.JWT_ACCESS_SECRET = "downloads_integration_test_access_secret_key";
 process.env.JWT_REFRESH_SECRET = "downloads_integration_test_refresh_secret_key";
 process.env.R2_ENDPOINT = "https://mock.r2.endpoint.com";
@@ -31,13 +28,6 @@ jest.mock("@aws-sdk/s3-request-presigner", () => ({
 const app = require("../../app");
 const { db } = require("../../config/db");
 const jwtUtil = require("../../utils/jwt");
-
-const D1DatabaseMock = (new db.constructor()).constructor;
-["exec", "close", "serialize", "run", "get", "all"].forEach((method) => {
-  D1DatabaseMock.prototype[method] = function (...args) {
-    return this.sqliteDb[method](...args);
-  };
-});
 
 let server;
 let port;
@@ -107,12 +97,6 @@ const seedData = async () => {
 };
 
 beforeAll(async () => {
-  try {
-    if (fs.existsSync(testDbPath)) {
-      fs.unlinkSync(testDbPath);
-    }
-  } catch (e) {}
-
   // Initialize Schema on SQLite
   const schemaPath = path.join(__dirname, "..", "..", "..", "Database", "schema.sql");
   const schema = fs.readFileSync(schemaPath, "utf8");
@@ -153,11 +137,6 @@ afterAll(async () => {
   await new Promise((resolve, reject) => {
     db.close((err) => {
       if (err) return reject(err);
-      try {
-        if (fs.existsSync(testDbPath)) {
-          fs.unlinkSync(testDbPath);
-        }
-      } catch (e) {}
       resolve();
     });
   });

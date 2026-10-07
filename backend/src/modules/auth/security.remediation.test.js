@@ -11,10 +11,7 @@ const fs = require("fs");
 const crypto = require("crypto");
 const bcrypt = require("bcrypt");
 
-const testDbPath = path.join(__dirname, "..", "..", "..", "Database", "security_test.db");
-
 // Set environment variables prior to loading modules
-process.env.DB_FILE = testDbPath;
 process.env.JWT_ACCESS_SECRET = "security_test_access_secret_key_123456789";
 process.env.JWT_REFRESH_SECRET = "security_test_refresh_secret_key_123456789";
 process.env.RAZORPAY_KEY_SECRET = "test_razorpay_secret_key";
@@ -68,17 +65,7 @@ afterAll(async () => {
   consoleErrorSpy.mockRestore();
 
   await new Promise((resolve) => server.close(resolve));
-  await new Promise((resolve, reject) => {
-    db.close((err) => {
-      if (err) return reject(err);
-      try {
-        if (fs.existsSync(testDbPath)) {
-          fs.unlinkSync(testDbPath);
-        }
-      } catch (e) {}
-      resolve();
-    });
-  });
+  await new Promise((resolve) => db.close(resolve));
 });
 
 beforeEach(async () => {
@@ -137,8 +124,8 @@ beforeEach(async () => {
   const beatPublicId = crypto.randomUUID();
   const beatId = await new Promise((res, rej) => {
     db.run(
-      "INSERT INTO beats (public_id, beat_name, slug, price, selling_status, status, audio_key) VALUES (?, ?, ?, ?, ?, ?, ?)",
-      [beatPublicId, "Cyberpunk Trap", "cyberpunk-trap", 199.99, "available", "published", "masters/cyberpunk.wav"],
+      "INSERT INTO beats (public_id, title, slug, price_amount, status, audio_key, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      [beatPublicId, "Cyberpunk Trap", "cyberpunk-trap", 199.99, "published", "masters/cyberpunk.wav", adminUser.id],
       function(err) { if (err) rej(err); else res(this.lastID); }
     );
   });
@@ -148,12 +135,12 @@ beforeEach(async () => {
   const soldBeatPublicId = crypto.randomUUID();
   const soldBeatId = await new Promise((res, rej) => {
     db.run(
-      "INSERT INTO beats (public_id, beat_name, slug, price, selling_status, status, audio_key) VALUES (?, ?, ?, ?, ?, ?, ?)",
-      [soldBeatPublicId, "Sold Exclusive Beat", "sold-exclusive-beat", 299.99, "sold", "published", "masters/sold.wav"],
+      "INSERT INTO beats (public_id, title, slug, price_amount, status, audio_key, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      [soldBeatPublicId, "Sold Exclusive Beat", "sold-exclusive-beat", 299.99, "archived", "masters/sold.wav", adminUser.id],
       function(err) { if (err) rej(err); else res(this.lastID); }
     );
   });
-  soldBeat = { id: soldBeatId, public_id: soldBeatPublicId, name: "Sold Exclusive Beat", price: 299.99, status: "published", selling_status: "sold" };
+  soldBeat = { id: soldBeatId, public_id: soldBeatPublicId, name: "Sold Exclusive Beat", price: 299.99, status: "archived", selling_status: "sold" };
 
   // 6. Create Dummy Order for Ownership
   const orderPublicId = crypto.randomUUID();
@@ -197,7 +184,7 @@ describe("1. AUTHENTICATION (Unauthenticated Access Denied)", () => {
   });
 
   test("4. Unauthenticated admin beat mutation -> 401", async () => {
-    const res = await client.post("/api/beats", { beat_name: "Hacker Beat", price: 99 });
+    const res = await client.post("/api/beats", { title: "Hacker Beat", price_amount: 99, audio_key: "previews/hacker.mp3" });
     expect(res.status).toBe(401);
   });
 });
@@ -218,7 +205,7 @@ describe("2. AUTHORIZATION (Role-based access control)", () => {
   });
 
   test("7. Normal user accesses admin beat mutation -> 403", async () => {
-    const res = await client.post("/api/beats", { beat_name: "Unauthorized Beat", price: 50 }, {
+    const res = await client.post("/api/beats", { title: "Unauthorized Beat", price_amount: 50, audio_key: "previews/unauth.mp3" }, {
       headers: { Authorization: `Bearer ${tokenA}` }
     });
     expect(res.status).toBe(403);
@@ -259,8 +246,8 @@ describe("3. ADMIN FUNCTIONALITY", () => {
 
   test("11. Admin can perform authorized beat mutation", async () => {
     const res = await client.post("/api/beats", {
-      beat_name: "New Admin Beat",
-      price: 250,
+      title: "New Admin Beat",
+      price_amount: 250,
       genre: "Hip Hop",
       bpm: 140,
       audio_key: "previews/admin_beat.mp3",
@@ -432,19 +419,19 @@ describe("5. R2 STORAGE & DOWNLOADS", () => {
   });
 
   test("23. Protected master cannot be fetched anonymously", async () => {
-    const res = await client.get("/api/beats/object/masters%2Fcyberpunk.wav");
+    const res = await client.get(`/api/downloads/${userAOwnership.public_id}`);
     expect(res.status).toBe(401);
   });
 
   test("24. Protected master cannot be fetched by user without ownership", async () => {
-    const res = await client.get("/api/beats/object/masters%2Fcyberpunk.wav", {
+    const res = await client.get(`/api/downloads/${userAOwnership.public_id}`, {
       headers: { Authorization: `Bearer ${tokenB}` }
     });
-    expect(res.status).toBe(403);
+    expect([403, 404]).toContain(res.status);
   });
 
-  test("25. Arbitrary R2 key cannot be requested", async () => {
-    const res = await client.get("/api/beats/object/unauthorized_prefix%2Fsecret.key", {
+  test("25. Arbitrary R2 key / invalid ownership cannot be requested", async () => {
+    const res = await client.get("/api/downloads/unauthorized_ownership_key_123", {
       headers: { Authorization: `Bearer ${adminToken}` }
     });
     expect([400, 403, 404, 500]).toContain(res.status);

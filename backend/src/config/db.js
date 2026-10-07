@@ -36,11 +36,34 @@ class MemoryDB {
   constructor() {
     this.tables = {};
     this.autoIncrements = {};
+    this.snapshots = [];
   }
 
   reset() {
     this.tables = {};
     this.autoIncrements = {};
+    this.snapshots = [];
+  }
+
+  beginTransaction() {
+    this.snapshots.push(JSON.stringify({
+      tables: this.tables,
+      autoIncrements: this.autoIncrements
+    }));
+  }
+
+  commitTransaction() {
+    if (this.snapshots.length > 0) {
+      this.snapshots.pop();
+    }
+  }
+
+  rollbackTransaction() {
+    if (this.snapshots.length > 0) {
+      const state = JSON.parse(this.snapshots.pop());
+      this.tables = state.tables;
+      this.autoIncrements = state.autoIncrements;
+    }
   }
 
   query(sql, params = []) {
@@ -48,10 +71,28 @@ class MemoryDB {
       throw new Error("FATAL SECURITY ERROR: MemoryDB is strictly forbidden in production environment.");
     }
 
-    const rawSql = sql.trim();
+    const cleanSql = sql
+      .replace(/--.*$/gm, "")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .trim();
+
+    if (!cleanSql) {
+      return { success: true, results: [], meta: { changes: 0 } };
+    }
+
+    const rawSql = cleanSql;
     const upperSql = rawSql.toUpperCase();
 
-    if (/^(BEGIN|COMMIT|ROLLBACK)/i.test(rawSql)) {
+    if (/^BEGIN/i.test(rawSql)) {
+      this.beginTransaction();
+      return { success: true, results: [], meta: { changes: 0 } };
+    }
+    if (/^COMMIT/i.test(rawSql)) {
+      this.commitTransaction();
+      return { success: true, results: [], meta: { changes: 0 } };
+    }
+    if (/^ROLLBACK/i.test(rawSql)) {
+      this.rollbackTransaction();
       return { success: true, results: [], meta: { changes: 0 } };
     }
 
@@ -87,11 +128,16 @@ class MemoryDB {
             const colName = colMatch[1].replace(/['"`]/g, "").trim();
             const colType = colMatch[2].toUpperCase();
             const isPk = /PRIMARY\s+KEY/i.test(trimmed);
+            const isUnique = /UNIQUE/i.test(trimmed);
             const isNotNull = /NOT\s+NULL/i.test(trimmed);
+            const dfltMatch = trimmed.match(/DEFAULT\s+([^\s,]+)/i);
+            const dfltVal = dfltMatch ? (isNaN(Number(dfltMatch[1])) ? dfltMatch[1].replace(/^'|'$/g, "") : Number(dfltMatch[1])) : null;
             this.tables[tableName].schema[colName] = {
               type: colType,
               pk: isPk,
-              notNull: isNotNull
+              unique: isUnique || isPk,
+              notNull: isNotNull,
+              default: dfltVal
             };
           }
         });
@@ -108,12 +154,12 @@ class MemoryDB {
         const defaultValStr = match[4];
         if (this.tables[tableName]) {
           if (!this.tables[tableName].schema[colName]) {
-            this.tables[tableName].schema[colName] = { type: colType, pk: false, notNull: false };
             let defaultVal = null;
             if (defaultValStr !== undefined) {
               defaultVal = defaultValStr.replace(/^'|'$/g, "").trim();
               if (!isNaN(Number(defaultVal))) defaultVal = Number(defaultVal);
             }
+            this.tables[tableName].schema[colName] = { type: colType, pk: false, unique: false, notNull: false, default: defaultVal };
             this.tables[tableName].rows.forEach((row) => {
               row[colName] = defaultVal;
             });
@@ -174,64 +220,135 @@ class MemoryDB {
           }
         }
 
-        const newRow = {};
+        const rawValuesStr = insertMatch[3] ? insertMatch[3].trim() : "";
+        const rowTuples = rawValuesStr ? rawValuesStr.split(/\)\s*,\s*\(/) : [];
+
         let paramIdx = 0;
-        cols.forEach((col) => {
-          if (paramIdx < params.length) {
-            newRow[col] = params[paramIdx++];
-          }
-        });
-        if (!newRow.id && (this.tables[tableName].schema.id || cols.length === 0 || !cols.includes("id"))) {
-          newRow.id = this.autoIncrements[tableName]++;
+        let totalChanges = 0;
+        let lastId = null;
+
+        for (const tupleStr of rowTuples) {
+          const cleanTuple = tupleStr.replace(/^\s*\(|\)\s*$/g, "");
+          const valTokens = cleanTuple.split(/,(?![^(]*\))/).map(v => v.trim());
+
+          const newRow = {};
+          cols.forEach((col, idx) => {
+            const token = valTokens[idx];
+            if (token && token !== "?") {
+              if (/^\d+$/.test(token)) {
+                newRow[col] = Number(token);
+              } else if (token.toUpperCase() === "NULL") {
+                newRow[col] = null;
+              } else {
+                newRow[col] = token.replace(/^'|'$/g, "");
+              }
+            } else {
+              if (paramIdx < params.length) {
+                newRow[col] = params[paramIdx++];
+              }
+            }
+          });
+
+        if (newRow.id === undefined || newRow.id === null) {
+          newRow.id = (this.autoIncrements[tableName] || 1);
+          this.autoIncrements[tableName] = newRow.id + 1;
+        } else if (typeof newRow.id === "number") {
+          this.autoIncrements[tableName] = Math.max(this.autoIncrements[tableName] || 1, newRow.id + 1);
         }
+
+        if (this.tables[tableName].schema) {
+          Object.keys(this.tables[tableName].schema).forEach((colName) => {
+            if (newRow[colName] === undefined) {
+              const dflt = this.tables[tableName].schema[colName].default;
+              newRow[colName] = dflt !== undefined && dflt !== null ? dflt : null;
+            }
+          });
+
+          const notNullCols = Object.keys(this.tables[tableName].schema).filter(
+            k => this.tables[tableName].schema[k].notNull && !this.tables[tableName].schema[k].pk && k !== "id"
+          );
+          for (const col of notNullCols) {
+            if (newRow[col] === null || newRow[col] === undefined) {
+              throw new Error(`NOT NULL constraint failed: ${tableName}.${col}`);
+            }
+          }
+
+          const uniqueCols = Object.keys(this.tables[tableName].schema).filter(
+            k => this.tables[tableName].schema[k].pk || this.tables[tableName].schema[k].unique
+          );
+          for (const col of uniqueCols) {
+            if (newRow[col] !== undefined && newRow[col] !== null) {
+              const duplicate = this.tables[tableName].rows.find(r => String(r[col]) === String(newRow[col]));
+              if (duplicate) {
+                throw new Error(`UNIQUE constraint failed: ${tableName}.${col}`);
+              }
+            }
+          }
+        }
+
         this.tables[tableName].rows.push(newRow);
-        return { success: true, results: [], meta: { changes: 1, last_row_id: newRow.id } };
+        totalChanges++;
+        lastId = newRow.id;
       }
-      return { success: true, results: [], meta: { changes: 0 } };
-    }
 
-    if (upperSql.startsWith("DELETE FROM")) {
-      const match = rawSql.match(/DELETE\s+FROM\s+([^\s;]+)(?:\s+WHERE\s+(.+))?/i);
-      if (match) {
-        const tableName = match[1].replace(/['"`]/g, "").trim();
-        const whereClause = match[2];
-        if (this.tables[tableName]) {
-          if (!whereClause) {
-            const count = this.tables[tableName].rows.length;
-            this.tables[tableName].rows = [];
-            return { success: true, results: [], meta: { changes: count } };
-          }
-          const matching = this.evalWhere(tableName, whereClause, params);
-          const matchingSet = new Set(matching);
-          this.tables[tableName].rows = this.tables[tableName].rows.filter(r => !matchingSet.has(r));
-          return { success: true, results: [], meta: { changes: matching.length } };
+      return { success: true, results: [], meta: { changes: totalChanges, last_row_id: lastId } };
+    }
+    return { success: true, results: [], meta: { changes: 0 } };
+  }
+
+  if (upperSql.startsWith("DELETE FROM")) {
+    const match = rawSql.match(/DELETE\s+FROM\s+([^\s;]+)(?:\s+WHERE\s+([\s\S]+))?/i);
+    if (match) {
+      const tableName = match[1].replace(/['"`]/g, "").trim();
+      const whereClause = match[2];
+      if (this.tables[tableName]) {
+        if (!whereClause) {
+          const count = this.tables[tableName].rows.length;
+          this.tables[tableName].rows = [];
+          return { success: true, results: [], meta: { changes: count } };
         }
+        const matching = this.evalWhere(tableName, whereClause, params);
+        const matchingSet = new Set(matching);
+        this.tables[tableName].rows = this.tables[tableName].rows.filter(r => !matchingSet.has(r));
+        return { success: true, results: [], meta: { changes: matching.length } };
       }
-      return { success: true, results: [], meta: { changes: 0 } };
     }
+    return { success: true, results: [], meta: { changes: 0 } };
+  }
 
-    if (upperSql.startsWith("UPDATE")) {
-      const match = rawSql.match(/UPDATE\s+([^\s]+)\s+SET\s+(.+?)(?:\s+WHERE\s+(.+))?$/i);
-      if (match) {
-        const tableName = match[1].replace(/['"`]/g, "").trim();
-        const setClause = match[2];
-        const whereClause = match[3];
+  if (upperSql.startsWith("UPDATE")) {
+    const match = rawSql.match(/UPDATE\s+([^\s]+)\s+SET\s+([\s\S]+?)(?:\s+WHERE\s+([\s\S]+))?$/i);
+    if (match) {
+      const tableName = match[1].replace(/['"`]/g, "").trim();
+      const setClause = match[2];
+      const whereClause = match[3];
 
-        if (this.tables[tableName]) {
-          let matching = whereClause ? this.evalWhere(tableName, whereClause, params) : this.tables[tableName].rows;
-          const assignments = setClause.split(/,(?![^(]*\))/);
-          let paramIdx = whereClause ? (params.length - assignments.length) : 0;
-          if (paramIdx < 0) paramIdx = 0;
+      if (this.tables[tableName]) {
+        const numSetPlaceholders = (setClause.match(/\?/g) || []).length;
+        const setParams = params.slice(0, numSetPlaceholders);
+        const whereParams = params.slice(numSetPlaceholders);
+
+        let matching = whereClause ? this.evalWhere(tableName, whereClause, whereParams) : this.tables[tableName].rows;
+        const assignments = setClause.split(/,(?![^(]*\))/);
 
           matching.forEach((row) => {
-            let pIdx = paramIdx;
+            let setPIdx = 0;
             assignments.forEach((assign) => {
               const [colRaw, valRaw] = assign.split("=").map(s => s.trim());
-              const col = colRaw.replace(/['"`]/g, "");
+              const col = colRaw.replace(/['"`]/g, "").split(".").pop();
+              const mathMatch = valRaw.match(/^([^\s+]+)\s*([+-])\s*(\d+)$/);
               if (valRaw === "?") {
-                row[col] = params[pIdx++];
+                row[col] = setParams[setPIdx++];
+              } else if (mathMatch) {
+                const targetCol = mathMatch[1].replace(/['"`]/g, "").split(".").pop();
+                const opSign = mathMatch[2];
+                const numVal = Number(mathMatch[3]);
+                const currentVal = Number(row[targetCol] || 0);
+                row[col] = opSign === "+" ? currentVal + numVal : currentVal - numVal;
               } else if (/^COALESCE/i.test(valRaw)) {
                 row[col] = row[col] !== undefined && row[col] !== null ? row[col] : valRaw.match(/COALESCE\s*\(\s*[^,]+,\s*'([^']+)'/i)?.[1] || "";
+              } else if (/CURRENT_TIMESTAMP/i.test(valRaw)) {
+                row[col] = new Date().toISOString();
               } else {
                 row[col] = valRaw.replace(/^'|'$/g, "");
               }
@@ -244,40 +361,163 @@ class MemoryDB {
     }
 
     if (upperSql.startsWith("SELECT")) {
-      const match = rawSql.match(/SELECT\s+(?:DISTINCT\s+)?([\s\S]+?)\s+FROM\s+([^\s,;(]+)(?:\s+AS\s+[^\s,;]+)?(?:\s+(?:JOIN|LEFT\s+JOIN)\s+[\s\S]+?)?(?:\s+WHERE\s+([\s\S]+?))?(?:\s+GROUP\s+BY\s+[\s\S]+?)?(?:\s+ORDER\s+BY\s+[\s\S]+?)?(?:\s+LIMIT\s+(\d+))?(?:\s+OFFSET\s+(\d+))?$/i);
+      let mainFromIdx = -1;
+      let depth = 0;
+      for (let i = 0; i < rawSql.length - 4; i++) {
+        if (rawSql[i] === "(") depth++;
+        else if (rawSql[i] === ")") depth--;
+        else if (depth === 0 && /^\s+FROM\s+/i.test(rawSql.substring(i))) {
+          mainFromIdx = i + 1; // Start at 'FROM'
+          break;
+        }
+      }
 
-      if (match) {
-        const selectCols = match[1].trim();
-        const tableName = match[2].replace(/['"`]/g, "").trim();
-        const whereClause = match[3];
-        const limitStr = match[5];
-        const offsetStr = match[6];
+      let selectCols = "";
+      let fromAndAfter = rawSql;
+
+      if (mainFromIdx !== -1) {
+        selectCols = rawSql.substring(6, mainFromIdx).trim();
+        fromAndAfter = rawSql.substring(mainFromIdx).trim();
+      }
+
+      const fromTableMatch = fromAndAfter.match(/^FROM\s+([^\s,;(]+)(?:\s+(?:AS\s+)?([^\s,;(]+))?/i);
+
+      if (fromTableMatch) {
+        if (!selectCols) selectCols = "*";
+        const tableName = fromTableMatch[1].replace(/['"`]/g, "").trim();
+
+        let whereClause = null;
+        const whereMatch = fromAndAfter.match(/\s+WHERE\s+([\s\S]+?)(?:\s+GROUP\s+BY|\s+ORDER\s+BY|\s+LIMIT|\s+OFFSET|$)/i);
+        if (whereMatch) {
+          whereClause = whereMatch[1].trim();
+        }
+
+        let orderColRaw = null;
+        let orderDir = "ASC";
+        const orderMatch = fromAndAfter.match(/\s+ORDER\s+BY\s+([^\s,;]+)(?:\s+(ASC|DESC))?/i);
+        if (orderMatch) {
+          orderColRaw = orderMatch[1];
+          if (orderMatch[2]) orderDir = orderMatch[2].toUpperCase();
+        }
+
+        let limitVal = null;
+        let offsetVal = null;
+        let queryParams = params ? [...params] : [];
+
+        const limitMatch = fromAndAfter.match(/\s+LIMIT\s+(\d+|\?)(?:\s+OFFSET\s+(\d+|\?))?/i);
+        if (limitMatch) {
+          if (limitMatch[1] === "?") {
+            if (limitMatch[2] === "?") {
+              offsetVal = Number(queryParams.pop());
+              limitVal = Number(queryParams.pop());
+            } else {
+              limitVal = Number(queryParams.pop());
+              if (limitMatch[2]) offsetVal = Number(limitMatch[2]);
+            }
+          } else {
+            limitVal = Number(limitMatch[1]);
+            if (limitMatch[2] === "?") {
+              offsetVal = Number(queryParams.pop());
+            } else if (limitMatch[2]) {
+              offsetVal = Number(limitMatch[2]);
+            }
+          }
+        }
 
         let rows = this.tables[tableName] ? [...this.tables[tableName].rows] : [];
-        if (whereClause) {
-          rows = this.evalWhere(tableName, whereClause, params);
+
+        const joinRegex = /(?:JOIN|LEFT\s+JOIN)\s+([^\s,;(]+)(?:\s+(?:AS\s+)?([^\s,;(]+))?\s+ON\s+([^\s=]+)\s*=\s*([^\s\n\r;]+)/gi;
+        let joinMatch;
+        while ((joinMatch = joinRegex.exec(fromAndAfter)) !== null) {
+          const joinTable = joinMatch[1].replace(/['"`]/g, "").trim();
+          const leftCol = joinMatch[3].replace(/['"`]/g, "").split(".").pop();
+          const rightCol = joinMatch[4].replace(/['"`]/g, "").split(".").pop();
+
+          if (this.tables[joinTable]) {
+            const joinRows = this.tables[joinTable].rows;
+            rows = rows.map((baseRow) => {
+              const joinedRow = { ...baseRow };
+              const matchRow = joinRows.find(
+                (j) => String(j[rightCol] ?? j[leftCol]) === String(baseRow[leftCol] ?? baseRow[rightCol])
+              );
+              if (matchRow) {
+                Object.keys(matchRow).forEach((key) => {
+                  if (joinedRow[key] === undefined) {
+                    joinedRow[key] = matchRow[key];
+                  }
+                });
+              }
+              return joinedRow;
+            });
+          }
         }
 
-        if (offsetStr) {
-          rows = rows.slice(Number(offsetStr));
+        if (whereClause) {
+          rows = this.evalWhere(tableName, whereClause, queryParams, rows);
         }
-        if (limitStr) {
-          rows = rows.slice(0, Number(limitStr));
+
+        if (orderColRaw) {
+          const orderCol = orderColRaw.replace(/['"`]/g, "").split(".").pop();
+          rows.sort((a, b) => {
+            const valA = a[orderCol];
+            const valB = b[orderCol];
+            if (valA === valB) return 0;
+            if (valA === null || valA === undefined) return 1;
+            if (valB === null || valB === undefined) return -1;
+            const comp = valA < valB ? -1 : 1;
+            return orderDir === "DESC" ? -comp : comp;
+          });
+        }
+
+        if (offsetVal !== null && !isNaN(offsetVal)) {
+          rows = rows.slice(offsetVal);
+        }
+        if (limitVal !== null && !isNaN(limitVal)) {
+          rows = rows.slice(0, limitVal);
         }
 
         if (selectCols === "*") {
           return { success: true, results: rows.map(r => ({ ...r })), meta: {} };
         }
 
+        if (/COUNT\s*\([^)]*\)/i.test(selectCols)) {
+          const parts = selectCols.trim().split(/\s+AS\s+/i);
+          const alias = parts.length > 1 ? parts[parts.length - 1].trim().replace(/['"`]/g, "") : "cnt";
+          return { success: true, results: [{ [alias]: rows.length }], meta: {} };
+        }
+
+        if (selectCols === "1") {
+          return { success: true, results: rows.map(() => ({ "1": 1 })), meta: {} };
+        }
+
         const formattedResults = rows.map((row) => {
           const res = {};
-          if (selectCols === "1" || selectCols === "COUNT(*)") {
-            res[selectCols] = 1;
-            return res;
-          }
-          selectCols.split(",").forEach((colExpr) => {
-            const colName = colExpr.trim().split(/\s+AS\s+/i).pop().replace(/['"`]/g, "").split(".").pop();
-            res[colName] = row[colName] !== undefined ? row[colName] : null;
+          selectCols.split(/,(?![^(]*\))/).forEach((colExpr) => {
+            const trimmed = colExpr.trim();
+            const parts = trimmed.split(/\s+AS\s+/i);
+            let alias, expr;
+            if (parts.length > 1) {
+              alias = parts[parts.length - 1].trim().replace(/['"`]/g, "");
+              expr = parts.slice(0, parts.length - 1).join(" AS ").trim();
+            } else {
+              alias = trimmed.replace(/['"`]/g, "").split(".").pop();
+              expr = trimmed;
+            }
+
+            if (/^\d+$/.test(expr)) {
+              res[alias] = Number(expr);
+            } else if (expr.toUpperCase() === "NULL") {
+              res[alias] = null;
+            } else if (expr.startsWith("(") && expr.endsWith(")")) {
+              res[alias] = null;
+            } else {
+              if (expr === "*" || expr.endsWith(".*")) {
+                Object.assign(res, row);
+              } else {
+                const colName = expr.replace(/['"`]/g, "").split(".").pop();
+                res[alias] = row[colName] !== undefined ? row[colName] : null;
+              }
+            }
           });
           return res;
         });
@@ -291,41 +531,74 @@ class MemoryDB {
     return { success: true, results: [], meta: { changes: 0 } };
   }
 
-  evalWhere(tableName, whereClause, params) {
-    if (!this.tables[tableName]) return [];
-    let rows = this.tables[tableName].rows;
+  evalWhere(tableName, whereClause, params = [], inputRows = null) {
+    let rows = inputRows || (this.tables[tableName] ? this.tables[tableName].rows : []);
+    if (!rows || rows.length === 0) return [];
 
-    const conditions = whereClause.split(/\s+AND\s+/i);
+    const rawConditions = whereClause.split(/\s+AND\s+/i);
     let paramIdx = 0;
+
+    const evalSingle = (row, condStr, pValues) => {
+      let pIdx = 0;
+      const trimmed = condStr.trim();
+      const match = trimmed.match(/^([^\s]+)\s*(=|!=|>=|<=|>|<|LIKE|IN|IS)\s*(.+)$/i);
+      if (!match) return true;
+      const col = match[1].replace(/['"`]/g, "").split(".").pop();
+      const op = match[2].toUpperCase();
+      let target = match[3].trim();
+
+      let val;
+      if (target === "?") {
+        val = pValues[pIdx++];
+      } else {
+        val = target.replace(/^'|'$/g, "");
+      }
+
+      const rowVal = row[col];
+      if (op === "=") return String(rowVal) === String(val);
+      if (op === "!=") return String(rowVal) !== String(val);
+      if (op === ">=") return Number(rowVal) >= Number(val);
+      if (op === "<=") return Number(rowVal) <= Number(val);
+      if (op === ">") return Number(rowVal) > Number(val);
+      if (op === "<") return Number(rowVal) < Number(val);
+      if (op === "LIKE") {
+        const regex = new RegExp("^" + String(val).replace(/%/g, ".*") + "$", "i");
+        return regex.test(String(rowVal || ""));
+      }
+      if (op === "IS") {
+        if (target.toUpperCase() === "NULL") return rowVal === null || rowVal === undefined;
+      }
+      return true;
+    };
 
     return rows.filter((row) => {
       let pIdx = paramIdx;
-      return conditions.every((cond) => {
+      return rawConditions.every((cond) => {
         const trimmed = cond.trim();
-        const match = trimmed.match(/^([^\s]+)\s*(=|!=|LIKE|IN|IS)\s*(.+)$/i);
-        if (!match) return true;
-        const col = match[1].replace(/['"`]/g, "").split(".").pop();
-        const op = match[2].toUpperCase();
-        let target = match[3].trim();
+        if (trimmed.startsWith("(") && trimmed.endsWith(")")) {
+          const inner = trimmed.slice(1, -1).trim();
+          const orTokens = inner.split(/\s+OR\s+/i);
+          const numParamsInGroup = (trimmed.match(/\?/g) || []).length;
+          const groupParams = params.slice(pIdx, pIdx + numParamsInGroup);
+          pIdx += numParamsInGroup;
 
-        let val;
-        if (target === "?") {
-          val = params[pIdx++];
-        } else {
-          val = target.replace(/^'|'$/g, "");
+          let matchedAny = false;
+          let subPIdx = 0;
+          for (const sub of orTokens) {
+            const numParamsInSub = (sub.match(/\?/g) || []).length;
+            const subParams = groupParams.slice(subPIdx, subPIdx + numParamsInSub);
+            subPIdx += numParamsInSub;
+            if (evalSingle(row, sub, subParams)) {
+              matchedAny = true;
+            }
+          }
+          return matchedAny;
         }
 
-        const rowVal = row[col];
-        if (op === "=") return String(rowVal) === String(val);
-        if (op === "!=") return String(rowVal) !== String(val);
-        if (op === "LIKE") {
-          const regex = new RegExp("^" + String(val).replace(/%/g, ".*") + "$", "i");
-          return regex.test(String(rowVal || ""));
-        }
-        if (op === "IS") {
-          if (target.toUpperCase() === "NULL") return rowVal === null || rowVal === undefined;
-        }
-        return true;
+        const numParamsInCond = (trimmed.match(/\?/g) || []).length;
+        const condParams = params.slice(pIdx, pIdx + numParamsInCond);
+        pIdx += numParamsInCond;
+        return evalSingle(row, trimmed, condParams);
       });
     });
   }
@@ -468,7 +741,8 @@ class CloudflareD1Database {
   }
 
   exec(sql, callback) {
-    const statements = sql.split(";").map(s => s.trim()).filter(Boolean);
+    const cleanSql = sql ? sql.replace(/--.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "") : "";
+    const statements = cleanSql.split(";").map(s => s.trim()).filter(Boolean);
     const runNext = (idx) => {
       if (idx >= statements.length) {
         return callback ? callback(null) : Promise.resolve();
@@ -619,6 +893,7 @@ const dbProxy = new Proxy(
             const isRollback = sqlUpper.startsWith("ROLLBACK");
 
             if (isBegin || isCommit || isRollback) {
+              activeDb.query(sqlUpper);
               if (isBegin) activeTransactionDepth++;
               if (isCommit || isRollback)
                 activeTransactionDepth = Math.max(0, activeTransactionDepth - 1);

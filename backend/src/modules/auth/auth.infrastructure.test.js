@@ -7,10 +7,7 @@ const axios = require("axios");
 const path = require("path");
 const fs = require("fs");
 
-const testDbPath = path.join(__dirname, "..", "..", "..", "Database", "beats_infra_test.db");
-
 // Set up environment config overrides before loading modules
-process.env.DB_FILE = testDbPath;
 process.env.JWT_ACCESS_SECRET = "infra_test_access_secret_key";
 process.env.JWT_REFRESH_SECRET = "infra_test_refresh_secret_key";
 process.env.ACCESS_TOKEN_EXPIRY_SECONDS = "900";
@@ -83,17 +80,7 @@ afterAll(async () => {
   consoleErrorSpy.mockRestore();
 
   await new Promise((resolve) => server.close(resolve));
-  await new Promise((resolve, reject) => {
-    db.close((err) => {
-      if (err) return reject(err);
-      try {
-        if (fs.existsSync(testDbPath)) {
-          fs.unlinkSync(testDbPath);
-        }
-      } catch (e) {}
-      resolve();
-    });
-  });
+  await new Promise((resolve) => db.close(resolve));
 });
 
 beforeEach(async () => {
