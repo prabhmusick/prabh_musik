@@ -66,14 +66,21 @@ app.use(
 );
 app.use(cookieParser());
 
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || "http://localhost:3000,http://localhost:5005,https://www.prabhmusik.com,https://prabhmusik.com").split(",");
+const allowedOrigins = (
+  process.env.ALLOWED_ORIGINS ||
+  "http://localhost:3000,http://localhost:5005,https://www.prabhmusik.com,https://prabhmusik.com"
+)
+  .split(",")
+  .map((o) => o.trim().replace(/^['"]|['"]$/g, ""))
+  .filter(Boolean);
+
 app.use(
   cors({
     origin: (origin, callback) => {
       if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== "production") {
         return callback(null, true);
       }
-      return callback(new Error("CORS policy violation: Origin not allowed"));
+      return callback(null, false);
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
