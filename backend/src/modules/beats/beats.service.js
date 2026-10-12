@@ -101,7 +101,7 @@ const resolvePublicUrl = (key) => {
   ) {
     return normalizedKey;
   }
-  const r2Url = process.env.R2_PUBLIC_URL;
+  const r2Url = process.env.R2_PUBLIC_URL || "https://media.prabhmusik.com";
   if (r2Url) {
     return `${r2Url.replace(/\/$/, "")}/${normalizedKey.replace(/^\//, "")}`;
   }

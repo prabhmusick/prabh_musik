@@ -3,8 +3,11 @@ const repository = require("./cart.repository");
 const resolvePublicUrl = (key) => {
   if (!key) return "";
   if (/^https?:\/\//.test(key)) return key;
+  const r2Url = process.env.R2_PUBLIC_URL || "https://media.prabhmusik.com";
+  if (r2Url) {
+    return `${r2Url.replace(/\/$/, "")}/${key.replace(/^\//, "")}`;
+  }
   const base =
-    process.env.R2_PUBLIC_URL ||
     process.env.BACKEND_PUBLIC_URL ||
     `http://localhost:${process.env.PORT || 5005}/api/media?key=`;
   return base.includes("/api/media?key=")

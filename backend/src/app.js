@@ -71,6 +71,7 @@ const defaultOrigins = [
   "http://localhost:5005",
   "https://www.prabhmusik.com",
   "https://prabhmusik.com",
+  "https://prabh-musik.vercel.app",
 ];
 
 const envOrigins = process.env.ALLOWED_ORIGINS

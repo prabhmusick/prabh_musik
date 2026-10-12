@@ -37,10 +37,10 @@ function formatBeatForDisplay(beat, index) {
     ...beat,
     songs: 412, // Default fallback
     ...palette,
-    id: beat.id,
+    id: beat.public_id || beat.id,
     genre: beat.genre || "MUSIC",
-    label: beat.beat_name,
-    img: beat.cover_image_url || beat.banner_image_url,
+    label: beat.title || beat.beat_name,
+    img: beat.cover_url || beat.cover_image_url || beat.banner_url || beat.banner_image_url,
   };
 }
 

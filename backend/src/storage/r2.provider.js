@@ -98,8 +98,9 @@ class CloudflareR2Provider extends StorageProvider {
   }
 
   async createPublicPreviewUrl(key) {
-    if (process.env.R2_PUBLIC_URL) {
-      return `${process.env.R2_PUBLIC_URL}/${cleanKey(key)}`;
+    const r2Url = process.env.R2_PUBLIC_URL || "https://media.prabhmusik.com";
+    if (r2Url) {
+      return `${r2Url.replace(/\/$/, "")}/${cleanKey(key).replace(/^\//, "")}`;
     }
     const command = new GetObjectCommand({
       Bucket: process.env.R2_BUCKET,

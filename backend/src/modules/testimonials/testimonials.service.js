@@ -4,8 +4,11 @@ const AppError = require("../../errors/AppError");
 const resolveImageUrl = (key) => {
   if (!key) return null;
   if (/^https?:\/\//.test(key) || key.startsWith("/")) return key;
+  const r2Url = process.env.R2_PUBLIC_URL || "https://media.prabhmusik.com";
+  if (r2Url) {
+    return `${r2Url.replace(/\/$/, "")}/${key.replace(/^\//, "")}`;
+  }
   const base =
-    process.env.R2_PUBLIC_URL ||
     process.env.BACKEND_PUBLIC_URL ||
     `http://localhost:${process.env.PORT || 5005}`;
   return `${base.replace(/\/$/, "")}/api/media?key=${encodeURIComponent(key)}`;
