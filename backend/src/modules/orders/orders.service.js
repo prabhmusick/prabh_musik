@@ -129,8 +129,13 @@ const createOrder = async (orderData) => {
 
   // 4. Ownership triggering mock hook
   if (validated.status === "paid") {
-    await createOwnerships(order);
-    return getOrder(orderId);
+    try {
+      await createOwnerships(order);
+      return getOrder(orderId);
+    } catch (fulfillmentErr) {
+      await repository.deleteOrderCompletely(orderId);
+      throw fulfillmentErr;
+    }
   }
 
   return order;

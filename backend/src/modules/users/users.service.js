@@ -22,6 +22,8 @@ const getUser = async (id) => {
   return user;
 };
 
+const crypto = require("crypto");
+
 /**
  * Creates a new user record.
  */
@@ -37,8 +39,11 @@ const createUser = async (userData) => {
   // Hash password with bcrypt before persisting
   validated.password = await bcrypt.hash(validated.password, 10);
 
-  const id = await repository.createUser(validated);
-  return repository.getUserById(id);
+  const publicId = crypto.randomUUID();
+  validated.public_id = publicId;
+
+  await repository.createUser(validated);
+  return repository.findUserByPublicId(publicId);
 };
 
 /**

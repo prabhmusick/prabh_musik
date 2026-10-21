@@ -90,10 +90,12 @@ const incrementDownloads = async (idOrPublicId) => {
  * @property {number} items[].price
  * @property {string} items[].licenseType
  */
-const createOwnershipsFromOrder = async (order, tx) => {
+const createOwnershipsFromOrder = async (order, outerTx) => {
   if (!order || !order.id || !order.customer || !order.customer.id || !Array.isArray(order.items)) {
     throw new AppError("Invalid order structure snapshot provided", 400);
   }
+
+  const { executeTransaction } = require("../../config/transaction");
 
   const userId = order.customer.id;
   const orderId = order.id;
@@ -122,12 +124,29 @@ const createOwnershipsFromOrder = async (order, tx) => {
     });
   }
 
-  // Pass down database connection client object context
-  const insertedIds = await repository.insertOwnershipsTransaction(userId, orderId, mappedItems, tx);
-  
+  if (outerTx) {
+    // ── FULFILLMENT PATH ──────────────────────────────────────────────────────
+    // An outer transaction context is provided. Queue the INSERTs directly into
+    // it so that ownerships, order lock, and fulfillment-complete are all in the
+    // same atomic D1 batch. DO NOT run a nested batch or read committed rows here
+    // (rows are not visible until after the outer batch commits).
+    // Return the pre-generated publicIds; the fulfillment service discards them.
+    const insertedPublicIds = repository.insertOwnershipsTransaction(outerTx, userId, orderId, mappedItems);
+    return insertedPublicIds;
+  }
+
+  // ── STANDALONE PATH ───────────────────────────────────────────────────────
+  // No outer tx provided (direct service call, admin API, test). Run a
+  // self-contained transaction and return hydrated ownership rows after commit.
+  let insertedPublicIds;
+  await executeTransaction(async (tx) => {
+    insertedPublicIds = repository.insertOwnershipsTransaction(tx, userId, orderId, mappedItems);
+  });
+
+  // Post-commit reads: rows are now visible.
   const results = [];
-  for (const insertedId of insertedIds) {
-    const row = await repository.getOwnershipById(insertedId);
+  for (const publicId of insertedPublicIds) {
+    const row = await repository.getOwnershipByPublicId(publicId);
     results.push(row);
   }
   return results;

@@ -66,9 +66,24 @@ const all = (sql, params = []) => {
 };
 
 /**
- * Inserts multiple ownership records in a single database transaction
+ * Inserts multiple ownership records into the caller's outer transaction.
+ *
+ * REQUIRED: tx must be an active transaction context from executeTransaction.
+ * All INSERT statements are queued via tx.run() — they are NOT executed here;
+ * they are batched atomically with all other statements in the outer tx batch.
+ * No internal db.batch() call is made. No this.lastID or this.changes are read.
+ *
+ * @param {object} tx - Mandatory outer transaction context (from executeFulfillmentTransaction).
+ * @param {number} userId - Internal user ID.
+ * @param {number} orderId - Internal order ID.
+ * @param {Array<object>} items - Mapped ownership items.
+ * @returns {Promise<string[]>} Array of pre-generated public_id UUIDs.
  */
-const insertOwnershipsTransaction = async (userId, orderId, items, tx) => {
+const insertOwnershipsTransaction = (tx, userId, orderId, items) => {
+  if (!tx || typeof tx.run !== "function") {
+    throw new RepositoryError("Transaction context (tx) is required for insertOwnershipsTransaction.");
+  }
+
   const sql = `
     INSERT INTO ownerships (
       public_id,
@@ -85,94 +100,35 @@ const insertOwnershipsTransaction = async (userId, orderId, items, tx) => {
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 'paid')
   `;
 
-  if (!tx) {
-    return new Promise((resolve, reject) => {
-      db.serialize(() => {
-        db.run("BEGIN TRANSACTION", (err) => {
-          if (err) return reject(err);
+  const insertedPublicIds = [];
 
-          let insertCount = 0;
-          if (items.length === 0) {
-            db.run("COMMIT", (errCommit) => {
-              if (errCommit) {
-                db.run("ROLLBACK");
-                return reject(errCommit);
-              }
-              resolve([]);
-            });
-            return;
-          }
+  for (const item of items) {
+    const publicId = crypto.randomUUID();
+    insertedPublicIds.push(publicId);
 
-          const insertedIds = [];
-          let failed = false;
-
-          items.forEach((item) => {
-            if (failed) return;
-            const publicId = crypto.randomUUID();
-            db.run(
-              sql,
-              [
-                publicId,
-                userId,
-                item.beatId,
-                orderId,
-                item.licenseType,
-                item.purchasePrice,
-                item.maxDownloads,
-                item.expiresAt || null,
-                item.downloadToken || null
-              ],
-              function (err2) {
-                if (err2) {
-                  failed = true;
-                  db.run("ROLLBACK");
-                  return reject(err2);
-                }
-                insertedIds.push(this.lastID);
-                insertCount++;
-                if (insertCount === items.length) {
-                  db.run("COMMIT", (errCommit) => {
-                    if (errCommit) {
-                      db.run("ROLLBACK");
-                      return reject(errCommit);
-                    }
-                    resolve(insertedIds);
-                  });
-                }
-              }
-            );
-          });
-        });
-      });
-    });
-  } else {
-    const insertedIds = [];
-    for (const item of items) {
-      const publicId = crypto.randomUUID();
-      const resultId = await new Promise((resolve, reject) => {
-        tx.run(
-          sql,
-          [
-            publicId,
-            userId,
-            item.beatId,
-            orderId,
-            item.licenseType,
-            item.purchasePrice,
-            item.maxDownloads,
-            item.expiresAt || null,
-            item.downloadToken || null
-          ],
-          function (err) {
-            if (err) reject(err);
-            else resolve(this.lastID);
-          }
-        );
-      });
-      insertedIds.push(resultId);
-    }
-    return insertedIds;
+    // Queue the INSERT in the outer transaction — does NOT execute immediately.
+    // this.lastID and this.changes are NOT read here; the callback is a no-op
+    // placeholder required only by the promise wrapper in the repository.
+    tx.run(
+      sql,
+      [
+        publicId,
+        userId,
+        item.beatId,
+        orderId,
+        item.licenseType,
+        item.purchasePrice,
+        item.maxDownloads,
+        item.expiresAt || null,
+        item.downloadToken || null
+      ],
+      () => {} // no-op: actual execution deferred to batch
+    );
   }
+
+  // Return the pre-generated IDs synchronously so callers can use them
+  // immediately (e.g. for post-commit lookups after the batch executes).
+  return insertedPublicIds;
 };
 
 /**

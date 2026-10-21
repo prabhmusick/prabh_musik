@@ -32,22 +32,36 @@ const createCredential = async (tx, credential) => {
     throw new RepositoryError("Credential data is required.");
   }
 
-  const sql = `
-    INSERT INTO user_credentials (
-      user_id,
-      provider,
-      provider_id,
-      provider_email,
-      password_hash
-    ) VALUES (?, ?, ?, ?, ?)
-  `;
-  const params = [
-    credential.user_id,
-    credential.provider || "email",
-    credential.provider_id || null,
-    credential.provider_email || null,
-    credential.password_hash || null
-  ];
+  // When user_id is null but user_public_id is supplied, resolve via subquery.
+  // This is required for D1 batch transactions where the preceding users INSERT
+  // has not yet been committed (the subquery runs inside the same atomic batch
+  // and D1 evaluates statements in sequence, so the row is visible).
+  const sql = credential.user_id != null
+    ? `INSERT INTO user_credentials (
+        user_id, provider, provider_id, provider_email, password_hash
+      ) VALUES (?, ?, ?, ?, ?)`
+    : `INSERT INTO user_credentials (
+        user_id, provider, provider_id, provider_email, password_hash
+      ) VALUES (
+        (SELECT id FROM users WHERE public_id = ?),
+        ?, ?, ?, ?
+      )`;
+
+  const params = credential.user_id != null
+    ? [
+        credential.user_id,
+        credential.provider || "email",
+        credential.provider_id || null,
+        credential.provider_email || null,
+        credential.password_hash || null
+      ]
+    : [
+        credential.user_public_id,
+        credential.provider || "email",
+        credential.provider_id || null,
+        credential.provider_email || null,
+        credential.password_hash || null
+      ];
 
   return new Promise((resolve, reject) => {
     tx.run(sql, params, function (err) {
@@ -77,26 +91,40 @@ const createSession = async (tx, session) => {
     throw new RepositoryError("Session data is required.");
   }
 
-  const sql = `
-    INSERT INTO user_sessions (
-      id,
-      user_id,
-      refresh_token_hash,
-      device_name,
-      ip,
-      user_agent,
-      expires_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?)
-  `;
-  const params = [
-    session.id,
-    session.user_id,
-    session.refresh_token_hash,
-    session.device_name || null,
-    session.ip || null,
-    session.user_agent || null,
-    session.expires_at
-  ];
+  // When user_id is null but user_public_id is supplied, resolve via subquery.
+  // Mirrors createCredential — safe inside a D1 batch where the users row is
+  // inserted in an earlier statement of the same batch.
+  const sql = session.user_id != null
+    ? `INSERT INTO user_sessions (
+        id, user_id, refresh_token_hash, device_name, ip, user_agent, expires_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)`
+    : `INSERT INTO user_sessions (
+        id, user_id, refresh_token_hash, device_name, ip, user_agent, expires_at
+      ) VALUES (
+        ?,
+        (SELECT id FROM users WHERE public_id = ?),
+        ?, ?, ?, ?, ?
+      )`;
+
+  const params = session.user_id != null
+    ? [
+        session.id,
+        session.user_id,
+        session.refresh_token_hash,
+        session.device_name || null,
+        session.ip || null,
+        session.user_agent || null,
+        session.expires_at
+      ]
+    : [
+        session.id,
+        session.user_public_id,
+        session.refresh_token_hash,
+        session.device_name || null,
+        session.ip || null,
+        session.user_agent || null,
+        session.expires_at
+      ];
 
   return new Promise((resolve, reject) => {
     tx.run(sql, params, function (err) {

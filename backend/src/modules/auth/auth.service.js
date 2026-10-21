@@ -71,9 +71,12 @@ const signup = async (userData, clientContext = {}) => {
     const expiresAt = new Date(Date.now() + sessionExpiryDays * 24 * 60 * 60 * 1000).toISOString();
 
     // 3. Execute Database Transaction
-    const { userId } = await executeTransaction(async (tx) => {
+    // NOTE: createUser resolves its publicId at INSERT time. createCredential and
+    // createSession use user_public_id so they can resolve user_id via a SQL
+    // subquery within the same D1 batch — no intermediate lastID is required.
+    await executeTransaction(async (tx) => {
       // Create user
-      const userResult = await usersRepository.createUser(tx, {
+      await usersRepository.createUser(tx, {
         public_id: publicId,
         name: userData.name,
         email: normalizedEmail,
@@ -81,25 +84,25 @@ const signup = async (userData, clientContext = {}) => {
         status: "active"
       });
 
-      // Create credential
+      // Create credential — resolved via public_id subquery inside the batch
       await authRepository.createCredential(tx, {
-        user_id: userResult.id,
+        user_id: null,
+        user_public_id: publicId,
         provider: "email",
         password_hash: passwordHash
       });
 
-      // Create session
+      // Create session — resolved via public_id subquery inside the batch
       await authRepository.createSession(tx, {
         id: sessionId,
-        user_id: userResult.id,
+        user_id: null,
+        user_public_id: publicId,
         refresh_token_hash: refreshHash,
         device_name: clientContext.deviceName || null,
         ip: clientContext.ip || null,
         user_agent: clientContext.userAgent || null,
         expires_at: expiresAt
       });
-
-      return { userId: userResult.id };
     });
 
     // 4. Generate Access Token AFTER successful transaction commit
@@ -663,21 +666,23 @@ const oauthLogin = async (profile, clientContext = {}) => {
 
   await executeTransaction(async (tx) => {
     // 1. Create user record
-    const userResult = await usersRepository.createUser(tx, newUserProfile);
+    await usersRepository.createUser(tx, newUserProfile);
 
-    // 2. Create credential record
+    // 2. Create credential — resolved via public_id subquery inside the batch
     await authRepository.createCredential(tx, {
-      user_id: userResult.id,
+      user_id: null,
+      user_public_id: publicId,
       provider: profile.provider,
       provider_id: profile.providerId,
       provider_email: profile.email,
       password_hash: null
     });
 
-    // 3. Create session
+    // 3. Create session — resolved via public_id subquery inside the batch
     await authRepository.createSession(tx, {
       id: sessionId,
-      user_id: userResult.id,
+      user_id: null,
+      user_public_id: publicId,
       refresh_token_hash: refreshHash,
       device_name: clientContext.deviceName || null,
       ip: clientContext.ip || null,

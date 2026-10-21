@@ -2,6 +2,7 @@ const { db } = require("../../config/db");
 const crypto = require("crypto");
 const RepositoryError = require("../../errors/RepositoryError");
 
+const { executeAtomicBatch, executeTransaction } = require("../../config/transaction");
 // Explicit list of columns to retrieve (never use SELECT *)
 const ORDER_COLUMNS = `
   o.id,
@@ -73,164 +74,84 @@ const createOrder = async (
   extra = {},
 ) => {
   const publicId = crypto.randomUUID();
-  return new Promise((resolve, reject) => {
-    db.serialize(() => {
-      db.run("BEGIN TRANSACTION", (err) => {
-        if (err)
-          return reject(
-            new RepositoryError(
-              `Failed to begin order transaction: ${err.message}`,
-              err,
-            ),
-          );
+  // Build statements for atomic batch
+  const statements = [];
 
-        const orderSql = `
-          INSERT INTO orders (
-            public_id,
-            customer_id,
-            total_amount,
-            payment_method,
-            payment_reference,
-            transaction_id,
-            gateway,
-            status
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `;
-        db.run(
-          orderSql,
-          [
-            publicId,
-            customerId,
-            totalAmount,
-            paymentMethod,
-            extra.paymentReference || null,
-            extra.transactionId || null,
-            extra.gateway || null,
-            status,
-          ],
-          function (err2) {
-            if (err2) {
-              db.run("ROLLBACK");
-              return reject(
-                new RepositoryError(
-                  `Failed to create order: ${err2.message}`,
-                  err2,
-                ),
-              );
-            }
-            const orderId = this.lastID;
+  // Insert order
+  const orderStmt = db.prepare(`
+    INSERT INTO orders (
+      public_id,
+      customer_id,
+      total_amount,
+      payment_method,
+      payment_reference,
+      transaction_id,
+      gateway,
+      status
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).bind(
+    publicId,
+    customerId,
+    totalAmount,
+    paymentMethod,
+    extra.paymentReference || null,
+    extra.transactionId || null,
+    extra.gateway || null,
+    status,
+  );
+  statements.push(orderStmt);
 
-            const itemSql = `
-            INSERT INTO order_items (
-              order_id,
-              beat_id,
-              beat_title,
-              price,
-              license_type
-            ) VALUES (?, ?, ?, ?, ?)
-          `;
-
-            let insertCount = 0;
-            if (items.length === 0) {
-              db.run("COMMIT", (errCommit) => {
-                if (errCommit) {
-                  db.run("ROLLBACK");
-                  return reject(
-                    new RepositoryError(
-                      `Failed to commit order transaction: ${errCommit.message}`,
-                      errCommit,
-                    ),
-                  );
-                }
-                resolve(orderId);
-              });
-              return;
-            }
-
-            let failed = false;
-            items.forEach((item) => {
-              if (failed) return;
-              db.run(
-                itemSql,
-                [
-                  orderId,
-                  item.beatId,
-                  item.beatTitle,
-                  item.price,
-                  item.licenseType || "exclusive",
-                ],
-                (err3) => {
-                  if (err3) {
-                    failed = true;
-                    db.run("ROLLBACK");
-                    return reject(
-                      new RepositoryError(
-                        `Failed to create order item: ${err3.message}`,
-                        err3,
-                      ),
-                    );
-                  }
-                  insertCount++;
-                  if (insertCount === items.length) {
-                    const purchaseSql = `
-                    INSERT INTO beat_purchases (user_id, beat_id, purchase_price)
-                    SELECT ?, ?, ?
-                    WHERE NOT EXISTS (
-                      SELECT 1 FROM beat_purchases WHERE user_id = ? AND beat_id = ?
-                    )
-                  `;
-
-                    const insertPurchases = (index) => {
-                      if (status !== "paid" || index >= items.length) {
-                        return db.run("COMMIT", (errCommit) => {
-                          if (errCommit) {
-                            db.run("ROLLBACK");
-                            return reject(
-                              new RepositoryError(
-                                `Failed to commit order transaction: ${errCommit.message}`,
-                                errCommit,
-                              ),
-                            );
-                          }
-                          resolve(orderId);
-                        });
-                      }
-
-                      const item = items[index];
-                      db.run(
-                        purchaseSql,
-                        [
-                          customerId,
-                          item.beatId,
-                          item.price,
-                          customerId,
-                          item.beatId,
-                        ],
-                        (purchaseError) => {
-                          if (purchaseError) {
-                            db.run("ROLLBACK");
-                            return reject(
-                              new RepositoryError(
-                                `Failed to create beat purchase: ${purchaseError.message}`,
-                                purchaseError,
-                              ),
-                            );
-                          }
-                          insertPurchases(index + 1);
-                        },
-                      );
-                    };
-
-                    insertPurchases(0);
-                  }
-                },
-              );
-            });
-          },
-        );
-      });
-    });
+  // Insert order items using subquery for order_id via public_id
+  const itemSql = `
+    INSERT INTO order_items (
+      order_id,
+      beat_id,
+      beat_title,
+      price,
+      license_type
+    ) VALUES ((SELECT id FROM orders WHERE public_id = ?), ?, ?, ?, ?)
+  `;
+  items.forEach((item) => {
+    const stmt = db.prepare(itemSql).bind(
+      publicId,
+      item.beatId,
+      item.beatTitle,
+      item.price,
+      item.licenseType || "exclusive",
+    );
+    statements.push(stmt);
   });
+
+  // Insert beat purchases if order is paid
+  if (status === "paid") {
+    const purchaseSql = `
+      INSERT INTO beat_purchases (user_id, beat_id, purchase_price)
+      SELECT ?, ?, ?
+      WHERE NOT EXISTS (
+        SELECT 1 FROM beat_purchases WHERE user_id = ? AND beat_id = ?
+      )
+    `;
+    items.forEach((item) => {
+      const stmt = db.prepare(purchaseSql).bind(
+        customerId,
+        item.beatId,
+        item.price,
+        customerId,
+        item.beatId,
+      );
+      statements.push(stmt);
+    });
+  }
+
+  // Execute batch atomically and return the generated order id
+  return executeAtomicBatch(statements)
+    .then(async () => {
+      const row = await db.prepare(`SELECT id FROM orders WHERE public_id = ?`).bind(publicId).first();
+      return row.id;
+    })
+    .catch((err) => {
+      throw new RepositoryError(`Failed to create order transaction: ${err.message}`, err);
+    });
 };
 
 /**
@@ -339,6 +260,21 @@ const deleteOrder = async (id) => {
   return result.changes > 0;
 };
 
+/**
+ * Hard deletes an order and its associated items/purchases/ownerships (used for transactional rollback on fulfillment crash).
+ */
+const deleteOrderCompletely = async (id) => {
+  try {
+    await run(`DELETE FROM ownerships WHERE order_id = ?`, [id]);
+    await run(`DELETE FROM order_items WHERE order_id = ?`, [id]);
+    await run(`DELETE FROM beat_purchases WHERE user_id = (SELECT customer_id FROM orders WHERE id = ?) AND beat_id IN (SELECT beat_id FROM order_items WHERE order_id = ?)`, [id, id]);
+    const result = await run(`DELETE FROM orders WHERE id = ?`, [id]);
+    return result.changes > 0;
+  } catch (err) {
+    return false;
+  }
+};
+
 let transactionMutex = Promise.resolve();
 
 /**
@@ -347,116 +283,63 @@ let transactionMutex = Promise.resolve();
  * and decision making remain in the service layer.
  */
 const executeFulfillmentTransaction = async (orderId, callback) => {
-  const runTransaction = () => {
-    return new Promise((resolve, reject) => {
-      let callbackResult = null;
-      const context = { lockAcquired: false };
-      db.serialize(() => {
-        db.run("BEGIN TRANSACTION", async (err) => {
-          if (err)
-            return reject(
-              new RepositoryError(
-                `Failed to begin fulfillment transaction: ${err.message}`,
-                err,
-              ),
-            );
-          try {
-            callbackResult = await callback(db, context);
-            db.run("COMMIT", (errCommit) => {
-              if (errCommit) {
-                db.run("ROLLBACK");
-                return reject(
-                  new RepositoryError(
-                    `Failed to commit fulfillment transaction: ${errCommit.message}`,
-                    errCommit,
-                  ),
-                );
-              }
-              resolve(callbackResult);
-            });
-          } catch (error) {
-            db.run("ROLLBACK");
-            // Rollback failed state update ONLY if processing lock was successfully acquired
-            if (context.lockAcquired) {
-              db.run(
-                "UPDATE orders SET fulfillment_status = 'failed', updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-                [orderId],
-              );
-            }
-            if (error instanceof RepositoryError) {
-              reject(error);
-            } else {
-              reject(
-                new RepositoryError(
-                  `Fulfillment transaction callback failed: ${error.message}`,
-                  error,
-                ),
-              );
-            }
-          }
-        });
-      });
-    });
-  };
-
-  const nextMutex = transactionMutex.then(runTransaction);
-  transactionMutex = nextMutex.catch(() => {});
-  return nextMutex;
+  const context = { lockAcquired: false };
+  return executeTransaction(async (tx) => {
+    try {
+      const result = await callback(tx, context);
+      return result;
+    } catch (error) {
+      if (context.lockAcquired) {
+        try {
+          await run(
+            `UPDATE orders SET fulfillment_status = 'failed', updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+            [orderId],
+          );
+        } catch (_) {}
+      }
+      throw error;
+    }
+  });
 };
 
 /**
- * Transactional lock update helper
+ * Transactional lock update helper.
+ * Atomically transitions order fulfillment_status from 'pending' to 'processing'.
+ * Preserves strict atomic conditional update semantics and returns true if and
+ * only if the conditional update affected the pending row.
+ *
+ * @param {number|string} orderId - Internal order ID.
+ * @param {object} [tx] - Optional transaction handle (for interface compatibility).
+ * @returns {Promise<boolean>} Resolves to true if lock was acquired, false otherwise.
  */
-const acquireFulfillmentLock = async (orderId, tx) => {
+const acquireFulfillmentLock = async (orderId, tx = null) => {
   const sql = `
-    UPDATE orders 
-    SET 
-      fulfillment_status = 'processing',
-      updated_at = CURRENT_TIMESTAMP
+    UPDATE orders
+    SET fulfillment_status = 'processing',
+        updated_at = CURRENT_TIMESTAMP
     WHERE id = ? AND fulfillment_status = 'pending'
   `;
-  return new Promise((resolve, reject) => {
-    tx.run(sql, [orderId], function (err) {
-      if (err) {
-        reject(
-          new RepositoryError(
-            `Failed to acquire fulfillment lock: ${err.message}`,
-            err,
-          ),
-        );
-      } else {
-        resolve(this.changes > 0);
-      }
-    });
-  });
+  const result = await run(sql, [orderId]);
+  return result.changes > 0;
 };
 
 /**
  * Transactional completion update helper
  */
-const completeFulfillment = async (orderId, tx) => {
+const completeFulfillment = async (orderId, tx = null) => {
   const sql = `
-    UPDATE orders 
-    SET 
-      fulfillment_status = 'completed',
-      fulfilled_at = CURRENT_TIMESTAMP,
-      updated_at = CURRENT_TIMESTAMP
+    UPDATE orders
+    SET fulfillment_status = 'completed',
+        fulfilled_at = CURRENT_TIMESTAMP,
+        updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
   `;
-  return new Promise((resolve, reject) => {
-    tx.run(sql, [orderId], function (err) {
-      if (err) {
-        reject(
-          new RepositoryError(
-            `Failed to complete fulfillment: ${err.message}`,
-            err,
-          ),
-        );
-      } else {
-        resolve(this.changes > 0);
-      }
-    });
-  });
+  if (tx && typeof tx.run === "function") {
+    tx.run(sql, [orderId], () => {});
+    return true;
+  }
+  const result = await run(sql, [orderId]);
+  return result.changes > 0;
 };
 
 /**
@@ -497,6 +380,7 @@ module.exports = {
   updateOrder,
   updateOrderStatus,
   deleteOrder,
+  deleteOrderCompletely,
   executeFulfillmentTransaction,
   acquireFulfillmentLock,
   completeFulfillment,

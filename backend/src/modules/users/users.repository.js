@@ -97,9 +97,19 @@ const getUserByEmail = findUserByEmail;
  * @param {Object} user - The user registration data.
  * @returns {Promise<Object>} Object containing the generated identifiers: { id, public_id }.
  */
-const createUser = async (tx, user) => {
-  if (!tx || typeof tx.run !== "function") {
-    throw new RepositoryError("Transaction context (tx) is required for write operations.");
+const createUser = async (txOrUser, maybeUser) => {
+  let tx = txOrUser;
+  let user = maybeUser;
+
+  if (maybeUser === undefined && txOrUser && typeof txOrUser === "object" && typeof txOrUser.run !== "function") {
+    user = txOrUser;
+    const { txContextStore } = require("../../config/transaction");
+    tx = txContextStore.getStore();
+  }
+
+  const conn = tx || db;
+  if (!conn || typeof conn.run !== "function") {
+    throw new RepositoryError("Database or transaction context is required for write operations.");
   }
   if (!user) {
     throw new RepositoryError("User data object is required to insert user profile.");
@@ -128,12 +138,11 @@ const createUser = async (tx, user) => {
   ];
 
   return new Promise((resolve, reject) => {
-    tx.run(sql, params, function (err) {
+    conn.run(sql, params, function (err) {
       if (err) {
         reject(new RepositoryError(`Failed to create user record: ${err.message}`, err));
       } else {
         resolve({
-          id: this.lastID,
           public_id: publicId
         });
       }
@@ -194,7 +203,7 @@ const updateLastLoginAt = async (tx, userId, timestamp) => {
       if (err) {
         reject(new RepositoryError(`Failed to update last_login_at: ${err.message}`, err));
       } else {
-        resolve(this.changes > 0);
+        resolve(true);
       }
     });
   });
