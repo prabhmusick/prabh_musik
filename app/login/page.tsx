@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import LoginForm from "@/components/auth/LoginForm";
+import { GoogleProvider } from "@/components/providers/google-provider";
+import { AppleProvider } from "@/components/providers/apple-provider";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { CANONICAL_DOMAIN } from "@/lib/seo/schemas";
 
@@ -560,15 +562,19 @@ export default function LoginPage() {
 
             {/* Login Form wrapped inside a styled div with proper padding & margin */}
             <div className="signup-card">
-              <Suspense
-                fallback={
-                  <div style={{ color: "#fff", textAlign: "center" }}>
-                    Loading…
-                  </div>
-                }
-              >
-                <LoginForm />
-              </Suspense>
+              <GoogleProvider>
+                <AppleProvider>
+                  <Suspense
+                    fallback={
+                      <div style={{ color: "#fff", textAlign: "center" }}>
+                        Loading…
+                      </div>
+                    }
+                  >
+                    <LoginForm />
+                  </Suspense>
+                </AppleProvider>
+              </GoogleProvider>
             </div>
           </div>
         </section>
