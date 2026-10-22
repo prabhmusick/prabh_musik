@@ -67,9 +67,6 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   const playBeat = useCallback(async (beat: BeatItem, nextQueue?: BeatItem[]) => {
     const audio = audioRef.current;
     if (!audio) return;
-    if (currentBeat?.id !== beat.id && !beat.previewUrl) return;
-
-    if (nextQueue) setQueue(nextQueue);
 
     if (currentBeat?.id === beat.id) {
       if (audio.paused) {
@@ -80,7 +77,11 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       return;
     }
 
-    audio.src = beat.previewUrl;
+    const previewUrl = beat.previewUrl;
+    if (!previewUrl) return;
+    if (nextQueue) setQueue(nextQueue);
+
+    audio.src = previewUrl;
     audio.currentTime = 0;
     setCurrentBeat(beat);
     setCurrentTime(0);
