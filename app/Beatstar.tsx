@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { SITE_CONFIG } from "@/lib/config/site";
 
 const COL1 = [
@@ -360,6 +361,7 @@ function BeatCard({ card }: { card: CardData }) {
 }
 
 export default function BeatstarsHero() {
+  const router = useRouter();
   const styleRef = useRef<HTMLStyleElement | null>(null);
 
   useEffect(() => {
@@ -472,6 +474,8 @@ export default function BeatstarsHero() {
         {/* CTA */}
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
           <button
+            type="button"
+            onClick={() => router.push("/beat")}
             style={{
               display: "inline-flex", alignItems: "center", gap: 8,
               background: "#e8c547", border: "1px solid rgba(232,197,71,0.35)", borderRadius: 10,

@@ -1734,7 +1734,7 @@ export default function MusicProductionPage() {
                   {
                     icon: "📍",
                     label: "Studio",
-                    val: "sri ganganagar rajasthan",
+                    val: "Mohali chandigarh",
                   },
                   { icon: "📧", label: "Email", val: "support@prabhmusik.com" },
                   { icon: "📞", label: "Phone", val: "+91 94612 09922" },

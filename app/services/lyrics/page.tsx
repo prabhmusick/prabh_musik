@@ -1383,7 +1383,7 @@ export default function LyricsPage() {
                   {
                     icon: "📍",
                     label: "Studio",
-                    val: "sri ganganagar rajasthan",
+                    val: "Mohali chandigarh",
                   },
                   { icon: "📧", label: "Email", val: "support@prabhmusik.com" },
                   { icon: "⏱", label: "Turnaround", val: "3–7 business days" },

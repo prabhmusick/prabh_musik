@@ -4,6 +4,7 @@ import React from "react";
 import { useAudioPlayer } from "@/app/contexts/audio-player-context";
 import { useAppShell } from "@/app/contexts/app-shell-context";
 import { useRouter, usePathname } from "next/navigation";
+import { useState } from "react";
 
 export function GlobalAudioPlayer() {
   const pathname = usePathname();
@@ -14,12 +15,18 @@ export function GlobalAudioPlayer() {
     currentTime,
     duration,
     isLooping,
+    volume,
+    queue,
     togglePlay,
     seekByRatio,
     toggleLoop,
+    playNext,
+    playPrevious,
+    setVolume,
     closePlayer,
   } = useAudioPlayer();
   const { isAuthenticated, addToCart } = useAppShell();
+  const [shareStatus, setShareStatus] = useState("");
 
   if (!currentBeat || pathname?.startsWith("/admin")) return null;
 
@@ -31,6 +38,35 @@ export function GlobalAudioPlayer() {
   };
 
   const progressRatio = duration > 0 ? currentTime / duration : 0;
+  const queueIndex = queue.findIndex((beat) => String(beat.id) === String(currentBeat.id));
+  const canPlayPrevious = queueIndex > 0;
+  const canPlayNext = queueIndex >= 0 && queueIndex < queue.length - 1;
+
+  const handleShare = async () => {
+    const url = new URL("/beat", window.location.origin);
+    url.searchParams.set("search", currentBeat.title);
+    const shareData = {
+      title: currentBeat.title,
+      text: `Listen to ${currentBeat.title} by ${currentBeat.producer} on Prabh Musik`,
+      url: url.toString(),
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+        setShareStatus("Shared");
+      } else if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareData.url);
+        setShareStatus("Link copied");
+      } else {
+        setShareStatus("Sharing isn't supported on this device");
+      }
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      console.error("Failed to share beat link", error);
+      setShareStatus("Couldn't share link");
+    }
+  };
 
   const waveformBars = Array.from({ length: 140 }, (_, i) => {
     const wave = Math.sin(i * 0.21) + Math.sin(i * 0.09 + 1.3) + Math.sin(i * 0.045 + 2.2);
@@ -152,7 +188,7 @@ export function GlobalAudioPlayer() {
         </div>
 
         {/* Controls & Track Info */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
           {/* Cover & Title */}
           <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 200, flex: "1 1 240px" }}>
             {currentBeat.cover && (
@@ -173,7 +209,24 @@ export function GlobalAudioPlayer() {
           </div>
 
           {/* Play / Pause / Controls */}
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
+            <button
+              type="button"
+              onClick={playPrevious}
+              disabled={!canPlayPrevious}
+              aria-label="Play previous beat"
+              title="Previous beat"
+              style={{
+                background: "transparent",
+                border: "1px solid rgba(255,255,255,0.14)",
+                color: canPlayPrevious ? "#fff" : "rgba(255,255,255,0.25)",
+                borderRadius: 8,
+                padding: "8px 10px",
+                cursor: canPlayPrevious ? "pointer" : "not-allowed",
+              }}
+            >
+              ⏮
+            </button>
             <button
               onClick={togglePlay}
               aria-label={isPlaying ? "Pause" : "Play"}
@@ -199,6 +252,24 @@ export function GlobalAudioPlayer() {
             </button>
 
             <button
+              type="button"
+              onClick={playNext}
+              disabled={!canPlayNext}
+              aria-label="Play next beat"
+              title="Next beat"
+              style={{
+                background: "transparent",
+                border: "1px solid rgba(255,255,255,0.14)",
+                color: canPlayNext ? "#fff" : "rgba(255,255,255,0.25)",
+                borderRadius: 8,
+                padding: "8px 10px",
+                cursor: canPlayNext ? "pointer" : "not-allowed",
+              }}
+            >
+              ⏭
+            </button>
+
+            <button
               onClick={toggleLoop}
               style={{
                 background: "transparent",
@@ -211,6 +282,40 @@ export function GlobalAudioPlayer() {
             >
               ↻ Loop
             </button>
+
+            <label style={{ display: "flex", alignItems: "center", gap: 6, color: "rgba(255,255,255,0.7)", fontSize: 12 }}>
+              <span aria-hidden="true">{volume === 0 ? "🔇" : "🔊"}</span>
+              <span className="sr-only">Volume</span>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.01"
+                value={volume}
+                onChange={(event) => setVolume(Number(event.target.value))}
+                aria-label="Volume"
+                style={{ width: 76, accentColor: "#fbbf24", cursor: "pointer" }}
+              />
+            </label>
+
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+              <button
+                type="button"
+                onClick={handleShare}
+                aria-label="Share beat"
+                style={{
+                  background: "transparent",
+                  border: "1px solid rgba(255,255,255,0.14)",
+                  color: "#fff",
+                  borderRadius: 8,
+                  padding: "8px 10px",
+                  cursor: "pointer",
+                }}
+              >
+                Share
+              </button>
+              {shareStatus && <span aria-live="polite" style={{ fontSize: 10, color: "#fbbf24" }}>{shareStatus}</span>}
+            </div>
           </div>
 
           {/* Purchase CTA */}
