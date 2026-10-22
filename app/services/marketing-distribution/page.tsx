@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { CANONICAL_DOMAIN, createBreadcrumbSchema } from "@/lib/seo/schemas";
 import { WorkedWithArtistsSection } from "../../../components/services/WorkedWithArtistsSection";
+import { SITE_CONFIG } from "@/lib/config/site";
 
 const mktgDistWebPageSchema = {
   "@type": "WebPage",
@@ -47,7 +48,7 @@ const mktgDistServiceSchema = {
 
 const stats = [
   { value: "200M+", label: "Units Sold Worldwide" },
-  { value: "$3.2B", label: "Annual Revenue" },
+  { value: "1M", label: "Annual Revenue" },
   { value: "180+", label: "Countries Reached" },
   { value: "94%", label: "Customer Satisfaction" },
 ];
@@ -562,7 +563,15 @@ export default function BeatsMarketingPage() {
             style={{ display: "flex", gap: 14, flexWrap: "wrap" }}
           >
             <button className="cta-primary">View Full Strategy</button>
-            <button className="cta-secondary">Watch Brand Film</button>
+            <a
+              className="cta-secondary"
+              href={SITE_CONFIG.socials.youtube}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ display: "inline-flex", alignItems: "center", textDecoration: "none" }}
+            >
+              Watch Brand Film
+            </a>
           </div>
         </div>
 

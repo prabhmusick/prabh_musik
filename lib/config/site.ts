@@ -11,11 +11,11 @@ export const SITE_CONFIG = {
     email: "support@prabhmusik.com",
     emailMailto: "mailto:support@prabhmusik.com",
     address: {
-      city: "Sri Ganganagar",
+      city: "Mohali chandigarh",
       state: "Rajasthan",
       postalCode: "335001",
       country: "India",
-      display: "Sri Ganganagar, Rajasthan 335001",
+      display: "Mohali chandigarh, Rajasthan 335001",
     },
   },
   socials: {

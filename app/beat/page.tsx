@@ -611,6 +611,17 @@ function BeatMarketplaceContent() {
   }, [addToCart, isAuthenticated, router]);
 
   const handlePlayBeat = useCallback((beat: Beat) => {
+    const playerQueue = filtered.map((item) => ({
+      id: item.id,
+      title: item.title,
+      producer: item.producer,
+      price: item.price,
+      cover: item.cover,
+      genre: item.genre,
+      bpm: item.bpm,
+      previewUrl: item.previewUrl,
+      plays: item.plays,
+    }));
     playBeatGlobal({
       id: beat.id,
       title: beat.title,
@@ -621,8 +632,8 @@ function BeatMarketplaceContent() {
       bpm: beat.bpm,
       previewUrl: beat.previewUrl,
       plays: beat.plays,
-    });
-  }, [playBeatGlobal]);
+    }, playerQueue);
+  }, [filtered, playBeatGlobal]);
 
   return (
     <>

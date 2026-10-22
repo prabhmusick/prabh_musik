@@ -10,7 +10,10 @@ interface AudioPlayerContextValue {
   duration: number;
   isLooping: boolean;
   volume: number;
-  playBeat: (beat: BeatItem) => Promise<void>;
+  queue: BeatItem[];
+  playBeat: (beat: BeatItem, queue?: BeatItem[]) => Promise<void>;
+  playNext: () => Promise<void>;
+  playPrevious: () => Promise<void>;
   togglePlay: () => Promise<void>;
   seek: (time: number) => void;
   seekByRatio: (ratio: number) => void;
@@ -28,6 +31,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   const [duration, setDuration] = useState(0);
   const [isLooping, setIsLooping] = useState(false);
   const [volume, setVolumeState] = useState(1);
+  const [queue, setQueue] = useState<BeatItem[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
@@ -60,9 +64,12 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     };
   }, []);
 
-  const playBeat = useCallback(async (beat: BeatItem) => {
+  const playBeat = useCallback(async (beat: BeatItem, nextQueue?: BeatItem[]) => {
     const audio = audioRef.current;
     if (!audio) return;
+    if (currentBeat?.id !== beat.id && !beat.previewUrl) return;
+
+    if (nextQueue) setQueue(nextQueue);
 
     if (currentBeat?.id === beat.id) {
       if (audio.paused) {
@@ -73,8 +80,6 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
       return;
     }
 
-    if (!beat.previewUrl) return;
-
     audio.src = beat.previewUrl;
     audio.currentTime = 0;
     setCurrentBeat(beat);
@@ -82,6 +87,17 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     setDuration(0);
     await audio.play().catch(() => {});
   }, [currentBeat?.id]);
+
+  const playQueuedBeat = useCallback(async (offset: -1 | 1) => {
+    if (!currentBeat || queue.length < 2) return;
+    const currentIndex = queue.findIndex((beat) => String(beat.id) === String(currentBeat.id));
+    const nextIndex = currentIndex + offset;
+    if (currentIndex < 0 || nextIndex < 0 || nextIndex >= queue.length) return;
+    await playBeat(queue[nextIndex], queue);
+  }, [currentBeat, playBeat, queue]);
+
+  const playNext = useCallback(() => playQueuedBeat(1), [playQueuedBeat]);
+  const playPrevious = useCallback(() => playQueuedBeat(-1), [playQueuedBeat]);
 
   const togglePlay = useCallback(async () => {
     const audio = audioRef.current;
@@ -129,6 +145,7 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     }
     setIsPlaying(false);
     setCurrentBeat(null);
+    setQueue([]);
     setCurrentTime(0);
     setDuration(0);
   };
@@ -142,7 +159,10 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
         duration,
         isLooping,
         volume,
+        queue,
         playBeat,
+        playNext,
+        playPrevious,
         togglePlay,
         seek,
         seekByRatio,

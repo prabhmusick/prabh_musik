@@ -84,7 +84,7 @@ function ChevronIcon({ direction }) {
   );
 }
 
-function BeatCard({ beat, index, onPurchase }) {
+function BeatCard({ beat, index, onPurchase, queue }) {
   const [hovered, setHovered] = useState(false);
   const [playHovered, setPlayHovered] = useState(false);
   const [cartHovered, setCartHovered] = useState(false);
@@ -103,7 +103,7 @@ function BeatCard({ beat, index, onPurchase }) {
       genre: beat.genre,
       bpm: beat.bpm,
       previewUrl: beat.previewUrl || beat.audio_url || "",
-    });
+    }, queue);
   };
 
   return (
@@ -369,6 +369,17 @@ export default function TrendingTypeBeats() {
   const [rightHovered, setRightHovered] = useState(false);
   const router = useRouter();
   const { isAuthenticated, addToCart } = useAppShell();
+  const audioQueue = beats.map((item) => ({
+    id: item.id,
+    title: item.label || item.title || item.beat_name || "Untitled",
+    producer: item.producer || item.artist_name || "Unknown Artist",
+    price: item.price ?? null,
+    cover: item.cover || item.img || item.cover_image_url || item.banner_image_url || "",
+    genre: item.genre,
+    bpm: item.bpm,
+    previewUrl: item.previewUrl || item.audio_url || "",
+    plays: item.plays || 0,
+  }));
 
   const handlePurchase = (beat) => {
     if (!isAuthenticated) {
@@ -593,7 +604,25 @@ export default function TrendingTypeBeats() {
               </div>
 
               {/* Nav arrows */}
-              <div className="trending-nav" style={{ display: "flex", gap: "10px", paddingTop: "8px" }}>
+              <div className="trending-nav" style={{ display: "flex", alignItems: "center", gap: "10px", paddingTop: "8px", flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  onClick={() => router.push("/beat")}
+                  style={{
+                    minHeight: 36,
+                    padding: "0 16px",
+                    borderRadius: 20,
+                    border: "1px solid #e8c547",
+                    background: "transparent",
+                    color: "#e8c547",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  View All Beats →
+                </button>
                 {["left", "right"].map((dir) => {
                   const isHov = dir === "left" ? leftHovered : rightHovered;
                   return (
@@ -633,7 +662,7 @@ export default function TrendingTypeBeats() {
               }}
             >
               {beats.map((beat, i) => (
-                <BeatCard key={beat.id} beat={beat} index={i} onPurchase={handlePurchase} />
+                <BeatCard key={beat.id} beat={beat} index={i} onPurchase={handlePurchase} queue={audioQueue} />
               ))}
             </div>
           </>
