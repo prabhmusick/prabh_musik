@@ -77,6 +77,18 @@ export default function RootLayout({
         {process.env.NODE_ENV === "development" && <Agentation />}
         <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" />
         <Script src="https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js" strategy="afterInteractive" />
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-SXQ20ZFWBT"
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){window.dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-SXQ20ZFWBT');
+          `}
+        </Script>
       </body>
     </html>
   );
