@@ -309,10 +309,15 @@ const style = `
     padding: 10px 12px; border-radius: 8px;
     background: var(--surface2);
     border: 1px solid var(--border);
-    transition: border-color 0.2s;
+    transition: border-color 0.2s, background-color 0.2s;
     cursor: pointer;
+    text-decoration: none;
+    color: inherit;
   }
-  .track-item:hover { border-color: var(--border-hover); }
+  .track-item:hover {
+    border-color: rgba(240,123,32,0.45);
+    background: rgba(240,123,32,0.06);
+  }
   .track-item.playing { border-color: rgba(240,123,32,0.35); background: rgba(240,123,32,0.05); }
   .track-num {
     font-family: var(--mono); font-size: 10px; color: var(--muted);
@@ -1481,11 +1486,26 @@ export default function MusicProductionPage() {
   };
 
   const tracks = [
-    { name: "Night Drive", artist: "Karan Aujla", dur: "3:24" },
-    { name: "Vasl", artist: "Sidhu Moose Wala", dur: "4:02" },
-    { name: "Levels", artist: "Session Demo", dur: "2:58" },
+    {
+      name: "Watch Video 01",
+      artist: "y3Us_j0k22g",
+      dur: "Watch ↗",
+      url: "https://www.youtube.com/watch?v=y3Us_j0k22g&list=PLk-o3_0WQOBSdt19eWteGXnmCAJmOsy7p",
+    },
+    {
+      name: "Watch Video 02",
+      artist: "kIH8D5m_VBQ",
+      dur: "Watch ↗",
+      url: "https://youtu.be/kIH8D5m_VBQ?si=7cJUyZtRdFcci1jP",
+    },
+    {
+      name: "Watch Video 03",
+      artist: "tFXTdcW8YBY",
+      dur: "Watch ↗",
+      url: "https://youtu.be/tFXTdcW8YBY?si=go2R6o4zFO-gdXFs",
+    },
   ];
-  const [activeTrack, setActiveTrack] = useState(1);
+  const [activeTrack, setActiveTrack] = useState(0);
 
   return (
     <>
@@ -1575,10 +1595,14 @@ export default function MusicProductionPage() {
               <AnimatedEQ playing={activeTrack >= 0} />
               <div className="track-list">
                 {tracks.map((t, i) => (
-                  <div
+                  <a
                     key={i}
+                    href={t.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className={`track-item${activeTrack === i ? " playing" : ""}`}
-                    onClick={() => setActiveTrack(i)}
+                    onMouseEnter={() => setActiveTrack(i)}
+                    aria-label={`${t.name} - Open YouTube video ${t.artist} in a new tab`}
                   >
                     <span className="track-num">
                       {activeTrack === i ? (
@@ -1596,7 +1620,7 @@ export default function MusicProductionPage() {
                       <div className="track-artist">{t.artist}</div>
                     </div>
                     <span className="track-dur">{t.dur}</span>
-                  </div>
+                  </a>
                 ))}
               </div>
             </div>

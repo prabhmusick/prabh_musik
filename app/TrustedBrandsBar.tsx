@@ -1,11 +1,11 @@
 "use client";
 
 const platforms = [
-  { name: "Spotify", label: "Spotify" },
-  { name: "Apple Music", label: "Apple Music" },
-  { name: "YouTube Music", label: "YouTube Music" },
-  { name: "Jio Music", label: "Jio Music" },
-  { name: "BeatStars", label: "BeatStars" },
+  { name: "Apple", label: "Apple", logo: "/brands/apple.jpeg" },
+  { name: "Jio", label: "Jio", logo: "/brands/jio.png" },
+  { name: "Spotify", label: "Spotify", logo: "/brands/spotify.png" },
+  { name: "YouTube", label: "YouTube", logo: "/brands/youtube.png" },
+  { name: "BeatStars", label: "BeatStars", logo: "/brands/beatstars.jpeg" },
 ];
 
 // Duplicate for smooth infinite marquee loop
@@ -54,9 +54,32 @@ export default function TrustedBrandsBar() {
           background: rgba(251,191,36,0.1);
         }
 
+        .platform-logo-wrapper {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          height: 24px;
+          width: 24px;
+          border-radius: 50%;
+          overflow: hidden;
+          flex-shrink: 0;
+        }
+
+        .platform-logo-img {
+          height: 100%;
+          width: 100%;
+          object-fit: contain;
+          display: block;
+        }
+
+        .platform-logo-img-jio {
+          transform: scale(3.6);
+        }
+
         @media (max-width: 768px) {
           .marquee-track { gap: 24px; }
-          .platform-item { font-size: 13px; padding: 8px 16px; }
+          .platform-item { font-size: 13px; padding: 8px 16px; gap: 8px; }
+          .platform-logo-wrapper { height: 20px; width: 20px; }
         }
       `}</style>
 
@@ -111,7 +134,13 @@ export default function TrustedBrandsBar() {
           <div className="marquee-track">
             {allPlatforms.map((p, i) => (
               <div key={`${p.name}-${i}`} className="platform-item">
-                <span style={{ color: "#fbbf24", fontSize: 16 }}>🎵</span>
+                <div className="platform-logo-wrapper">
+                  <img
+                    src={p.logo}
+                    alt={p.name}
+                    className={`platform-logo-img ${p.name === "Jio" ? "platform-logo-img-jio" : ""}`}
+                  />
+                </div>
                 <span>{p.label}</span>
               </div>
             ))}

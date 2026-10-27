@@ -440,14 +440,30 @@ export default function ArtistsWorkedWith() {
             flex-direction: column !important;
             align-items: flex-start !important;
             justify-content: flex-start !important;
-            gap: 12px !important;
+            gap: 16px !important;
             width: 100% !important;
+            padding: 0 16px !important;
+            box-sizing: border-box !important;
             margin-bottom: 24px !important;
           }
-          .artists-header-buttons {
-            align-self: flex-end !important;
+          .artists-header-title {
+            font-size: clamp(22px, 6vw, 32px) !important;
+            line-height: 1.2 !important;
+            margin-bottom: 0 !important;
             width: 100% !important;
-            justify-content: flex-end !important;
+            word-break: break-word !important;
+          }
+          .artists-header-buttons {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+          }
+          .artists-nav-buttons {
+            display: flex !important;
+            align-items: center !important;
+            gap: 8px !important;
           }
           .artists-card {
             min-width: 280px !important;
@@ -480,13 +496,9 @@ export default function ArtistsWorkedWith() {
             width: 20px !important;
             height: 20px !important;
           }
-          .artists-header-title {
-            font-size: 24px !important;
-            margin-bottom: 0 !important;
-          }
           .artists-scroll {
             gap: 12px !important;
-            padding: 0 12px 6px !important;
+            padding: 0 16px 6px !important;
           }
         }
       `}</style>
@@ -582,33 +594,38 @@ export default function ArtistsWorkedWith() {
               View All
             </button>
 
-            {(["left", "right"] as const).map((dir) => (
-              <button
-                key={dir}
-                onClick={() => scroll(dir)}
-                style={{
-                  width: "36px",
-                  height: "36px",
-                  borderRadius: "50%",
-                  border: "1.5px solid rgba(255,255,255,0.2)",
-                  background: "transparent",
-                  color: "#ffffff",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  cursor: "pointer",
-                  transition: "background 0.2s ease",
-                }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.background = "rgba(255,255,255,0.1)")
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.background = "transparent")
-                }
-              >
-                <ChevronIcon dir={dir} />
-              </button>
-            ))}
+            <div
+              className="artists-nav-buttons"
+              style={{ display: "flex", alignItems: "center", gap: "8px" }}
+            >
+              {(["left", "right"] as const).map((dir) => (
+                <button
+                  key={dir}
+                  onClick={() => scroll(dir)}
+                  style={{
+                    width: "36px",
+                    height: "36px",
+                    borderRadius: "50%",
+                    border: "1.5px solid rgba(255,255,255,0.2)",
+                    background: "transparent",
+                    color: "#ffffff",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                    transition: "background 0.2s ease",
+                  }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.background = "rgba(255,255,255,0.1)")
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.background = "transparent")
+                  }
+                >
+                  <ChevronIcon dir={dir} />
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 

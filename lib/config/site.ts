@@ -11,11 +11,11 @@ export const SITE_CONFIG = {
     email: "support@prabhmusik.com",
     emailMailto: "mailto:support@prabhmusik.com",
     address: {
-      city: "Mohali chandigarh",
-      state: "Rajasthan",
-      postalCode: "335001",
+      city: "Mohali, Chandigarh",
+      state: "Punjab",
+      postalCode: "160055",
       country: "India",
-      display: "Mohali chandigarh, Rajasthan 335001",
+      display: "Mohali, Chandigarh, Punjab 160055",
     },
   },
   socials: {
