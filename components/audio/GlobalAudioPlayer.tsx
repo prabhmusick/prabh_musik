@@ -4,6 +4,7 @@ import React, { useRef, useState, useEffect } from "react";
 import { useAudioPlayer } from "@/app/contexts/audio-player-context";
 import { useAppShell } from "@/app/contexts/app-shell-context";
 import { useRouter, usePathname } from "next/navigation";
+import { ListMusic, X } from "lucide-react";
 
 export function GlobalAudioPlayer() {
   const pathname = usePathname();
@@ -27,6 +28,7 @@ export function GlobalAudioPlayer() {
   } = useAudioPlayer();
   const { isAuthenticated, addToCart } = useAppShell();
   const [shareStatus, setShareStatus] = useState("");
+  const [isQueueOpen, setIsQueueOpen] = useState(false);
   const prevVolumeRef = useRef(1);
 
   // Expose a safe testing hook on window for automated verification
@@ -41,7 +43,8 @@ export function GlobalAudioPlayer() {
             price: 149.99,
             cover: "/beats_bg.png",
             bpm: 120,
-            previewUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+            previewUrl:
+              "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
             genre: "Hip-Hop",
             ...customBeat,
           },
@@ -53,7 +56,8 @@ export function GlobalAudioPlayer() {
               price: 149.99,
               cover: "/beats_bg.png",
               bpm: 120,
-              previewUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+              previewUrl:
+                "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
               genre: "Hip-Hop",
             },
             {
@@ -63,10 +67,11 @@ export function GlobalAudioPlayer() {
               price: 199.99,
               cover: "/hip-hop.png",
               bpm: 128,
-              previewUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
+              previewUrl:
+                "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
               genre: "Trap",
             },
-          ]
+          ],
         );
       };
     }
@@ -88,7 +93,9 @@ export function GlobalAudioPlayer() {
   };
 
   const progressRatio = duration > 0 ? currentTime / duration : 0;
-  const queueIndex = queue.findIndex((beat) => String(beat.id) === String(currentBeat.id));
+  const queueIndex = queue.findIndex(
+    (beat) => String(beat.id) === String(currentBeat.id),
+  );
   const canPlayPrevious = queueIndex > 0;
   const canPlayNext = queueIndex >= 0 && queueIndex < queue.length - 1;
 
@@ -119,7 +126,8 @@ export function GlobalAudioPlayer() {
   };
 
   const waveformBars = Array.from({ length: 120 }, (_, i) => {
-    const wave = Math.sin(i * 0.21) + Math.sin(i * 0.09 + 1.3) + Math.sin(i * 0.045 + 2.2);
+    const wave =
+      Math.sin(i * 0.21) + Math.sin(i * 0.09 + 1.3) + Math.sin(i * 0.045 + 2.2);
     const normalized = Math.abs(wave / 3);
     return 6 + Math.round(normalized * 22);
   });
@@ -322,6 +330,11 @@ export function GlobalAudioPlayer() {
           background: rgba(255, 255, 255, 0.08);
           color: #fff;
         }
+        .pap-ctrl-btn.active {
+          border-color: rgba(255, 192, 67, 0.45);
+          background: rgba(255, 192, 67, 0.12);
+          color: #ffc043;
+        }
         .pap-ctrl-btn:disabled {
           opacity: 0.25;
           cursor: not-allowed;
@@ -506,6 +519,87 @@ export function GlobalAudioPlayer() {
           color: #fff;
         }
 
+        .pap-queue-panel {
+          position: fixed;
+          z-index: 1000;
+          right: max(16px, calc((100vw - 1400px) / 2));
+          bottom: 88px;
+          width: min(360px, calc(100vw - 32px));
+          max-height: min(560px, calc(100dvh - 120px));
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+          color: #ededed;
+          background: rgba(24, 24, 24, 0.98);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 8px;
+          box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55);
+          backdrop-filter: blur(16px);
+        }
+        .pap-queue-header {
+          min-height: 48px;
+          padding: 0 14px 0 16px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+          font-size: 13px;
+          font-weight: 700;
+        }
+        .pap-queue-count {
+          margin-left: 6px;
+          color: rgba(255, 255, 255, 0.45);
+          font-weight: 500;
+        }
+        .pap-queue-close {
+          width: 28px;
+          height: 28px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          color: rgba(255, 255, 255, 0.55);
+          background: transparent;
+          border: 0;
+          border-radius: 6px;
+          cursor: pointer;
+        }
+        .pap-queue-close:hover { color: #fff; background: rgba(255, 255, 255, 0.08); }
+        .pap-queue-list { overflow-y: auto; padding: 6px; }
+        .pap-queue-item {
+          width: 100%;
+          min-height: 54px;
+          padding: 6px 8px;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          text-align: left;
+          color: inherit;
+          background: transparent;
+          border: 0;
+          border-radius: 6px;
+          cursor: pointer;
+        }
+        .pap-queue-item:hover { background: rgba(255, 255, 255, 0.07); }
+        .pap-queue-item.current { background: rgba(255, 192, 67, 0.12); }
+        .pap-queue-cover {
+          width: 40px;
+          height: 40px;
+          flex: 0 0 40px;
+          object-fit: cover;
+          border-radius: 4px;
+          background: rgba(255, 255, 255, 0.08);
+        }
+        .pap-queue-meta { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+        .pap-queue-title, .pap-queue-producer {
+          overflow: hidden;
+          white-space: nowrap;
+          text-overflow: ellipsis;
+        }
+        .pap-queue-title { font-size: 12px; font-weight: 600; }
+        .pap-queue-producer { color: rgba(255, 255, 255, 0.5); font-size: 11px; }
+        .pap-queue-playing { margin-left: auto; color: #ffc043; font-size: 10px; }
+        .pap-queue-empty { padding: 24px 12px; text-align: center; color: rgba(255, 255, 255, 0.5); font-size: 12px; }
+
         .pap-close-btn-desktop {
           margin-left: 4px;
         }
@@ -542,6 +636,12 @@ export function GlobalAudioPlayer() {
         @media (max-width: 859px) {
           .pap-wrapper {
             padding: 8px 12px 10px;
+          }
+          .pap-queue-panel {
+            right: 12px;
+            bottom: 176px;
+            width: min(360px, calc(100vw - 24px));
+            max-height: calc(100dvh - 196px);
           }
           .pap-close-btn-desktop {
             display: none !important;
@@ -646,7 +746,9 @@ export function GlobalAudioPlayer() {
         <div className="pap-container">
           {/* Waveform Seek Bar (Spans full width) */}
           <div className="pap-waveform-row">
-            <span className="pap-time pap-time-curr">{formatTime(currentTime)}</span>
+            <span className="pap-time pap-time-curr">
+              {formatTime(currentTime)}
+            </span>
 
             <div
               onClick={handleSeek}
@@ -669,14 +771,18 @@ export function GlobalAudioPlayer() {
                     className="pap-waveform-bar"
                     style={{
                       height: barHeight,
-                      background: played ? "#ffc043" : "rgba(255, 255, 255, 0.16)",
+                      background: played
+                        ? "#ffc043"
+                        : "rgba(255, 255, 255, 0.16)",
                     }}
                   />
                 );
               })}
             </div>
 
-            <span className="pap-time pap-time-dur">{formatTime(duration || 0)}</span>
+            <span className="pap-time pap-time-dur">
+              {formatTime(duration || 0)}
+            </span>
 
             <button
               type="button"
@@ -685,7 +791,16 @@ export function GlobalAudioPlayer() {
               aria-label="Close player"
               title="Close player"
             >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <svg
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
                 <line x1="18" y1="6" x2="6" y2="18" />
                 <line x1="6" y1="6" x2="18" y2="18" />
               </svg>
@@ -709,8 +824,12 @@ export function GlobalAudioPlayer() {
                 <p className="pap-title" title={currentBeat.title}>
                   {currentBeat.title}
                 </p>
-                <p className="pap-sub" title={`${currentBeat.producer}${currentBeat.bpm ? ` • ${currentBeat.bpm} BPM` : ""}`}>
-                  {currentBeat.producer} {currentBeat.bpm ? `• ${currentBeat.bpm} BPM` : ""}
+                <p
+                  className="pap-sub"
+                  title={`${currentBeat.producer}${currentBeat.bpm ? ` • ${currentBeat.bpm} BPM` : ""}`}
+                >
+                  {currentBeat.producer}{" "}
+                  {currentBeat.bpm ? `• ${currentBeat.bpm} BPM` : ""}
                 </p>
               </div>
             </div>
@@ -725,7 +844,12 @@ export function GlobalAudioPlayer() {
                 aria-label="Play previous beat"
                 title="Previous beat"
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
                   <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" />
                 </svg>
               </button>
@@ -738,11 +862,22 @@ export function GlobalAudioPlayer() {
                 title={isPlaying ? "Pause" : "Play"}
               >
                 {isPlaying ? (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
                     <path d="M7 5h4v14H7zm6 0h4v14h-4z" />
                   </svg>
                 ) : (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style={{ marginLeft: 2 }}>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    style={{ marginLeft: 2 }}
+                  >
                     <path d="M8 5v14l11-7z" />
                   </svg>
                 )}
@@ -756,9 +891,27 @@ export function GlobalAudioPlayer() {
                 aria-label="Play next beat"
                 title="Next beat"
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
                   <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
                 </svg>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsQueueOpen((open) => !open)}
+                className={`pap-ctrl-btn ${isQueueOpen ? "active" : ""}`}
+                aria-label={
+                  isQueueOpen ? "Hide playing queue" : "Show playing queue"
+                }
+                title="Playing queue"
+                aria-expanded={isQueueOpen}
+              >
+                <ListMusic size={16} aria-hidden="true" />
               </button>
             </div>
 
@@ -771,7 +924,16 @@ export function GlobalAudioPlayer() {
                 aria-label={isLooping ? "Disable loop" : "Enable loop"}
                 title={isLooping ? "Loop enabled" : "Loop disabled"}
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
                   <path d="M17 2l4 4-4 4" />
                   <path d="M3 11v-1a4 4 0 0 1 4-4h14" />
                   <path d="M7 22l-4-4 4-4" />
@@ -789,19 +951,55 @@ export function GlobalAudioPlayer() {
                   title={volume === 0 ? "Unmute" : "Mute"}
                 >
                   {volume === 0 ? (
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" />
+                    <svg
+                      width="15"
+                      height="15"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <polygon
+                        points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"
+                        fill="currentColor"
+                      />
                       <line x1="23" y1="9" x2="17" y2="15" />
                       <line x1="17" y1="9" x2="23" y2="15" />
                     </svg>
                   ) : volume < 0.5 ? (
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" />
+                    <svg
+                      width="15"
+                      height="15"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <polygon
+                        points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"
+                        fill="currentColor"
+                      />
                       <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
                     </svg>
                   ) : (
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" />
+                    <svg
+                      width="15"
+                      height="15"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <polygon
+                        points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"
+                        fill="currentColor"
+                      />
                       <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
                       <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
                     </svg>
@@ -829,14 +1027,32 @@ export function GlobalAudioPlayer() {
                 >
                   {shareStatus ? (
                     <>
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <svg
+                        width="13"
+                        height="13"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
                         <polyline points="20 6 9 17 4 12" />
                       </svg>
                       <span className="pap-tool-text">{shareStatus}</span>
                     </>
                   ) : (
                     <>
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <svg
+                        width="13"
+                        height="13"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
                         <circle cx="18" cy="5" r="3" />
                         <circle cx="6" cy="12" r="3" />
                         <circle cx="18" cy="19" r="3" />
@@ -847,7 +1063,9 @@ export function GlobalAudioPlayer() {
                     </>
                   )}
                 </button>
-                <span className="sr-only" aria-live="polite">{shareStatus}</span>
+                <span className="sr-only" aria-live="polite">
+                  {shareStatus}
+                </span>
               </div>
 
               <button
@@ -862,7 +1080,9 @@ export function GlobalAudioPlayer() {
                   className="pap-cart-icon"
                 />
                 <span className="pap-cart-price">
-                  {currentBeat.price === null ? "Free" : `₹${currentBeat.price.toLocaleString("en-IN")}`}
+                  {currentBeat.price === null
+                    ? "Free"
+                    : `₹${currentBeat.price.toLocaleString("en-IN")}`}
                 </span>
               </button>
             </div>
@@ -886,8 +1106,12 @@ export function GlobalAudioPlayer() {
                   <p className="pap-title" title={currentBeat.title}>
                     {currentBeat.title}
                   </p>
-                  <p className="pap-sub" title={`${currentBeat.producer}${currentBeat.bpm ? ` • ${currentBeat.bpm} BPM` : ""}`}>
-                    {currentBeat.producer} {currentBeat.bpm ? `• ${currentBeat.bpm} BPM` : ""}
+                  <p
+                    className="pap-sub"
+                    title={`${currentBeat.producer}${currentBeat.bpm ? ` • ${currentBeat.bpm} BPM` : ""}`}
+                  >
+                    {currentBeat.producer}{" "}
+                    {currentBeat.bpm ? `• ${currentBeat.bpm} BPM` : ""}
                   </p>
                 </div>
               </div>
@@ -899,7 +1123,16 @@ export function GlobalAudioPlayer() {
                 aria-label="Close player"
                 title="Close player"
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
                   <line x1="18" y1="6" x2="6" y2="18" />
                   <line x1="6" y1="6" x2="18" y2="18" />
                 </svg>
@@ -916,7 +1149,12 @@ export function GlobalAudioPlayer() {
                 aria-label="Play previous beat"
                 title="Previous beat"
               >
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                <svg
+                  width="15"
+                  height="15"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
                   <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" />
                 </svg>
               </button>
@@ -929,11 +1167,22 @@ export function GlobalAudioPlayer() {
                 title={isPlaying ? "Pause" : "Play"}
               >
                 {isPlaying ? (
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
                     <path d="M7 5h4v14H7zm6 0h4v14h-4z" />
                   </svg>
                 ) : (
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style={{ marginLeft: 2 }}>
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    style={{ marginLeft: 2 }}
+                  >
                     <path d="M8 5v14l11-7z" />
                   </svg>
                 )}
@@ -947,9 +1196,27 @@ export function GlobalAudioPlayer() {
                 aria-label="Play next beat"
                 title="Next beat"
               >
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                <svg
+                  width="15"
+                  height="15"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
                   <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
                 </svg>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsQueueOpen((open) => !open)}
+                className={`pap-ctrl-btn ${isQueueOpen ? "active" : ""}`}
+                aria-label={
+                  isQueueOpen ? "Hide playing queue" : "Show playing queue"
+                }
+                title="Playing queue"
+                aria-expanded={isQueueOpen}
+              >
+                <ListMusic size={16} aria-hidden="true" />
               </button>
             </div>
 
@@ -963,7 +1230,16 @@ export function GlobalAudioPlayer() {
                   aria-label={isLooping ? "Disable loop" : "Enable loop"}
                   title={isLooping ? "Loop enabled" : "Loop disabled"}
                 >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
                     <path d="M17 2l4 4-4 4" />
                     <path d="M3 11v-1a4 4 0 0 1 4-4h14" />
                     <path d="M7 22l-4-4 4-4" />
@@ -979,19 +1255,55 @@ export function GlobalAudioPlayer() {
                   title={volume === 0 ? "Unmute" : "Mute"}
                 >
                   {volume === 0 ? (
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" />
+                    <svg
+                      width="15"
+                      height="15"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <polygon
+                        points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"
+                        fill="currentColor"
+                      />
                       <line x1="23" y1="9" x2="17" y2="15" />
                       <line x1="17" y1="9" x2="23" y2="15" />
                     </svg>
                   ) : volume < 0.5 ? (
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" />
+                    <svg
+                      width="15"
+                      height="15"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <polygon
+                        points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"
+                        fill="currentColor"
+                      />
                       <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
                     </svg>
                   ) : (
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" />
+                    <svg
+                      width="15"
+                      height="15"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <polygon
+                        points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"
+                        fill="currentColor"
+                      />
                       <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
                       <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
                     </svg>
@@ -1006,11 +1318,29 @@ export function GlobalAudioPlayer() {
                   title="Share beat link"
                 >
                   {shareStatus ? (
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <svg
+                      width="13"
+                      height="13"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
                       <polyline points="20 6 9 17 4 12" />
                     </svg>
                   ) : (
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg
+                      width="13"
+                      height="13"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
                       <circle cx="18" cy="5" r="3" />
                       <circle cx="6" cy="12" r="3" />
                       <circle cx="18" cy="19" r="3" />
@@ -1033,13 +1363,72 @@ export function GlobalAudioPlayer() {
                   className="pap-cart-icon"
                 />
                 <span className="pap-cart-price">
-                  {currentBeat.price === null ? "Free" : `₹${currentBeat.price.toLocaleString("en-IN")}`}
+                  {currentBeat.price === null
+                    ? "Free"
+                    : `₹${currentBeat.price.toLocaleString("en-IN")}`}
                 </span>
               </button>
             </div>
           </div>
         </div>
       </div>
+
+      {isQueueOpen && (
+        <section className="pap-queue-panel" aria-label="Playing queue">
+          <div className="pap-queue-header">
+            <span>
+              Playing queue
+              <span className="pap-queue-count">{queue.length}</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => setIsQueueOpen(false)}
+              className="pap-queue-close"
+              aria-label="Close playing queue"
+            >
+              <X size={16} aria-hidden="true" />
+            </button>
+          </div>
+          {queue.length > 0 ? (
+            <div className="pap-queue-list">
+              {queue.map((beat, index) => {
+                const isCurrentBeat =
+                  String(beat.id) === String(currentBeat.id);
+                return (
+                  <button
+                    type="button"
+                    key={`${beat.id}-${index}`}
+                    onClick={() => playBeat(beat, queue)}
+                    className={`pap-queue-item ${isCurrentBeat ? "current" : ""}`}
+                    aria-current={isCurrentBeat ? "true" : undefined}
+                  >
+                    {beat.cover ? (
+                      <img
+                        src={beat.cover}
+                        alt=""
+                        className="pap-queue-cover"
+                      />
+                    ) : (
+                      <span className="pap-queue-cover" />
+                    )}
+                    <span className="pap-queue-meta">
+                      <span className="pap-queue-title">{beat.title}</span>
+                      <span className="pap-queue-producer">
+                        {beat.producer}
+                      </span>
+                    </span>
+                    {isCurrentBeat && (
+                      <span className="pap-queue-playing">Playing</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="pap-queue-empty">No tracks in the queue</div>
+          )}
+        </section>
+      )}
     </>
   );
 }
