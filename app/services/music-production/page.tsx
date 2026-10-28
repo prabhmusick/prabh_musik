@@ -1499,19 +1499,19 @@ export default function MusicProductionPage() {
   const tracks = [
     {
       name: "Harris Bhullar",
-      artist: "y3Us_j0k22g",
+      artist: "Prabh",
       dur: "Watch ↗",
       url: "https://www.youtube.com/watch?v=y3Us_j0k22g&list=PLk-o3_0WQOBSdt19eWteGXnmCAJmOsy7p",
     },
     {
       name: "Bawa Singh",
-      artist: "kIH8D5m_VBQ",
+      artist: "Prabh",
       dur: "Watch ↗",
       url: "https://youtu.be/kIH8D5m_VBQ?si=7cJUyZtRdFcci1jP",
     },
     {
       name: "GEEYAAN",
-      artist: "tFXTdcW8YBY",
+      artist: "Prabh",
       dur: "Watch ↗",
       url: "https://youtu.be/tFXTdcW8YBY?si=go2R6o4zFO-gdXFs",
     },
