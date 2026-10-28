@@ -1,6 +1,20 @@
-import { localArtists, localBeats, localOrders } from './db';
-import { Artist } from '../types/admin';
-import api from '../lib/api';
+import { Artist } from "../types/admin";
+import api from "../lib/api";
+
+interface ArtistResponse {
+  id: string;
+  public_id?: string;
+  name?: string;
+  stageName?: string;
+  phone?: string;
+  email?: string;
+  image?: string;
+  totalBeats?: number;
+  totalSales?: number;
+  createdAt?: string;
+  joinedAt?: string;
+  status?: Artist["status"];
+}
 
 export interface WorkedWithArtist {
   id: number;
@@ -23,32 +37,26 @@ export interface WorkedWithArtistVisibility {
 }
 
 export async function getArtists(): Promise<Artist[]> {
-  // Simulate network delay
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  
-  return localArtists.map(artist => {
-    const artistBeats = localBeats.filter(b => b.artistId === artist.id);
-    const totalBeats = artistBeats.length;
-    
-    // Count how many of this artist's beats are in completed orders
-    const totalSales = localOrders
-      .filter(o => o.status === 'COMPLETED')
-      .reduce((sum, o) => {
-        const artistBeatsInOrder = o.beatIds.filter(bid => artistBeats.some(ab => ab.id === bid));
-        return sum + artistBeatsInOrder.length;
-      }, 0);
+  const response = await api.get("/artists");
+  const artists: ArtistResponse[] = response.data.data || [];
 
-    return {
-      ...artist,
-      totalBeats,
-      totalSales
-    };
-  });
+  return artists.map((artist) => ({
+    id: artist.public_id || artist.id,
+    userId: "",
+    stageName: artist.stageName || artist.name || "",
+    phone: artist.phone || "",
+    email: artist.email || "",
+    image: artist.image || "",
+    totalBeats: Number(artist.totalBeats || 0),
+    totalSales: Number(artist.totalSales || 0),
+    joinedAt: artist.joinedAt || artist.createdAt || "",
+    status: artist.status || "active",
+  }));
 }
 
 export async function getWorkedWithArtists(): Promise<WorkedWithArtist[]> {
   try {
-    const response = await api.get('/artists/worked-with');
+    const response = await api.get("/artists/worked-with");
     return response.data.data || [];
   } catch {
     return [];
@@ -66,7 +74,7 @@ export async function createWorkedWithArtist(data: {
   show_on_lyrics: boolean;
   show_on_marketing_distribution: boolean;
 }): Promise<WorkedWithArtist> {
-  const response = await api.post('/artists/worked-with', data);
+  const response = await api.post("/artists/worked-with", data);
   return response.data.data;
 }
 
@@ -87,7 +95,7 @@ export async function deleteWorkedWithArtist(id: number): Promise<void> {
 
 export async function getArtistById(id: string): Promise<Artist | undefined> {
   const artists = await getArtists();
-  return artists.find(artist => artist.id === id);
+  return artists.find((artist) => artist.id === id);
 }
 
 export async function createArtist(data: {
@@ -96,6 +104,6 @@ export async function createArtist(data: {
   email?: string;
   image_key?: string;
 }): Promise<Artist> {
-  const response = await api.post('/artists', data);
+  const response = await api.post("/artists", data);
   return response.data.data;
 }
