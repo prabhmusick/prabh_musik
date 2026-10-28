@@ -11,6 +11,7 @@ import {
   createWorkedWithArtist,
   deleteWorkedWithArtist,
   getWorkedWithArtists,
+  updateWorkedWithArtistUrl,
   updateWorkedWithArtistVisibility,
   WorkedWithArtistVisibility,
 } from "../../../services/artist.service";
@@ -40,6 +41,7 @@ export default function ArtistsPage() {
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState("");
   const [workedWithName, setWorkedWithName] = React.useState("");
+  const [workedWithUrl, setWorkedWithUrl] = React.useState("");
   const [workedWithImage, setWorkedWithImage] = React.useState("");
   const [workedWithSong, setWorkedWithSong] = React.useState("Dont Look 2");
   const [workedWithMusicType, setWorkedWithMusicType] =
@@ -60,6 +62,7 @@ export default function ArtistsPage() {
   const [updatingVisibilityId, setUpdatingVisibilityId] = React.useState<
     number | null
   >(null);
+  const [updatingUrlId, setUpdatingUrlId] = React.useState<number | null>(null);
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -87,6 +90,7 @@ export default function ArtistsPage() {
     try {
       await createWorkedWithArtist({
         name: workedWithName,
+        url: workedWithUrl,
         image: workedWithImage,
         popular_song: workedWithSong,
         music_type: workedWithMusicType,
@@ -97,6 +101,7 @@ export default function ArtistsPage() {
         queryKey: ["admin", "worked-with-artists"],
       });
       setWorkedWithName("");
+      setWorkedWithUrl("");
       setWorkedWithImage("");
       setWorkedWithSong("Dont Look 2");
       setWorkedWithMusicType("Punjabi Trap");
@@ -164,6 +169,23 @@ export default function ArtistsPage() {
       );
     } finally {
       setUpdatingVisibilityId(null);
+    }
+  };
+
+  const updateWorkedWithUrl = async (artistId: number, url: string) => {
+    setUpdatingUrlId(artistId);
+    setWorkedWithError("");
+    try {
+      await updateWorkedWithArtistUrl(artistId, url);
+      await queryClient.invalidateQueries({
+        queryKey: ["admin", "worked-with-artists"],
+      });
+    } catch (err: unknown) {
+      setWorkedWithError(
+        getApiErrorMessage(err, "Unable to update artist URL"),
+      );
+    } finally {
+      setUpdatingUrlId(null);
     }
   };
 
@@ -262,6 +284,12 @@ export default function ArtistsPage() {
             placeholder="Artist name"
             value={workedWithName}
             onChange={(event) => setWorkedWithName(event.target.value)}
+          />
+          <Input
+            type="url"
+            placeholder="Artist URL (https://...)"
+            value={workedWithUrl}
+            onChange={(event) => setWorkedWithUrl(event.target.value)}
           />
           <Input
             required
@@ -366,6 +394,34 @@ export default function ArtistsPage() {
                       : "Remove"}
                   </Button>
                 </div>
+                <form
+                  className="flex gap-2"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    const formData = new FormData(event.currentTarget);
+                    void updateWorkedWithUrl(
+                      artist.id,
+                      String(formData.get("url") || ""),
+                    );
+                  }}
+                >
+                  <Input
+                    type="url"
+                    name="url"
+                    placeholder="Artist URL (https://...)"
+                    defaultValue={artist.url}
+                    aria-label={`${artist.name} URL`}
+                  />
+                  <Button
+                    type="submit"
+                    variant="outline"
+                    size="sm"
+                    disabled={updatingUrlId === artist.id}
+                    className="shrink-0"
+                  >
+                    {updatingUrlId === artist.id ? "Saving..." : "Save URL"}
+                  </Button>
+                </form>
                 <div className="grid gap-2 border-t border-card-border pt-3 sm:grid-cols-2">
                   {visibilityOptions.map((option) => {
                     const checked = {

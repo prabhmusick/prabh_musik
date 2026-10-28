@@ -13,8 +13,12 @@ const fs = require("fs");
 const isProduction = process.env.NODE_ENV === "production";
 
 const cloudflareD1Config = {
-  accountId: process.env.CLOUDFLARE_ACCOUNT_ID || (isProduction ? "" : "ef604a28e1b051d534c1a8abf3640476"),
-  databaseId: process.env.CLOUDFLARE_D1_DATABASE_ID || (isProduction ? "" : "c2e9d27f-d877-4627-a588-0456d062dde6"),
+  accountId:
+    process.env.CLOUDFLARE_ACCOUNT_ID ||
+    (isProduction ? "" : "ef604a28e1b051d534c1a8abf3640476"),
+  databaseId:
+    process.env.CLOUDFLARE_D1_DATABASE_ID ||
+    (isProduction ? "" : "c2e9d27f-d877-4627-a588-0456d062dde6"),
   apiToken: process.env.CLOUDFLARE_API_TOKEN || "",
 };
 
@@ -27,7 +31,7 @@ if (isProduction) {
 
   if (missing.length > 0) {
     throw new Error(
-      `FATAL CONFIGURATION ERROR: Production Cloudflare D1 database integration requires:\n- ${missing.join("\n- ")}`
+      `FATAL CONFIGURATION ERROR: Production Cloudflare D1 database integration requires:\n- ${missing.join("\n- ")}`,
     );
   }
 }
@@ -46,10 +50,12 @@ class MemoryDB {
   }
 
   beginTransaction() {
-    this.snapshots.push(JSON.stringify({
-      tables: this.tables,
-      autoIncrements: this.autoIncrements
-    }));
+    this.snapshots.push(
+      JSON.stringify({
+        tables: this.tables,
+        autoIncrements: this.autoIncrements,
+      }),
+    );
   }
 
   commitTransaction() {
@@ -68,7 +74,9 @@ class MemoryDB {
 
   query(sql, params = []) {
     if (process.env.NODE_ENV === "production") {
-      throw new Error("FATAL SECURITY ERROR: MemoryDB is strictly forbidden in production environment.");
+      throw new Error(
+        "FATAL SECURITY ERROR: MemoryDB is strictly forbidden in production environment.",
+      );
     }
 
     const cleanSql = sql
@@ -107,13 +115,15 @@ class MemoryDB {
         type: table.schema[colName].type || "TEXT",
         notnull: table.schema[colName].notNull ? 1 : 0,
         dflt_value: table.schema[colName].default || null,
-        pk: table.schema[colName].pk ? 1 : 0
+        pk: table.schema[colName].pk ? 1 : 0,
       }));
       return { success: true, results, meta: {} };
     }
 
     if (upperSql.startsWith("CREATE TABLE")) {
-      const match = rawSql.match(/CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?([^\s(]+)\s*\(([\s\S]+)\)/i);
+      const match = rawSql.match(
+        /CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?([^\s(]+)\s*\(([\s\S]+)\)/i,
+      );
       if (match) {
         const tableName = match[1].replace(/['"`]/g, "").trim();
         if (!this.tables[tableName]) {
@@ -124,20 +134,27 @@ class MemoryDB {
         colDefs.forEach((def) => {
           const trimmed = def.trim();
           const colMatch = trimmed.match(/^([^\s]+)\s+([^\s,]+)/);
-          if (colMatch && !/^(FOREIGN|PRIMARY|UNIQUE|CHECK|CONSTRAINT)/i.test(colMatch[1])) {
+          if (
+            colMatch &&
+            !/^(FOREIGN|PRIMARY|UNIQUE|CHECK|CONSTRAINT)/i.test(colMatch[1])
+          ) {
             const colName = colMatch[1].replace(/['"`]/g, "").trim();
             const colType = colMatch[2].toUpperCase();
             const isPk = /PRIMARY\s+KEY/i.test(trimmed);
             const isUnique = /UNIQUE/i.test(trimmed);
             const isNotNull = /NOT\s+NULL/i.test(trimmed);
             const dfltMatch = trimmed.match(/DEFAULT\s+([^\s,]+)/i);
-            const dfltVal = dfltMatch ? (isNaN(Number(dfltMatch[1])) ? dfltMatch[1].replace(/^'|'$/g, "") : Number(dfltMatch[1])) : null;
+            const dfltVal = dfltMatch
+              ? isNaN(Number(dfltMatch[1]))
+                ? dfltMatch[1].replace(/^'|'$/g, "")
+                : Number(dfltMatch[1])
+              : null;
             this.tables[tableName].schema[colName] = {
               type: colType,
               pk: isPk,
               unique: isUnique || isPk,
               notNull: isNotNull,
-              default: dfltVal
+              default: dfltVal,
             };
           }
         });
@@ -146,7 +163,9 @@ class MemoryDB {
     }
 
     if (upperSql.startsWith("ALTER TABLE")) {
-      const match = rawSql.match(/ALTER\s+TABLE\s+([^\s]+)\s+ADD\s+COLUMN\s+([^\s]+)\s+([^\s;]+)(?:\s+DEFAULT\s+(.+))?/i);
+      const match = rawSql.match(
+        /ALTER\s+TABLE\s+([^\s]+)\s+ADD\s+COLUMN\s+([^\s]+)\s+([^\s;]+)(?:\s+DEFAULT\s+(.+))?/i,
+      );
       if (match) {
         const tableName = match[1].replace(/['"`]/g, "").trim();
         const colName = match[2].replace(/['"`]/g, "").trim();
@@ -159,7 +178,13 @@ class MemoryDB {
               defaultVal = defaultValStr.replace(/^'|'$/g, "").trim();
               if (!isNaN(Number(defaultVal))) defaultVal = Number(defaultVal);
             }
-            this.tables[tableName].schema[colName] = { type: colType, pk: false, unique: false, notNull: false, default: defaultVal };
+            this.tables[tableName].schema[colName] = {
+              type: colType,
+              pk: false,
+              unique: false,
+              notNull: false,
+              default: defaultVal,
+            };
             this.tables[tableName].rows.forEach((row) => {
               row[colName] = defaultVal;
             });
@@ -170,7 +195,9 @@ class MemoryDB {
     }
 
     if (upperSql.startsWith("DROP TABLE")) {
-      const match = rawSql.match(/DROP\s+TABLE\s+(?:IF\s+EXISTS\s+)?([^\s;]+)/i);
+      const match = rawSql.match(
+        /DROP\s+TABLE\s+(?:IF\s+EXISTS\s+)?([^\s;]+)/i,
+      );
       if (match) {
         const tableName = match[1].replace(/['"`]/g, "").trim();
         delete this.tables[tableName];
@@ -181,7 +208,9 @@ class MemoryDB {
 
     if (upperSql.startsWith("INSERT INTO")) {
       const isValuesInsert = /\bVALUES\b/i.test(rawSql);
-      const insertMatch = rawSql.match(/INSERT\s+(?:OR\s+IGNORE\s+)?INTO\s+([^\s(]+)\s*(?:\(([^)]+)\))?/i);
+      const insertMatch = rawSql.match(
+        /INSERT\s+(?:OR\s+IGNORE\s+)?INTO\s+([^\s(]+)\s*(?:\(([^)]+)\))?/i,
+      );
       if (insertMatch) {
         const tableName = insertMatch[1].replace(/['"`]/g, "").trim();
         if (!this.tables[tableName]) {
@@ -190,11 +219,15 @@ class MemoryDB {
         }
 
         const colsStr = insertMatch[2];
-        const cols = colsStr ? colsStr.split(",").map(c => c.replace(/['"`]/g, "").trim()) : Object.keys(this.tables[tableName].schema || {});
+        const cols = colsStr
+          ? colsStr.split(",").map((c) => c.replace(/['"`]/g, "").trim())
+          : Object.keys(this.tables[tableName].schema || {});
 
         if (!isValuesInsert && /SELECT/i.test(rawSql)) {
           if (/WHERE\s+NOT\s+EXISTS/i.test(rawSql)) {
-            const subCheckMatch = rawSql.match(/WHERE\s+NOT\s+EXISTS\s*\(\s*SELECT\s+1\s+FROM\s+([^\s]+)\s+WHERE\s+(.+?)\s*\)/i);
+            const subCheckMatch = rawSql.match(
+              /WHERE\s+NOT\s+EXISTS\s*\(\s*SELECT\s+1\s+FROM\s+([^\s]+)\s+WHERE\s+(.+?)\s*\)/i,
+            );
             if (subCheckMatch) {
               const checkTable = subCheckMatch[1].replace(/['"`]/g, "").trim();
               const checkCond = subCheckMatch[2];
@@ -202,13 +235,19 @@ class MemoryDB {
               const checkParams = params.slice(0, numParams);
               const exists = this.evalWhere(checkTable, checkCond, checkParams);
               if (exists.length > 0) {
-                return { success: true, results: [], meta: { changes: 0, last_row_id: null } };
+                return {
+                  success: true,
+                  results: [],
+                  meta: { changes: 0, last_row_id: null },
+                };
               }
             }
           }
           const selectValMatch = rawSql.match(/SELECT\s+(.+?)(?:\s+WHERE|$)/i);
           if (selectValMatch) {
-            const rawVals = selectValMatch[1].split(/,(?![^(]*\))/).map(v => v.trim().replace(/^'|'$/g, ""));
+            const rawVals = selectValMatch[1]
+              .split(/,(?![^(]*\))/)
+              .map((v) => v.trim().replace(/^'|'$/g, ""));
             const newRow = {};
             let pIdx = 0;
             cols.forEach((col, idx) => {
@@ -222,12 +261,20 @@ class MemoryDB {
               newRow.id = this.autoIncrements[tableName]++;
             }
             this.tables[tableName].rows.push(newRow);
-            return { success: true, results: [], meta: { changes: 1, last_row_id: newRow.id || this.autoIncrements[tableName] } };
+            return {
+              success: true,
+              results: [],
+              meta: {
+                changes: 1,
+                last_row_id: newRow.id || this.autoIncrements[tableName],
+              },
+            };
           }
         }
 
         const valuesIndex = rawSql.search(/\bVALUES\b/i);
-        const valuesPart = valuesIndex >= 0 ? rawSql.substring(valuesIndex + 6).trim() : "";
+        const valuesPart =
+          valuesIndex >= 0 ? rawSql.substring(valuesIndex + 6).trim() : "";
 
         const rowTuples = [];
         let depth = 0;
@@ -287,16 +334,28 @@ class MemoryDB {
                 newRow[col] = params[paramIdx++];
               }
             } else if (/^\(\s*SELECT\b/i.test(token)) {
-              const subMatch = token.match(/^\(\s*SELECT\s+([^\s]+)\s+FROM\s+([^\s]+)\s+WHERE\s+([\s\S]+?)\s*\)$/i);
+              const subMatch = token.match(
+                /^\(\s*SELECT\s+([^\s]+)\s+FROM\s+([^\s]+)\s+WHERE\s+([\s\S]+?)\s*\)$/i,
+              );
               if (subMatch) {
                 const subCol = subMatch[1].replace(/['"`]/g, "").trim();
                 const subTable = subMatch[2].replace(/['"`]/g, "").trim();
                 const subWhere = subMatch[3].trim();
                 const numSubParams = (subWhere.match(/\?/g) || []).length;
-                const subParams = params.slice(paramIdx, paramIdx + numSubParams);
+                const subParams = params.slice(
+                  paramIdx,
+                  paramIdx + numSubParams,
+                );
                 paramIdx += numSubParams;
-                const matchedRows = this.evalWhere(subTable, subWhere, subParams);
-                newRow[col] = matchedRows.length > 0 ? (matchedRows[0][subCol] ?? null) : null;
+                const matchedRows = this.evalWhere(
+                  subTable,
+                  subWhere,
+                  subParams,
+                );
+                newRow[col] =
+                  matchedRows.length > 0
+                    ? (matchedRows[0][subCol] ?? null)
+                    : null;
               } else {
                 newRow[col] = null;
               }
@@ -310,37 +369,56 @@ class MemoryDB {
           });
 
           if (newRow.id === undefined || newRow.id === null) {
-            newRow.id = (this.autoIncrements[tableName] || 1);
+            newRow.id = this.autoIncrements[tableName] || 1;
             this.autoIncrements[tableName] = newRow.id + 1;
           } else if (typeof newRow.id === "number") {
-            this.autoIncrements[tableName] = Math.max(this.autoIncrements[tableName] || 1, newRow.id + 1);
+            this.autoIncrements[tableName] = Math.max(
+              this.autoIncrements[tableName] || 1,
+              newRow.id + 1,
+            );
           }
 
           if (this.tables[tableName].schema) {
             Object.keys(this.tables[tableName].schema).forEach((colName) => {
               if (newRow[colName] === undefined) {
                 const dflt = this.tables[tableName].schema[colName].default;
-                newRow[colName] = dflt !== undefined && dflt !== null ? dflt : null;
+                newRow[colName] =
+                  dflt !== undefined && dflt !== null ? dflt : null;
               }
             });
 
-            const notNullCols = Object.keys(this.tables[tableName].schema).filter(
-              k => this.tables[tableName].schema[k].notNull && !this.tables[tableName].schema[k].pk && k !== "id"
+            const notNullCols = Object.keys(
+              this.tables[tableName].schema,
+            ).filter(
+              (k) =>
+                this.tables[tableName].schema[k].notNull &&
+                !this.tables[tableName].schema[k].pk &&
+                k !== "id",
             );
             for (const col of notNullCols) {
               if (newRow[col] === null || newRow[col] === undefined) {
-                throw new Error(`NOT NULL constraint failed: ${tableName}.${col}`);
+                throw new Error(
+                  `NOT NULL constraint failed: ${tableName}.${col}`,
+                );
               }
             }
 
-            const uniqueCols = Object.keys(this.tables[tableName].schema).filter(
-              k => this.tables[tableName].schema[k].pk || this.tables[tableName].schema[k].unique
+            const uniqueCols = Object.keys(
+              this.tables[tableName].schema,
+            ).filter(
+              (k) =>
+                this.tables[tableName].schema[k].pk ||
+                this.tables[tableName].schema[k].unique,
             );
             for (const col of uniqueCols) {
               if (newRow[col] !== undefined && newRow[col] !== null) {
-                const duplicate = this.tables[tableName].rows.find(r => String(r[col]) === String(newRow[col]));
+                const duplicate = this.tables[tableName].rows.find(
+                  (r) => String(r[col]) === String(newRow[col]),
+                );
                 if (duplicate) {
-                  throw new Error(`UNIQUE constraint failed: ${tableName}.${col}`);
+                  throw new Error(
+                    `UNIQUE constraint failed: ${tableName}.${col}`,
+                  );
                 }
               }
             }
@@ -351,62 +429,87 @@ class MemoryDB {
           lastId = newRow.id;
         }
 
-        return { success: true, results: [], meta: { changes: totalChanges, last_row_id: lastId } };
+        return {
+          success: true,
+          results: [],
+          meta: { changes: totalChanges, last_row_id: lastId },
+        };
       }
       return { success: true, results: [], meta: { changes: 0 } };
     }
 
     if (upperSql.startsWith("DELETE FROM")) {
-    const match = rawSql.match(/DELETE\s+FROM\s+([^\s;]+)(?:\s+WHERE\s+([\s\S]+))?/i);
-    if (match) {
-      const tableName = match[1].replace(/['"`]/g, "").trim();
-      const whereClause = match[2];
-      if (this.tables[tableName]) {
-        if (!whereClause) {
-          const count = this.tables[tableName].rows.length;
-          this.tables[tableName].rows = [];
-          return { success: true, results: [], meta: { changes: count } };
+      const match = rawSql.match(
+        /DELETE\s+FROM\s+([^\s;]+)(?:\s+WHERE\s+([\s\S]+))?/i,
+      );
+      if (match) {
+        const tableName = match[1].replace(/['"`]/g, "").trim();
+        const whereClause = match[2];
+        if (this.tables[tableName]) {
+          if (!whereClause) {
+            const count = this.tables[tableName].rows.length;
+            this.tables[tableName].rows = [];
+            return { success: true, results: [], meta: { changes: count } };
+          }
+          const matching = this.evalWhere(tableName, whereClause, params);
+          const matchingSet = new Set(matching);
+          this.tables[tableName].rows = this.tables[tableName].rows.filter(
+            (r) => !matchingSet.has(r),
+          );
+          return {
+            success: true,
+            results: [],
+            meta: { changes: matching.length },
+          };
         }
-        const matching = this.evalWhere(tableName, whereClause, params);
-        const matchingSet = new Set(matching);
-        this.tables[tableName].rows = this.tables[tableName].rows.filter(r => !matchingSet.has(r));
-        return { success: true, results: [], meta: { changes: matching.length } };
       }
+      return { success: true, results: [], meta: { changes: 0 } };
     }
-    return { success: true, results: [], meta: { changes: 0 } };
-  }
 
-  if (upperSql.startsWith("UPDATE")) {
-    const match = rawSql.match(/UPDATE\s+([^\s]+)\s+SET\s+([\s\S]+?)(?:\s+WHERE\s+([\s\S]+))?$/i);
-    if (match) {
-      const tableName = match[1].replace(/['"`]/g, "").trim();
-      const setClause = match[2];
-      const whereClause = match[3];
+    if (upperSql.startsWith("UPDATE")) {
+      const match = rawSql.match(
+        /UPDATE\s+([^\s]+)\s+SET\s+([\s\S]+?)(?:\s+WHERE\s+([\s\S]+))?$/i,
+      );
+      if (match) {
+        const tableName = match[1].replace(/['"`]/g, "").trim();
+        const setClause = match[2];
+        const whereClause = match[3];
 
-      if (this.tables[tableName]) {
-        const numSetPlaceholders = (setClause.match(/\?/g) || []).length;
-        const setParams = params.slice(0, numSetPlaceholders);
-        const whereParams = params.slice(numSetPlaceholders);
+        if (this.tables[tableName]) {
+          const numSetPlaceholders = (setClause.match(/\?/g) || []).length;
+          const setParams = params.slice(0, numSetPlaceholders);
+          const whereParams = params.slice(numSetPlaceholders);
 
-        let matching = whereClause ? this.evalWhere(tableName, whereClause, whereParams) : this.tables[tableName].rows;
-        const assignments = setClause.split(/,(?![^(]*\))/);
+          let matching = whereClause
+            ? this.evalWhere(tableName, whereClause, whereParams)
+            : this.tables[tableName].rows;
+          const assignments = setClause.split(/,(?![^(]*\))/);
 
           matching.forEach((row) => {
             let setPIdx = 0;
             assignments.forEach((assign) => {
-              const [colRaw, valRaw] = assign.split("=").map(s => s.trim());
+              const [colRaw, valRaw] = assign.split("=").map((s) => s.trim());
               const col = colRaw.replace(/['"`]/g, "").split(".").pop();
               const mathMatch = valRaw.match(/^([^\s+]+)\s*([+-])\s*(\d+)$/);
               if (valRaw === "?") {
                 row[col] = setParams[setPIdx++];
               } else if (mathMatch) {
-                const targetCol = mathMatch[1].replace(/['"`]/g, "").split(".").pop();
+                const targetCol = mathMatch[1]
+                  .replace(/['"`]/g, "")
+                  .split(".")
+                  .pop();
                 const opSign = mathMatch[2];
                 const numVal = Number(mathMatch[3]);
                 const currentVal = Number(row[targetCol] || 0);
-                row[col] = opSign === "+" ? currentVal + numVal : currentVal - numVal;
+                row[col] =
+                  opSign === "+" ? currentVal + numVal : currentVal - numVal;
               } else if (/^COALESCE/i.test(valRaw)) {
-                row[col] = row[col] !== undefined && row[col] !== null ? row[col] : valRaw.match(/COALESCE\s*\(\s*[^,]+,\s*'([^']+)'/i)?.[1] || "";
+                row[col] =
+                  row[col] !== undefined && row[col] !== null
+                    ? row[col]
+                    : valRaw.match(
+                        /COALESCE\s*\(\s*[^,]+,\s*'([^']+)'/i,
+                      )?.[1] || "";
               } else if (/CURRENT_TIMESTAMP/i.test(valRaw)) {
                 row[col] = new Date().toISOString();
               } else {
@@ -414,7 +517,11 @@ class MemoryDB {
               }
             });
           });
-          return { success: true, results: [], meta: { changes: matching.length } };
+          return {
+            success: true,
+            results: [],
+            meta: { changes: matching.length },
+          };
         }
       }
       return { success: true, results: [], meta: { changes: 0 } };
@@ -440,21 +547,27 @@ class MemoryDB {
         fromAndAfter = rawSql.substring(mainFromIdx).trim();
       }
 
-      const fromTableMatch = fromAndAfter.match(/^FROM\s+([^\s,;(]+)(?:\s+(?:AS\s+)?([^\s,;(]+))?/i);
+      const fromTableMatch = fromAndAfter.match(
+        /^FROM\s+([^\s,;(]+)(?:\s+(?:AS\s+)?([^\s,;(]+))?/i,
+      );
 
       if (fromTableMatch) {
         if (!selectCols) selectCols = "*";
         const tableName = fromTableMatch[1].replace(/['"`]/g, "").trim();
 
         let whereClause = null;
-        const whereMatch = fromAndAfter.match(/\s+WHERE\s+([\s\S]+?)(?:\s+GROUP\s+BY|\s+ORDER\s+BY|\s+LIMIT|\s+OFFSET|$)/i);
+        const whereMatch = fromAndAfter.match(
+          /\s+WHERE\s+([\s\S]+?)(?:\s+GROUP\s+BY|\s+ORDER\s+BY|\s+LIMIT|\s+OFFSET|$)/i,
+        );
         if (whereMatch) {
           whereClause = whereMatch[1].trim();
         }
 
         let orderColRaw = null;
         let orderDir = "ASC";
-        const orderMatch = fromAndAfter.match(/\s+ORDER\s+BY\s+([^\s,;]+)(?:\s+(ASC|DESC))?/i);
+        const orderMatch = fromAndAfter.match(
+          /\s+ORDER\s+BY\s+([^\s,;]+)(?:\s+(ASC|DESC))?/i,
+        );
         if (orderMatch) {
           orderColRaw = orderMatch[1];
           if (orderMatch[2]) orderDir = orderMatch[2].toUpperCase();
@@ -464,7 +577,9 @@ class MemoryDB {
         let offsetVal = null;
         let queryParams = params ? [...params] : [];
 
-        const limitMatch = fromAndAfter.match(/\s+LIMIT\s+(\d+|\?)(?:\s+OFFSET\s+(\d+|\?))?/i);
+        const limitMatch = fromAndAfter.match(
+          /\s+LIMIT\s+(\d+|\?)(?:\s+OFFSET\s+(\d+|\?))?/i,
+        );
         if (limitMatch) {
           if (limitMatch[1] === "?") {
             if (limitMatch[2] === "?") {
@@ -484,9 +599,12 @@ class MemoryDB {
           }
         }
 
-        let rows = this.tables[tableName] ? [...this.tables[tableName].rows] : [];
+        let rows = this.tables[tableName]
+          ? [...this.tables[tableName].rows]
+          : [];
 
-        const joinRegex = /(?:JOIN|LEFT\s+JOIN)\s+([^\s,;(]+)(?:\s+(?:AS\s+)?([^\s,;(]+))?\s+ON\s+([^\s=]+)\s*=\s*([^\s\n\r;]+)/gi;
+        const joinRegex =
+          /(?:JOIN|LEFT\s+JOIN)\s+([^\s,;(]+)(?:\s+(?:AS\s+)?([^\s,;(]+))?\s+ON\s+([^\s=]+)\s*=\s*([^\s\n\r;]+)/gi;
         let joinMatch;
         while ((joinMatch = joinRegex.exec(fromAndAfter)) !== null) {
           const joinTable = joinMatch[1].replace(/['"`]/g, "").trim();
@@ -498,7 +616,9 @@ class MemoryDB {
             rows = rows.map((baseRow) => {
               const joinedRow = { ...baseRow };
               const matchRow = joinRows.find(
-                (j) => String(j[rightCol] ?? j[leftCol]) === String(baseRow[leftCol] ?? baseRow[rightCol])
+                (j) =>
+                  String(j[rightCol] ?? j[leftCol]) ===
+                  String(baseRow[leftCol] ?? baseRow[rightCol]),
               );
               if (matchRow) {
                 Object.keys(matchRow).forEach((key) => {
@@ -537,17 +657,32 @@ class MemoryDB {
         }
 
         if (selectCols === "*") {
-          return { success: true, results: rows.map(r => ({ ...r })), meta: {} };
+          return {
+            success: true,
+            results: rows.map((r) => ({ ...r })),
+            meta: {},
+          };
         }
 
         if (/COUNT\s*\([^)]*\)/i.test(selectCols)) {
           const parts = selectCols.trim().split(/\s+AS\s+/i);
-          const alias = parts.length > 1 ? parts[parts.length - 1].trim().replace(/['"`]/g, "") : "cnt";
-          return { success: true, results: [{ [alias]: rows.length }], meta: {} };
+          const alias =
+            parts.length > 1
+              ? parts[parts.length - 1].trim().replace(/['"`]/g, "")
+              : "cnt";
+          return {
+            success: true,
+            results: [{ [alias]: rows.length }],
+            meta: {},
+          };
         }
 
         if (selectCols === "1") {
-          return { success: true, results: rows.map(() => ({ "1": 1 })), meta: {} };
+          return {
+            success: true,
+            results: rows.map(() => ({ 1: 1 })),
+            meta: {},
+          };
         }
 
         const formattedResults = rows.map((row) => {
@@ -558,7 +693,10 @@ class MemoryDB {
             let alias, expr;
             if (parts.length > 1) {
               alias = parts[parts.length - 1].trim().replace(/['"`]/g, "");
-              expr = parts.slice(0, parts.length - 1).join(" AS ").trim();
+              expr = parts
+                .slice(0, parts.length - 1)
+                .join(" AS ")
+                .trim();
             } else {
               alias = trimmed.replace(/['"`]/g, "").split(".").pop();
               expr = trimmed;
@@ -585,14 +723,15 @@ class MemoryDB {
         return { success: true, results: formattedResults, meta: {} };
       }
 
-      return { success: true, results: [{ "1": 1 }], meta: {} };
+      return { success: true, results: [{ 1: 1 }], meta: {} };
     }
 
     return { success: true, results: [], meta: { changes: 0 } };
   }
 
   evalWhere(tableName, whereClause, params = [], inputRows = null) {
-    let rows = inputRows || (this.tables[tableName] ? this.tables[tableName].rows : []);
+    let rows =
+      inputRows || (this.tables[tableName] ? this.tables[tableName].rows : []);
     if (!rows || rows.length === 0) return [];
 
     const rawConditions = whereClause.split(/\s+AND\s+/i);
@@ -601,7 +740,9 @@ class MemoryDB {
     const evalSingle = (row, condStr, pValues) => {
       let pIdx = 0;
       const trimmed = condStr.trim();
-      const match = trimmed.match(/^([^\s]+)\s*(=|!=|>=|<=|>|<|LIKE|IN|IS)\s*(.+)$/i);
+      const match = trimmed.match(
+        /^([^\s]+)\s*(=|!=|>=|<=|>|<|LIKE|IN|IS)\s*(.+)$/i,
+      );
       if (!match) return true;
       const col = match[1].replace(/['"`]/g, "").split(".").pop();
       const op = match[2].toUpperCase();
@@ -622,11 +763,15 @@ class MemoryDB {
       if (op === ">") return Number(rowVal) > Number(val);
       if (op === "<") return Number(rowVal) < Number(val);
       if (op === "LIKE") {
-        const regex = new RegExp("^" + String(val).replace(/%/g, ".*") + "$", "i");
+        const regex = new RegExp(
+          "^" + String(val).replace(/%/g, ".*") + "$",
+          "i",
+        );
         return regex.test(String(rowVal || ""));
       }
       if (op === "IS") {
-        if (target.toUpperCase() === "NULL") return rowVal === null || rowVal === undefined;
+        if (target.toUpperCase() === "NULL")
+          return rowVal === null || rowVal === undefined;
       }
       return true;
     };
@@ -646,7 +791,10 @@ class MemoryDB {
           let subPIdx = 0;
           for (const sub of orTokens) {
             const numParamsInSub = (sub.match(/\?/g) || []).length;
-            const subParams = groupParams.slice(subPIdx, subPIdx + numParamsInSub);
+            const subParams = groupParams.slice(
+              subPIdx,
+              subPIdx + numParamsInSub,
+            );
             subPIdx += numParamsInSub;
             if (evalSingle(row, sub, subParams)) {
               matchedAny = true;
@@ -707,8 +855,14 @@ class CloudflareD1Database {
 
   async query(sql, params = []) {
     if (process.env.NODE_ENV === "production") {
-      if (!this.config.apiToken || !this.config.accountId || !this.config.databaseId) {
-        throw new Error("FATAL CONFIGURATION ERROR: Production database query attempted without valid Cloudflare D1 credentials.");
+      if (
+        !this.config.apiToken ||
+        !this.config.accountId ||
+        !this.config.databaseId
+      ) {
+        throw new Error(
+          "FATAL CONFIGURATION ERROR: Production database query attempted without valid Cloudflare D1 credentials.",
+        );
       }
     }
 
@@ -739,7 +893,9 @@ class CloudflareD1Database {
     }
 
     if (process.env.NODE_ENV === "production") {
-      throw new Error("FATAL SECURITY ERROR: MemoryDB is strictly forbidden in production environment.");
+      throw new Error(
+        "FATAL SECURITY ERROR: MemoryDB is strictly forbidden in production environment.",
+      );
     }
 
     return this.memoryDb.query(sql, params);
@@ -757,7 +913,7 @@ class CloudflareD1Database {
     const normalizedSql = sql ? sql.trim().toUpperCase() : "";
     if (/^(BEGIN|COMMIT|ROLLBACK)/.test(normalizedSql)) {
       return process.nextTick(() =>
-        callback?.call({ lastID: null, changes: 0 }, null)
+        callback?.call({ lastID: null, changes: 0 }, null),
       );
     }
 
@@ -770,8 +926,8 @@ class CloudflareD1Database {
             lastID: result.meta.last_row_id ?? null,
             changes: result.meta.changes ?? 0,
           },
-          null
-        )
+          null,
+        ),
       )
       .catch((error) => callback?.(error));
   }
@@ -801,15 +957,20 @@ class CloudflareD1Database {
   }
 
   exec(sql, callback) {
-    const cleanSql = sql ? sql.replace(/--.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "") : "";
-    const statements = cleanSql.split(";").map(s => s.trim()).filter(Boolean);
+    const cleanSql = sql
+      ? sql.replace(/--.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "")
+      : "";
+    const statements = cleanSql
+      .split(";")
+      .map((s) => s.trim())
+      .filter(Boolean);
     const runNext = (idx) => {
       if (idx >= statements.length) {
         return callback ? callback(null) : Promise.resolve();
       }
       this.query(statements[idx])
         .then(() => runNext(idx + 1))
-        .catch((err) => callback ? callback(err) : Promise.reject(err));
+        .catch((err) => (callback ? callback(err) : Promise.reject(err)));
     };
 
     if (callback) {
@@ -837,8 +998,14 @@ class CloudflareD1Database {
 
   async batch(statements) {
     if (process.env.NODE_ENV === "production") {
-      if (!this.config.apiToken || !this.config.accountId || !this.config.databaseId) {
-        throw new Error("FATAL CONFIGURATION ERROR: Production database batch attempted without valid Cloudflare D1 credentials.");
+      if (
+        !this.config.apiToken ||
+        !this.config.accountId ||
+        !this.config.databaseId
+      ) {
+        throw new Error(
+          "FATAL CONFIGURATION ERROR: Production database batch attempted without valid Cloudflare D1 credentials.",
+        );
       }
     }
 
@@ -863,7 +1030,9 @@ class CloudflareD1Database {
     }
 
     if (process.env.NODE_ENV === "production") {
-      throw new Error("FATAL SECURITY ERROR: MemoryDB is strictly forbidden in production environment.");
+      throw new Error(
+        "FATAL SECURITY ERROR: MemoryDB is strictly forbidden in production environment.",
+      );
     }
 
     this.memoryDb.beginTransaction();
@@ -963,7 +1132,10 @@ const dbProxy = new Proxy(
               activeDb.query(sqlUpper);
               if (isBegin) activeTransactionDepth++;
               if (isCommit || isRollback)
-                activeTransactionDepth = Math.max(0, activeTransactionDepth - 1);
+                activeTransactionDepth = Math.max(
+                  0,
+                  activeTransactionDepth - 1,
+                );
               if (actualCallback) {
                 process.nextTick(() => {
                   actualCallback.call({ lastID: null, changes: 0 }, null);
@@ -1128,6 +1300,16 @@ function init() {
     .then(() =>
       localD1Instance
         .prepare("ALTER TABLE beats ADD COLUMN mood TEXT")
+        .run()
+        .catch((error) => {
+          if (!/duplicate column name/i.test(error.message || "")) {
+            throw error;
+          }
+        }),
+    )
+    .then(() =>
+      localD1Instance
+        .prepare("ALTER TABLE worked_with_artists ADD COLUMN url TEXT")
         .run()
         .catch((error) => {
           if (!/duplicate column name/i.test(error.message || "")) {

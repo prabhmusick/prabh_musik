@@ -34,6 +34,7 @@ const listArtists = async () => (await repository.list()).map(toDto);
 const toWorkedWithDto = (artist) => ({
   id: artist.id,
   name: artist.name,
+  url: artist.url || "",
   image:
     artist.image?.startsWith("/") || /^https?:\/\//.test(artist.image)
       ? artist.image
@@ -47,11 +48,24 @@ const toWorkedWithDto = (artist) => ({
   showOnMarketingDistribution: Boolean(artist.show_on_marketing_distribution),
 });
 
+const normalizeWorkedWithArtistUrl = (value) => {
+  const url = typeof value === "string" ? value.trim() : "";
+  if (!url) return "";
+
+  try {
+    const parsedUrl = new URL(url);
+    if (["http:", "https:"].includes(parsedUrl.protocol)) return url;
+  } catch {}
+
+  throw new AppError("Artist URL must be a valid HTTP or HTTPS URL.", 400);
+};
+
 const listWorkedWithArtists = async () =>
   (await repository.listWorkedWith()).map(toWorkedWithDto);
 
 const createWorkedWithArtist = async (input) => {
   const name = typeof input?.name === "string" ? input.name.trim() : "";
+  const url = normalizeWorkedWithArtistUrl(input?.url);
   const image = typeof input?.image === "string" ? input.image.trim() : "";
   const popularSong =
     typeof input?.popular_song === "string" ? input.popular_song.trim() : "";
@@ -76,6 +90,7 @@ const createWorkedWithArtist = async (input) => {
     return toWorkedWithDto(
       await repository.createWorkedWith({
         name,
+        url,
         image,
         popularSong,
         musicType,
@@ -92,6 +107,21 @@ const createWorkedWithArtist = async (input) => {
     }
     throw error;
   }
+};
+
+const updateWorkedWithArtistUrl = async (id, input) => {
+  const numericId = Number(id);
+  if (!Number.isInteger(numericId) || numericId < 1) {
+    throw new AppError("Invalid artist id.", 400);
+  }
+
+  const url = normalizeWorkedWithArtistUrl(input?.url);
+  const result = await repository.updateWorkedWithUrl(numericId, url);
+  if (!result.meta?.changes) {
+    throw new AppError("Worked-with artist not found.", 404);
+  }
+
+  return toWorkedWithDto(await repository.findWorkedWithById(numericId));
 };
 
 const removeWorkedWithArtist = async (id) => {
@@ -157,6 +187,7 @@ module.exports = {
   createWorkedWithArtist,
   removeWorkedWithArtist,
   updateWorkedWithArtistVisibility,
+  updateWorkedWithArtistUrl,
   createArtist,
   toDto,
 };

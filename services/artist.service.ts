@@ -19,6 +19,7 @@ interface ArtistResponse {
 export interface WorkedWithArtist {
   id: number;
   name: string;
+  url: string;
   image: string;
   popularSong: string;
   musicType: string;
@@ -65,6 +66,7 @@ export async function getWorkedWithArtists(): Promise<WorkedWithArtist[]> {
 
 export async function createWorkedWithArtist(data: {
   name: string;
+  url: string;
   image: string;
   popular_song: string;
   music_type: string;
@@ -86,6 +88,14 @@ export async function updateWorkedWithArtistVisibility(
     `/artists/worked-with/${id}/visibility`,
     visibility,
   );
+  return response.data.data;
+}
+
+export async function updateWorkedWithArtistUrl(
+  id: number,
+  url: string,
+): Promise<WorkedWithArtist> {
+  const response = await api.patch(`/artists/worked-with/${id}/url`, { url });
   return response.data.data;
 }
 

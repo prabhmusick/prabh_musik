@@ -23,6 +23,12 @@ router.patch(
   requireAdmin,
   controller.updateWorkedWithArtistVisibility,
 );
+router.patch(
+  "/worked-with/:id/url",
+  authMiddleware,
+  requireAdmin,
+  controller.updateWorkedWithArtistUrl,
+);
 router.get("/", controller.listArtists);
 router.post("/", authMiddleware, requireAdmin, controller.createArtist);
 

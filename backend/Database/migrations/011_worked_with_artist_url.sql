@@ -1,0 +1,1 @@
+ALTER TABLE worked_with_artists ADD COLUMN url TEXT;

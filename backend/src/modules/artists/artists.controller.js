@@ -50,6 +50,17 @@ const updateWorkedWithArtistVisibility = async (req, res, next) => {
   }
 };
 
+const updateWorkedWithArtistUrl = async (req, res, next) => {
+  try {
+    res.json({
+      success: true,
+      data: await service.updateWorkedWithArtistUrl(req.params.id, req.body),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const createArtist = async (req, res, next) => {
   try {
     res
@@ -66,5 +77,6 @@ module.exports = {
   createWorkedWithArtist,
   deleteWorkedWithArtist,
   updateWorkedWithArtistVisibility,
+  updateWorkedWithArtistUrl,
   createArtist,
 };

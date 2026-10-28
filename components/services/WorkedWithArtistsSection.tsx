@@ -25,7 +25,9 @@ export function WorkedWithArtistsSection({
     getWorkedWithArtists()
       .then((items: WorkedWithArtist[]) => {
         if (isMounted) {
-          setArtists(items.filter((artist: WorkedWithArtist) => artist[visibility]));
+          setArtists(
+            items.filter((artist: WorkedWithArtist) => artist[visibility]),
+          );
         }
       })
       .catch(() => {
@@ -61,9 +63,10 @@ export function WorkedWithArtistsSection({
         .worked-with-card {
           overflow: hidden; border: 1px solid rgba(255,255,255,.08); border-radius: 16px;
           background: #111111; transition: border-color .35s ease, transform .35s ease, box-shadow .35s ease;
-          display: flex; flex-direction: column; position: relative;
+          display: flex; flex-direction: column; position: relative; color: inherit; text-decoration: none;
         }
         .worked-with-card:hover { transform: translateY(-6px); border-color: rgba(240,123,32,.5); box-shadow: 0 20px 40px rgba(0,0,0,0.65), 0 0 20px rgba(240,123,32,0.15); }
+        .worked-with-card:focus-visible { outline: 2px solid #e8a050; outline-offset: 4px; }
         .worked-with-image {
           height: 280px; position: relative; overflow: hidden; background: #161310;
         }
@@ -94,25 +97,43 @@ export function WorkedWithArtistsSection({
           </h2>
         </header>
         <div className="worked-with-grid">
-          {artists.map((artist) => (
-            <article className="worked-with-card" key={artist.id}>
-              <div className="worked-with-image">
-                <img src={artist.image} alt={artist.name} loading="lazy" />
-                <div className="worked-with-overlay" />
-              </div>
-              <div className="worked-with-info">
-                <h3 className="worked-with-name">{artist.name}</h3>
-                <div className="worked-with-meta">
-                  {[artist.musicType, artist.popularSong, artist.workedYear]
-                    .filter(Boolean)
-                    .join(" · ")}
+          {artists.map((artist) => {
+            const cardContent = (
+              <>
+                <div className="worked-with-image">
+                  <img src={artist.image} alt={artist.name} loading="lazy" />
+                  <div className="worked-with-overlay" />
                 </div>
-              </div>
-            </article>
-          ))}
+                <div className="worked-with-info">
+                  <h3 className="worked-with-name">{artist.name}</h3>
+                  <div className="worked-with-meta">
+                    {[artist.musicType, artist.popularSong, artist.workedYear]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </div>
+                </div>
+              </>
+            );
+
+            return artist.url ? (
+              <a
+                className="worked-with-card"
+                href={artist.url}
+                key={artist.id}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`View ${artist.name} (opens in a new tab)`}
+              >
+                {cardContent}
+              </a>
+            ) : (
+              <article className="worked-with-card" key={artist.id}>
+                {cardContent}
+              </article>
+            );
+          })}
         </div>
       </div>
     </section>
   );
 }
-

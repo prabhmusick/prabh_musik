@@ -110,6 +110,7 @@ CREATE TABLE artists (
 CREATE TABLE worked_with_artists (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT UNIQUE NOT NULL,
+    url TEXT,
     image TEXT NOT NULL,
     popular_song TEXT,
     music_type TEXT,

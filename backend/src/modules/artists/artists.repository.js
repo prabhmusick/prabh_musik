@@ -21,7 +21,7 @@ const listWorkedWith = async () => {
   const result = await db
     .prepare(
       `
-        SELECT id, name, image, popular_song, music_type, worked_year,
+        SELECT id, name, url, image, popular_song, music_type, worked_year,
           show_on_music_production, show_on_mix_master, show_on_lyrics,
           show_on_marketing_distribution
     FROM worked_with_artists
@@ -34,6 +34,7 @@ const listWorkedWith = async () => {
 
 const createWorkedWith = async ({
   name,
+  url,
   image,
   popularSong,
   musicType,
@@ -47,13 +48,14 @@ const createWorkedWith = async ({
     .prepare(
       `
       INSERT INTO worked_with_artists
-        (name, image, popular_song, music_type, worked_year, show_on_music_production,
+        (name, url, image, popular_song, music_type, worked_year, show_on_music_production,
           show_on_mix_master, show_on_lyrics, show_on_marketing_distribution)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `,
     )
     .bind(
       name,
+      url,
       image,
       popularSong,
       musicType,
@@ -67,7 +69,7 @@ const createWorkedWith = async ({
 
   return db
     .prepare(
-      "SELECT id, name, image, popular_song, music_type, worked_year, show_on_music_production, show_on_mix_master, show_on_lyrics, show_on_marketing_distribution FROM worked_with_artists WHERE id = ?",
+      "SELECT id, name, url, image, popular_song, music_type, worked_year, show_on_music_production, show_on_mix_master, show_on_lyrics, show_on_marketing_distribution FROM worked_with_artists WHERE id = ?",
     )
     .bind(result.meta?.last_row_id)
     .first();
@@ -93,10 +95,16 @@ const updateWorkedWithVisibility = async (id, visibility) =>
     )
     .run();
 
+const updateWorkedWithUrl = async (id, url) =>
+  db
+    .prepare("UPDATE worked_with_artists SET url = ? WHERE id = ?")
+    .bind(url, id)
+    .run();
+
 const findWorkedWithById = async (id) =>
   db
     .prepare(
-      `SELECT id, name, image, popular_song, music_type, worked_year,
+      `SELECT id, name, url, image, popular_song, music_type, worked_year,
         show_on_music_production, show_on_mix_master, show_on_lyrics,
         show_on_marketing_distribution
        FROM worked_with_artists WHERE id = ?`,
@@ -132,6 +140,7 @@ module.exports = {
   createWorkedWith,
   deleteWorkedWith,
   updateWorkedWithVisibility,
+  updateWorkedWithUrl,
   findWorkedWithById,
   findByPublicId,
   create,

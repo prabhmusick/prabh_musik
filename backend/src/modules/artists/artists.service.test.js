@@ -2,6 +2,7 @@ jest.mock("./artists.repository", () => ({
   listWorkedWith: jest.fn(),
   createWorkedWith: jest.fn(),
   updateWorkedWithVisibility: jest.fn(),
+  updateWorkedWithUrl: jest.fn(),
   findWorkedWithById: jest.fn(),
 }));
 
@@ -11,6 +12,7 @@ const service = require("./artists.service");
 const workedWithRecord = {
   id: 7,
   name: "Example Artist",
+  url: "https://example.com/artist",
   image: "/artist.jpg",
   popular_song: "Example Song",
   music_type: "Pop",
@@ -34,8 +36,58 @@ test("maps service visibility flags to public artist fields", async () => {
       showOnMixMaster: true,
       showOnLyrics: false,
       showOnMarketingDistribution: true,
+      url: "https://example.com/artist",
     }),
   ]);
+});
+
+test("persists a valid artist URL", async () => {
+  repository.createWorkedWith.mockResolvedValue(workedWithRecord);
+
+  await service.createWorkedWithArtist({
+    name: "Example Artist",
+    url: "https://example.com/artist",
+    image: "/artist.jpg",
+    popular_song: "Example Song",
+    music_type: "Pop",
+    worked_year: 2025,
+  });
+
+  expect(repository.createWorkedWith).toHaveBeenCalledWith(
+    expect.objectContaining({ url: "https://example.com/artist" }),
+  );
+});
+
+test("rejects artist URLs that are not HTTP or HTTPS", async () => {
+  await expect(
+    service.createWorkedWithArtist({
+      name: "Example Artist",
+      url: "javascript:alert(1)",
+      image: "/artist.jpg",
+      popular_song: "Example Song",
+      music_type: "Pop",
+      worked_year: 2025,
+    }),
+  ).rejects.toMatchObject({ statusCode: 400 });
+  expect(repository.createWorkedWith).not.toHaveBeenCalled();
+});
+
+test("updates an existing artist URL", async () => {
+  repository.updateWorkedWithUrl.mockResolvedValue({ meta: { changes: 1 } });
+  repository.findWorkedWithById.mockResolvedValue({
+    ...workedWithRecord,
+    url: "https://example.com/new-artist-page",
+  });
+
+  const artist = await service.updateWorkedWithArtistUrl(7, {
+    url: "https://example.com/new-artist-page",
+  });
+
+  expect(repository.updateWorkedWithUrl).toHaveBeenCalledWith(
+    7,
+    "https://example.com/new-artist-page",
+  );
+  expect(artist.url).toBe("https://example.com/new-artist-page");
 });
 
 test("updates the visibility for an existing worked-with artist", async () => {

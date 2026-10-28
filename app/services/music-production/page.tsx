@@ -31,7 +31,7 @@ const musicProdBreadcrumbSchema = createBreadcrumbSchema(
       name: "Music Production",
       url: `${CANONICAL_DOMAIN}/services/music-production`,
     },
-  ]
+  ],
 );
 
 const musicProdServiceSchema = {
@@ -46,7 +46,6 @@ const musicProdServiceSchema = {
     "@id": `${CANONICAL_DOMAIN}/#organization`,
   },
 };
-
 
 const style = `
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700;1,900&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
@@ -388,13 +387,17 @@ const style = `
     gap: 20px;
   }
   .artist-card {
+    display: block;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 16px;
     overflow: hidden;
     transition: border-color 0.35s, transform 0.35s, box-shadow 0.35s;
     cursor: pointer;
+    color: inherit;
+    text-decoration: none;
   }
+  .artist-card:focus-visible { outline: 2px solid var(--amber); outline-offset: 4px; }
   .artist-card:hover {
     border-color: var(--border-hover);
     transform: translateY(-6px);
@@ -790,6 +793,7 @@ function Waveform({
 
 function ArtistCard({
   name,
+  url,
   image,
   sceneColor,
   tag,
@@ -798,6 +802,7 @@ function ArtistCard({
   delay,
 }: {
   name: string;
+  url: string;
   image: string;
   sceneColor: string;
   tag: string;
@@ -806,8 +811,12 @@ function ArtistCard({
   delay: string;
 }) {
   return (
-    <div
+    <a
       className="artist-card fade-up"
+      href={url || undefined}
+      target={url ? "_blank" : undefined}
+      rel={url ? "noopener noreferrer" : undefined}
+      aria-label={url ? `View ${name} (opens in a new tab)` : undefined}
       style={{ animationDelay: delay, opacity: 0 }}
     >
       <div className="artist-vis">
@@ -1410,7 +1419,7 @@ function ArtistCard({
           intention.
         </p>
       </div>
-    </div>
+    </a>
   );
 }
 
@@ -1432,7 +1441,9 @@ export default function MusicProductionPage() {
     getWorkedWithArtists()
       .then((artists: WorkedWithArtist[]) =>
         setWorkedWithArtists(
-          artists.filter((artist: WorkedWithArtist) => artist.showOnMusicProduction),
+          artists.filter(
+            (artist: WorkedWithArtist) => artist.showOnMusicProduction,
+          ),
         ),
       )
       .catch(() => setWorkedWithArtists([]));
@@ -1487,19 +1498,19 @@ export default function MusicProductionPage() {
 
   const tracks = [
     {
-      name: "Watch Video 01",
+      name: "Harris Bhullar",
       artist: "y3Us_j0k22g",
       dur: "Watch ↗",
       url: "https://www.youtube.com/watch?v=y3Us_j0k22g&list=PLk-o3_0WQOBSdt19eWteGXnmCAJmOsy7p",
     },
     {
-      name: "Watch Video 02",
+      name: "Bawa Singh",
       artist: "kIH8D5m_VBQ",
       dur: "Watch ↗",
       url: "https://youtu.be/kIH8D5m_VBQ?si=7cJUyZtRdFcci1jP",
     },
     {
-      name: "Watch Video 03",
+      name: "GEEYAAN",
       artist: "tFXTdcW8YBY",
       dur: "Watch ↗",
       url: "https://youtu.be/tFXTdcW8YBY?si=go2R6o4zFO-gdXFs",
@@ -1517,7 +1528,6 @@ export default function MusicProductionPage() {
         ]}
       />
       <style>{style}</style>
-
 
       {/* HERO */}
       <section className="hero" id="services">
@@ -1664,6 +1674,7 @@ export default function MusicProductionPage() {
               <ArtistCard
                 key={artist.id}
                 name={artist.name}
+                url={artist.url}
                 image={artist.image}
                 sceneColor={index % 2 === 0 ? "#f07b20" : "#c87a30"}
                 tag={artist.musicType}
