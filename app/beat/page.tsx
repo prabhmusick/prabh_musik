@@ -7,6 +7,7 @@ import {
 import { useAppShell } from "../contexts/app-shell-context";
 import { useAudioPlayer } from "../contexts/audio-player-context";
 import { useRouter, useSearchParams } from "next/navigation";
+import { BEAT_GENRES } from "@/constants/beat-genres";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { CANONICAL_DOMAIN, createBreadcrumbSchema } from "@/lib/seo/schemas";
 
@@ -150,11 +151,9 @@ const TAGS = [
   "gunna",
 ];
 
-function getFilterOptions(beats: Beat[]) {
+function getFilterOptions() {
   return {
-    genres: Array.from(
-      new Set(beats.map((b) => b.genre).filter(Boolean)),
-    ).sort(),
+    genres: [...BEAT_GENRES],
     moods: ["Energetic", "Chill", "Dark", "Uplifting", "Aggressive"],
     priceRanges: ["Free", "₹0-500", "₹500-1000", "₹1000+"],
     bpmRanges: [
@@ -525,21 +524,19 @@ function TrendingHeader({
   search,
   onSearch,
   isMobile,
-  beats,
   filters,
   onFilterChange,
 }: {
   search: string;
   onSearch: (v: string) => void;
   isMobile: boolean;
-  beats: Beat[];
   filters: FilterState;
   onFilterChange: (filters: FilterState) => void;
 }) {
   const [activeArtist, setActiveArtist] = useState(1);
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
-  const filterOptions = getFilterOptions(beats);
+  const filterOptions = getFilterOptions();
 
   return (
     <div style={{ paddingTop: 36, paddingBottom: 10 }}>
@@ -1227,9 +1224,9 @@ function BeatMarketplaceContent() {
   const [isMobile, setIsMobile] = useState(false);
   const [filters, setFilters] = useState<FilterState>({
     genre: searchParams?.get("genre") || null,
-    mood: null,
-    priceRange: null,
-    bpmRange: null,
+    mood: searchParams?.get("mood") || null,
+    priceRange: searchParams?.get("price") || null,
+    bpmRange: searchParams?.get("bpm") || null,
   });
   const router = useRouter();
   const { isAuthenticated, addToCart } = useAppShell();
@@ -1244,10 +1241,29 @@ function BeatMarketplaceContent() {
     setPage(1);
   }, []);
 
-  const handleFilterChange = useCallback((newFilters: FilterState) => {
-    setFilters(newFilters);
-    setPage(1);
-  }, []);
+  const handleFilterChange = useCallback(
+    (newFilters: FilterState) => {
+      setFilters(newFilters);
+      setPage(1);
+
+      const params = new URLSearchParams(searchParams?.toString());
+      const queryFilters = [
+        ["genre", newFilters.genre],
+        ["mood", newFilters.mood],
+        ["price", newFilters.priceRange],
+        ["bpm", newFilters.bpmRange],
+      ] as const;
+
+      for (const [key, value] of queryFilters) {
+        if (value) params.set(key, value);
+        else params.delete(key);
+      }
+
+      const query = params.toString();
+      router.replace(query ? `/beat?${query}` : "/beat", { scroll: false });
+    },
+    [router, searchParams],
+  );
 
   useEffect(() => {
     const q = searchParams
@@ -1521,7 +1537,6 @@ function BeatMarketplaceContent() {
             search={search}
             onSearch={handleSearchChange}
             isMobile={isMobile}
-            beats={beats}
             filters={filters}
             onFilterChange={handleFilterChange}
           />
