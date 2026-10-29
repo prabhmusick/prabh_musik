@@ -6,6 +6,7 @@ interface Genre {
   id: number;
   name: string;
   image: string;
+  filterValue?: string;
 }
 
 const genres: Genre[] = [
@@ -18,6 +19,7 @@ const genres: Genre[] = [
     id: 2,
     name: "POP",
     image: "/pop.webp",
+    filterValue: "Pop",
   },
   {
     id: 3,
@@ -26,8 +28,9 @@ const genres: Genre[] = [
   },
   {
     id: 4,
-    name: "Rock",
-    image: "/rock.webp",
+    name: "Afro",
+    image: "/about_1.webp",
+    filterValue: "Afrobeat",
   },
 ];
 
@@ -606,7 +609,9 @@ function GenreCard({ genre, index }: { genre: Genre; index: number }) {
     <div
       className="genre-card"
       onClick={() =>
-        router.push(`/beat?genre=${encodeURIComponent(genre.name)}`)
+        router.push(
+          `/beat?genre=${encodeURIComponent(genre.filterValue ?? genre.name)}`,
+        )
       }
       style={{
         display: "flex",
