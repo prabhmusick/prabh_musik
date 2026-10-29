@@ -102,10 +102,12 @@ const createOrder = async (orderData) => {
     });
   }
 
+  const totalAmount = validated.totalAmount ?? calculatedTotal;
+
   // 3. Create the order using transaction rollback on failure
   const orderId = await repository.createOrder(
     customer.id,
-    calculatedTotal,
+    totalAmount,
     validated.paymentMethod,
     validated.status,
     items,
@@ -120,7 +122,7 @@ const createOrder = async (orderData) => {
     event: "ORDER_CREATED",
     orderId,
     customerId: validated.customerId,
-    totalAmount: calculatedTotal,
+    totalAmount,
     paymentMethod: validated.paymentMethod,
     beatCount: items.length,
   });

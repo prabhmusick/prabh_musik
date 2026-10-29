@@ -68,7 +68,10 @@ export interface Beat {
 export interface Order {
   id: string;
   customerId: string;
+  customerName?: string;
+  customerEmail?: string;
   beatIds: string[];
+  beatTitles?: string[];
   totalAmount: number;
   status: "PENDING" | "COMPLETED" | "FAILED" | "REFUNDED";
   createdAt: string;
@@ -85,7 +88,10 @@ export interface Activity {
 export interface Ownership {
   id: string;
   beatId: string;
+  beatTitle?: string;
   customerId: string;
+  customerName?: string;
+  customerEmail?: string;
   licenseType: "exclusive" | "non-exclusive" | "basic";
   purchasedAt: string;
   pricePaid: number;

@@ -16,13 +16,16 @@ process.env.STRIPE_WEBHOOK_SECRET = "whsec_mock_integration_key";
 // Suppress console output to keep Jest logs clean
 const consoleLogSpy = jest.spyOn(console, "log").mockImplementation(() => {});
 const consoleWarnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
-const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+const consoleErrorSpy = jest
+  .spyOn(console, "error")
+  .mockImplementation(() => {});
 
 const app = require("../../app");
 const { db } = require("../../config/db");
 
 const ordersService = require("./orders.service");
 const ordersRepository = require("./orders.repository");
+const ownershipsRepository = require("../ownerships/ownerships.repository");
 
 let server;
 let port;
@@ -35,20 +38,37 @@ const seedData = async () => {
       // Insert test user
       db.run(
         `INSERT INTO users (id, public_id, email, name, role, status) VALUES (?, ?, ?, ?, ?, ?)`,
-        [101, "usr_test101", "customer@example.com", "John Doe", "customer", "active"],
+        [
+          101,
+          "usr_test101",
+          "customer@example.com",
+          "John Doe",
+          "customer",
+          "active",
+        ],
         (err) => {
           if (err) return reject(err);
 
           // Insert test beat
           db.run(
             `INSERT INTO beats (id, public_id, title, slug, price_amount, currency_code, audio_key, status, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [201, "bt_test201", "Midnight Ride", "midnight-ride", 14999, "INR", "audio/bt_test201.mp3", "published", 101],
+            [
+              201,
+              "bt_test201",
+              "Midnight Ride",
+              "midnight-ride",
+              14999,
+              "INR",
+              "audio/bt_test201.mp3",
+              "published",
+              101,
+            ],
             (err2) => {
               if (err2) reject(err2);
               else resolve();
-            }
+            },
           );
-        }
+        },
       );
     });
   });
@@ -56,7 +76,14 @@ const seedData = async () => {
 
 beforeAll(async () => {
   // Initialize Schema on SQLite
-  const schemaPath = path.join(__dirname, "..", "..", "..", "Database", "schema.sql");
+  const schemaPath = path.join(
+    __dirname,
+    "..",
+    "..",
+    "..",
+    "Database",
+    "schema.sql",
+  );
   const schema = fs.readFileSync(schemaPath, "utf8");
   await new Promise((resolve, reject) => {
     db.exec(schema, (err) => {
@@ -74,7 +101,7 @@ beforeAll(async () => {
       port = server.address().port;
       client = axios.create({
         baseURL: `http://localhost:${port}`,
-        validateStatus: () => true
+        validateStatus: () => true,
       });
       resolve();
     });
@@ -106,7 +133,7 @@ describe("Orders & Payments Integration Tests", () => {
     test("Should fail if customerId is missing or invalid", async () => {
       const res = await client.post("/api/orders", {
         beatIds: [201],
-        paymentMethod: "card"
+        paymentMethod: "card",
       });
       expect(res.status).toBe(400);
       expect(res.data.success).toBe(false);
@@ -116,7 +143,7 @@ describe("Orders & Payments Integration Tests", () => {
       const res = await client.post("/api/orders", {
         customerId: 101,
         beatIds: [201],
-        paymentMethod: "card"
+        paymentMethod: "card",
       });
 
       expect(res.status).toBe(201);
@@ -126,6 +153,18 @@ describe("Orders & Payments Integration Tests", () => {
       expect(res.data.data.totalAmount).toBe(14999);
       expect(res.data.data.items[0].beatId).toBe(201);
     });
+
+    test("Should persist an admin-provided total amount in minor currency units", async () => {
+      const order = await ordersService.createOrder({
+        customerId: 101,
+        beatIds: [201],
+        paymentMethod: "card",
+        status: "pending",
+        totalAmount: 12000,
+      });
+
+      expect(order.totalAmount).toBe(12000);
+    });
   });
 
   describe("OrdersService.confirmPayment() (Idempotency and Replays)", () => {
@@ -134,7 +173,7 @@ describe("Orders & Payments Integration Tests", () => {
         email: "customer@example.com",
         beatIds: [201],
         paymentReference: "pi_test_12345",
-        paymentMethod: "card"
+        paymentMethod: "card",
       });
 
       expect(order).toBeDefined();
@@ -143,9 +182,17 @@ describe("Orders & Payments Integration Tests", () => {
       expect(order.paymentMethod).toBe("card");
 
       // Verify it was written to DB
-      const dbOrder = await ordersRepository.getOrderByPaymentReference("pi_test_12345");
+      const dbOrder =
+        await ordersRepository.getOrderByPaymentReference("pi_test_12345");
       expect(dbOrder).toBeDefined();
       expect(dbOrder.status).toBe("paid");
+
+      const ownerships = await ownershipsRepository.getOwnershipsByOrder(
+        order.id,
+      );
+      expect(ownerships).toHaveLength(1);
+      expect(ownerships[0].user_id).toBe(101);
+      expect(ownerships[0].beat_id).toBe(201);
     });
 
     test("Should trigger idempotency guard and return same order on duplicate confirmation requests", async () => {
@@ -154,7 +201,7 @@ describe("Orders & Payments Integration Tests", () => {
         email: "customer@example.com",
         beatIds: [201],
         paymentReference: "pi_test_12345",
-        paymentMethod: "card"
+        paymentMethod: "card",
       });
 
       expect(order).toBeDefined();
@@ -162,9 +209,13 @@ describe("Orders & Payments Integration Tests", () => {
 
       // Count orders matching reference in the database to verify no duplicate row was created
       const count = await new Promise((resolve) => {
-        db.get("SELECT COUNT(*) as cnt FROM orders WHERE payment_reference = ?", ["pi_test_12345"], (err, row) => {
-          resolve(row ? row.cnt : 0);
-        });
+        db.get(
+          "SELECT COUNT(*) as cnt FROM orders WHERE payment_reference = ?",
+          ["pi_test_12345"],
+          (err, row) => {
+            resolve(row ? row.cnt : 0);
+          },
+        );
       });
       expect(count).toBe(1);
     });
@@ -180,13 +231,9 @@ describe("Orders & Payments Integration Tests", () => {
 
       // Pass an invalid structure in items list which would fail SQL insert (missing fields)
       await expect(
-        ordersRepository.createOrder(
-          101,
-          9999,
-          "card",
-          "pending",
-          [{ beatId: null, beatTitle: null, price: null }]
-        )
+        ordersRepository.createOrder(101, 9999, "card", "pending", [
+          { beatId: null, beatTitle: null, price: null },
+        ]),
       ).rejects.toThrow();
 
       // Verify no order was inserted

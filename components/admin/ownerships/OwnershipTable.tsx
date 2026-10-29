@@ -1,103 +1,118 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import Link from "next/link"
-import { ColumnDef } from "@tanstack/react-table"
-import { Eye, ShieldAlert, MoreHorizontal, Shield } from "lucide-react"
+import * as React from "react";
+import Link from "next/link";
+import { ColumnDef } from "@tanstack/react-table";
+import { Eye, ShieldAlert, MoreHorizontal, Shield } from "lucide-react";
 
-import { Ownership } from "../../../types/admin"
-import { useUsers } from "../../../hooks/useUsers"
-import { useBeats } from "../../../hooks/useBeats"
-import { useArtists } from "../../../hooks/useArtists"
-import { useRevokeOwnership } from "../../../hooks/useOwnerships"
-import { DataTable } from "../DataTable"
-import { Badge } from "../../ui/badge"
-import { Button } from "../../ui/button"
-import { ConfirmDialog } from "../ConfirmDialog"
+import { Ownership } from "../../../types/admin";
+import { useUsers } from "../../../hooks/useUsers";
+import { useBeats } from "../../../hooks/useBeats";
+import { useArtists } from "../../../hooks/useArtists";
+import { useRevokeOwnership } from "../../../hooks/useOwnerships";
+import { DataTable } from "../DataTable";
+import { Badge } from "../../ui/badge";
+import { Button } from "../../ui/button";
+import { ConfirmDialog } from "../ConfirmDialog";
 
 interface OwnershipTableProps {
   ownerships: Ownership[];
 }
 
 export function OwnershipTable({ ownerships }: OwnershipTableProps) {
-  const { data: users = [] } = useUsers()
-  const { data: beats = [] } = useBeats()
-  const { data: artists = [] } = useArtists()
+  const { data: users = [] } = useUsers();
+  const { data: beats = [] } = useBeats();
+  const { data: artists = [] } = useArtists();
 
-  const revokeOwnershipMutation = useRevokeOwnership()
+  const revokeOwnershipMutation = useRevokeOwnership();
 
-  const [ownToRevoke, setOwnToRevoke] = React.useState<string | null>(null)
-  const [activeDropdownId, setActiveDropdownId] = React.useState<string | null>(null)
+  const [ownToRevoke, setOwnToRevoke] = React.useState<string | null>(null);
+  const [activeDropdownId, setActiveDropdownId] = React.useState<string | null>(
+    null,
+  );
 
   const handleRevokeConfirm = () => {
     if (ownToRevoke) {
-      revokeOwnershipMutation.mutate(ownToRevoke)
-      setOwnToRevoke(null)
+      revokeOwnershipMutation.mutate(ownToRevoke);
+      setOwnToRevoke(null);
     }
-  }
+  };
 
   const columns: ColumnDef<Ownership>[] = [
     {
       accessorKey: "id",
       header: "Ownership ID",
       cell: ({ row }) => (
-        <Link 
+        <Link
           href={`/admin/ownerships/${row.original.id}`}
           className="font-mono text-xs text-primary font-bold hover:underline"
         >
           #{row.original.id}
         </Link>
-      )
+      ),
     },
     {
       id: "beat",
       header: "Beat Title",
       cell: ({ row }) => {
-        const beat = beats.find(b => b.id === row.original.beatId)
+        const beat = beats.find((b) => b.id === row.original.beatId);
         return (
           <div className="flex items-center gap-2">
             <div className="h-7 w-7 rounded bg-neutral-900 overflow-hidden flex items-center justify-center shrink-0 border border-card-border">
               {beat?.assets.coverImage ? (
-                <img src={beat.assets.coverImage} className="h-full w-full object-cover" />
+                <img
+                  src={beat.assets.coverImage}
+                  className="h-full w-full object-cover"
+                />
               ) : (
-                <span className="text-[8px] font-bold text-neutral-600">BEAT</span>
+                <span className="text-[8px] font-bold text-neutral-600">
+                  BEAT
+                </span>
               )}
             </div>
-            <Link 
+            <Link
               href={`/admin/beats/${row.original.beatId}`}
               className="font-semibold text-neutral-100 hover:underline"
             >
-              {beat ? beat.title : "Unknown Beat"}
+              {row.original.beatTitle || beat?.title || "Unknown Beat"}
             </Link>
           </div>
-        )
-      }
+        );
+      },
     },
     {
       id: "artist",
       header: "Artist",
       cell: ({ row }) => {
-        const beat = beats.find(b => b.id === row.original.beatId)
-        const artist = beat ? artists.find(a => a.id === beat.artistId) : null
+        const beat = beats.find((b) => b.id === row.original.beatId);
+        const artist = beat
+          ? artists.find((a) => a.id === beat.artistId)
+          : null;
         return (
           <span className="text-sm text-neutral-300">
             {artist ? artist.stageName : "Unknown Artist"}
           </span>
-        )
-      }
+        );
+      },
     },
     {
       id: "customer",
       header: "Customer / Licensee",
       cell: ({ row }) => {
-        const customer = users.find(u => u.id === row.original.customerId)
+        const customer = users.find((u) => u.id === row.original.customerId);
         return (
           <div className="flex flex-col">
-            <span className="font-medium text-neutral-100">{customer ? customer.name : "Unknown Customer"}</span>
-            <span className="text-xs text-neutral-500 mt-0.5">{customer ? customer.email : ""}</span>
+            <span className="font-medium text-neutral-100">
+              {row.original.customerName ||
+                customer?.name ||
+                "Unknown Customer"}
+            </span>
+            <span className="text-xs text-neutral-500 mt-0.5">
+              {row.original.customerEmail || customer?.email || ""}
+            </span>
           </div>
-        )
-      }
+        );
+      },
     },
     {
       accessorKey: "licenseType",
@@ -107,7 +122,7 @@ export function OwnershipTable({ ownerships }: OwnershipTableProps) {
           <Shield size={10} />
           {row.original.licenseType}
         </Badge>
-      )
+      ),
     },
     {
       accessorKey: "pricePaid",
@@ -116,7 +131,7 @@ export function OwnershipTable({ ownerships }: OwnershipTableProps) {
         <span className="font-mono font-semibold text-neutral-200">
           ${row.original.pricePaid.toFixed(2)}
         </span>
-      )
+      ),
     },
     {
       accessorKey: "transactionId",
@@ -125,7 +140,7 @@ export function OwnershipTable({ ownerships }: OwnershipTableProps) {
         <span className="font-mono text-xs text-neutral-400">
           {row.original.transactionId}
         </span>
-      )
+      ),
     },
     {
       accessorKey: "purchasedAt",
@@ -134,14 +149,14 @@ export function OwnershipTable({ ownerships }: OwnershipTableProps) {
         <span className="text-neutral-500 font-mono text-xs">
           {new Date(row.original.purchasedAt).toLocaleDateString()}
         </span>
-      )
+      ),
     },
     {
       id: "actions",
       header: "Actions",
       cell: ({ row }) => {
-        const own = row.original
-        const isOpen = activeDropdownId === own.id
+        const own = row.original;
+        const isOpen = activeDropdownId === own.id;
 
         return (
           <div className="relative">
@@ -153,11 +168,11 @@ export function OwnershipTable({ ownerships }: OwnershipTableProps) {
             >
               <MoreHorizontal size={16} />
             </Button>
-            
+
             {isOpen && (
               <>
-                <div 
-                  className="fixed inset-0 z-10" 
+                <div
+                  className="fixed inset-0 z-10"
                   onClick={() => setActiveDropdownId(null)}
                 />
                 <div className="absolute right-0 mt-1 w-40 rounded-md border border-card-border bg-card p-1 shadow-xl z-20 animate-in fade-in slide-in-from-top-1">
@@ -172,8 +187,8 @@ export function OwnershipTable({ ownerships }: OwnershipTableProps) {
 
                   <button
                     onClick={() => {
-                      setOwnToRevoke(own.id)
-                      setActiveDropdownId(null)
+                      setOwnToRevoke(own.id);
+                      setActiveDropdownId(null);
                     }}
                     className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-xs text-red-400 hover:bg-red-500/5 hover:text-red-300 transition-colors"
                   >
@@ -184,10 +199,10 @@ export function OwnershipTable({ ownerships }: OwnershipTableProps) {
               </>
             )}
           </div>
-        )
-      }
-    }
-  ]
+        );
+      },
+    },
+  ];
 
   return (
     <>
@@ -203,5 +218,5 @@ export function OwnershipTable({ ownerships }: OwnershipTableProps) {
         isDestructive
       />
     </>
-  )
+  );
 }

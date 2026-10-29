@@ -2,7 +2,7 @@ const AppError = require("../../errors/AppError");
 
 const STATUS_WHITELIST = ["pending", "paid", "failed", "refunded", "cancelled"];
 
-const cleanString = (value) => 
+const cleanString = (value) =>
   typeof value === "string" ? value.trim() : value;
 
 /**
@@ -24,7 +24,7 @@ const validateCreateOrder = (data) => {
     throw new AppError("beatIds must be a non-empty array", 400);
   }
 
-  const beatIds = data.beatIds.map(id => {
+  const beatIds = data.beatIds.map((id) => {
     const rawId = String(id || "").trim();
     if (!/^\d+$/.test(rawId)) {
       throw new AppError(`Invalid beatId: ${id}`, 400);
@@ -37,22 +37,39 @@ const validateCreateOrder = (data) => {
   });
 
   const paymentMethod = cleanString(data.paymentMethod) || "credit_card";
-  
-  let status = cleanString(data.status) ? cleanString(data.status).toLowerCase() : "pending";
+
+  let totalAmount;
+  if (data.totalAmount !== undefined) {
+    totalAmount = Number(data.totalAmount);
+    if (!Number.isSafeInteger(totalAmount) || totalAmount <= 0) {
+      throw new AppError(
+        "totalAmount must be a positive integer in minor currency units",
+        400,
+      );
+    }
+  }
+
+  let status = cleanString(data.status)
+    ? cleanString(data.status).toLowerCase()
+    : "pending";
   // Support UI's 'COMPLETED' by mapping it to 'paid'
   if (status === "completed") {
     status = "paid";
   }
 
   if (!STATUS_WHITELIST.includes(status)) {
-    throw new AppError(`Invalid status. Must be one of: ${STATUS_WHITELIST.join(", ")}`, 400);
+    throw new AppError(
+      `Invalid status. Must be one of: ${STATUS_WHITELIST.join(", ")}`,
+      400,
+    );
   }
 
   return {
     customerId,
     beatIds,
     paymentMethod,
-    status
+    status,
+    totalAmount,
   };
 };
 
@@ -71,12 +88,15 @@ const validateStatusUpdate = (data) => {
     }
   }
   if (!STATUS_WHITELIST.includes(status)) {
-    throw new AppError(`Invalid status. Must be one of: ${STATUS_WHITELIST.join(", ")}`, 400);
+    throw new AppError(
+      `Invalid status. Must be one of: ${STATUS_WHITELIST.join(", ")}`,
+      400,
+    );
   }
   return { status };
 };
 
 module.exports = {
   validateCreateOrder,
-  validateStatusUpdate
+  validateStatusUpdate,
 };

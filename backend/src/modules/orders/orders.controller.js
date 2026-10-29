@@ -8,13 +8,21 @@ const createOrder = async (req, res, next) => {
   try {
     const payload = {
       ...req.body,
-      customerId: req.user ? (req.user.id || req.user.sub || req.user.public_id) : req.body.customerId,
-      status: (req.user && req.user.role === "admin") ? (req.body.status || "pending") : "pending"
+      customerId: req.user
+        ? req.user.id || req.user.sub || req.user.public_id
+        : req.body.customerId,
+      status:
+        req.user && req.user.role === "admin"
+          ? req.body.status || "pending"
+          : "pending",
     };
+    if (!req.user || req.user.role !== "admin") {
+      delete payload.totalAmount;
+    }
     const order = await service.createOrder(payload);
     res.status(201).json({
       success: true,
-      data: order
+      data: order,
     });
   } catch (error) {
     next(error);
@@ -28,13 +36,14 @@ const createOrder = async (req, res, next) => {
 const getAllOrders = async (req, res, next) => {
   try {
     const orders = await service.getAllOrders();
-    const filtered = req.user && req.user.role !== "admin"
-      ? orders.filter(o => o.customer && o.customer.id === req.user.id)
-      : orders;
+    const filtered =
+      req.user && req.user.role !== "admin"
+        ? orders.filter((o) => o.customer && o.customer.id === req.user.id)
+        : orders;
     res.json({
       success: true,
       count: filtered.length,
-      data: filtered
+      data: filtered,
     });
   } catch (error) {
     next(error);
@@ -48,15 +57,20 @@ const getAllOrders = async (req, res, next) => {
 const getOrder = async (req, res, next) => {
   try {
     const order = await service.getOrder(req.params.id);
-    if (req.user && req.user.role !== "admin" && order.customer && order.customer.id !== req.user.id) {
+    if (
+      req.user &&
+      req.user.role !== "admin" &&
+      order.customer &&
+      order.customer.id !== req.user.id
+    ) {
       return res.status(403).json({
         success: false,
-        message: "Access denied."
+        message: "Access denied.",
       });
     }
     res.json({
       success: true,
-      data: order
+      data: order,
     });
   } catch (error) {
     next(error);
@@ -72,7 +86,7 @@ const updateOrder = async (req, res, next) => {
     const order = await service.updateOrder(req.params.id, req.body);
     res.json({
       success: true,
-      data: order
+      data: order,
     });
   } catch (error) {
     next(error);
@@ -88,7 +102,7 @@ const updateOrderStatus = async (req, res, next) => {
     const order = await service.updateOrderStatus(req.params.id, req.body);
     res.json({
       success: true,
-      data: order
+      data: order,
     });
   } catch (error) {
     next(error);
@@ -104,7 +118,7 @@ const deleteOrder = async (req, res, next) => {
     await service.deleteOrder(req.params.id);
     res.json({
       success: true,
-      message: "Order cancelled and archived successfully."
+      message: "Order cancelled and archived successfully.",
     });
   } catch (error) {
     next(error);
@@ -122,7 +136,7 @@ const verifyPayment = async (req, res, next) => {
       razorpay_order_id,
       razorpayOrderId,
       razorpay_payment_id,
-      razorpayPaymentId
+      razorpayPaymentId,
     } = req.body;
 
     if (!orderId) {
@@ -130,7 +144,7 @@ const verifyPayment = async (req, res, next) => {
         success: false,
         message: "orderId is required.",
         errorCode: "INVALID_INPUT",
-        details: null
+        details: null,
       });
     }
 
@@ -140,7 +154,7 @@ const verifyPayment = async (req, res, next) => {
         success: false,
         message: "Payment signature is required.",
         errorCode: "INVALID_PAYMENT_SIGNATURE",
-        details: null
+        details: null,
       });
     }
 
@@ -158,26 +172,42 @@ const verifyPayment = async (req, res, next) => {
           success: false,
           message: "Invalid payment signature verification failed.",
           errorCode: "INVALID_PAYMENT_SIGNATURE",
-          details: null
+          details: null,
         });
       }
-    } else if (sig === "invalid_sig" || sig === "tampered_signature" || sig === "invalid_signature") {
+    } else if (
+      sig === "invalid_sig" ||
+      sig === "tampered_signature" ||
+      sig === "invalid_signature"
+    ) {
       return res.status(400).json({
         success: false,
         message: "Invalid payment signature verification failed.",
         errorCode: "INVALID_PAYMENT_SIGNATURE",
-        details: null
+        details: null,
       });
     }
 
     const order = await service.getOrder(orderId);
     if (order.status === "paid" || order.status === "completed") {
-      return res.status(200).json({ success: true, message: "Payment already verified", data: order });
+      return res
+        .status(200)
+        .json({
+          success: true,
+          message: "Payment already verified",
+          data: order,
+        });
     }
 
     await service.updateOrderStatus(orderId, { status: "paid" });
     const updatedOrder = await service.getOrder(orderId);
-    res.status(200).json({ success: true, message: "Payment verified successfully", data: updatedOrder });
+    res
+      .status(200)
+      .json({
+        success: true,
+        message: "Payment verified successfully",
+        data: updatedOrder,
+      });
   } catch (error) {
     next(error);
   }
@@ -190,5 +220,5 @@ module.exports = {
   updateOrder,
   updateOrderStatus,
   deleteOrder,
-  verifyPayment
+  verifyPayment,
 };
