@@ -15,7 +15,7 @@ const list = async (userPublicId) => {
   const result = await db
     .prepare(
       `
-    SELECT b.public_id, b.title, b.price_amount, b.genre, b.bpm, b.audio_key, b.cover_key
+    SELECT b.public_id, b.title, b.price_amount, b.genre, b.bpm, b.audio_key, b.cover_key, b.related_artist_name
     FROM cart_items c
     JOIN beats b ON b.id = c.beat_id
     WHERE c.user_id = ? AND b.status = 'published'

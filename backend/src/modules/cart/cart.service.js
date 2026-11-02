@@ -18,7 +18,7 @@ const resolvePublicUrl = (key) => {
 const toBeatItem = (beat) => ({
   id: beat.public_id,
   title: beat.title,
-  producer: "Unknown",
+  producer: beat.related_artist_name || "Prabh Musik",
   price: Number(beat.price_amount || 0) / 100,
   cover: resolvePublicUrl(beat.cover_key),
   genre: beat.genre || undefined,

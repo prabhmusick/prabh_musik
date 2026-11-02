@@ -62,6 +62,43 @@ export async function fetchBeats(): Promise<Beat[]> {
 }
 
 /**
+ * Fetch trending beats from the backend
+ * @param limit - Optional maximum number of beats to fetch
+ * @returns Promise<Beat[]> - Array of beat objects
+ */
+export async function fetchTrendingBeats(limit: number = 4): Promise<Beat[]> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/beats/trending?limit=${limit}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch trending beats: ${response.status} ${response.statusText}`,
+      );
+    }
+
+    const data: any = await response.json();
+    const items: Beat[] = Array.isArray(data?.items)
+      ? data.items
+      : Array.isArray(data?.data)
+        ? data.data
+        : Array.isArray(data)
+          ? data
+          : [];
+
+    return items;
+  } catch (error) {
+    console.warn("Falling back to fetchBeats for trending:", error);
+    const fallback = await fetchBeats();
+    return fallback.slice(0, limit);
+  }
+}
+
+/**
  * Fetch a single beat by ID
  * @param id - The beat ID
  * @returns Promise<Beat> - Beat object

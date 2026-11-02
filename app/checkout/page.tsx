@@ -97,14 +97,38 @@ function CheckoutForm({ cart, user, onCheckoutComplete }: any) {
   const [email, setEmail] = useState(user?.email || "");
   const [name, setName] = useState(user?.fullName || "");
 
-  const total = cart.reduce(
-    (sum: number, item: any) => sum + (item.price || 0),
-    0,
+  const hasInvalidItem = cart.some(
+    (item: any) =>
+      item.price === null ||
+      item.price === undefined ||
+      typeof item.price !== "number" ||
+      item.price <= 0,
   );
+
+  const total = hasInvalidItem
+    ? 0
+    : cart.reduce((sum: number, item: any) => sum + item.price, 0);
   const totalInPaise = Math.round(total * 100);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!email || !email.trim()) {
+      setError("Contact email is required to proceed with checkout.");
+      return;
+    }
+
+    if (hasInvalidItem) {
+      setError(
+        "One or more beats have invalid or missing pricing. Please return to the cart and remove them before checking out.",
+      );
+      return;
+    }
+
+    if (total <= 0) {
+      setError("Cart total must be greater than zero to create a payment order.");
+      return;
+    }
 
     setLoading(true);
     setError("");
@@ -113,7 +137,7 @@ function CheckoutForm({ cart, user, onCheckoutComplete }: any) {
       const response = await api.post("/payments/create-checkout-session", {
         amount: totalInPaise,
         currency: "INR",
-        email,
+        email: email.trim(),
         beats: cart.map((b: any) => ({
           id: b.id,
           title: b.title,
@@ -270,8 +294,18 @@ function CheckoutForm({ cart, user, onCheckoutComplete }: any) {
                         <div className="title">{item.title}</div>
                         <div className="meta">{item.producer || "Unknown"}</div>
                       </div>
-                      <div style={{ color: "#fbbf24", fontWeight: 700 }}>
-                        ₹{item.price?.toLocaleString("en-IN")}
+                      <div
+                        style={{
+                          color:
+                            typeof item.price === "number" && item.price > 0
+                              ? "#fbbf24"
+                              : "#ff6b6b",
+                          fontWeight: 700,
+                        }}
+                      >
+                        {typeof item.price === "number" && item.price > 0
+                          ? `₹${item.price.toLocaleString("en-IN")}`
+                          : "Unavailable"}
                       </div>
                     </div>
                   ))}
@@ -291,13 +325,18 @@ function CheckoutForm({ cart, user, onCheckoutComplete }: any) {
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || hasInvalidItem || total <= 0}
                 className="checkout-pay-button"
-                style={{ opacity: loading ? 0.6 : 1 }}
+                style={{
+                  opacity: loading || hasInvalidItem || total <= 0 ? 0.6 : 1,
+                  cursor: hasInvalidItem || total <= 0 ? "not-allowed" : "pointer",
+                }}
               >
                 {loading
                   ? "Processing..."
-                  : `Pay ₹${total.toLocaleString("en-IN")}`}
+                  : hasInvalidItem
+                    ? "Invalid Pricing in Cart"
+                    : `Pay ₹${total.toLocaleString("en-IN")}`}
               </button>
             </form>
           </div>
@@ -360,12 +399,17 @@ function CheckoutForm({ cart, user, onCheckoutComplete }: any) {
                     </div>
                     <div
                       style={{
-                        color: "#fbbf24",
+                        color:
+                          typeof item.price === "number" && item.price > 0
+                            ? "#fbbf24"
+                            : "#ff6b6b",
                         fontWeight: 700,
                         fontSize: 13,
                       }}
                     >
-                      ₹{item.price?.toLocaleString("en-IN")}
+                      {typeof item.price === "number" && item.price > 0
+                        ? `₹${item.price.toLocaleString("en-IN")}`
+                        : "Unavailable"}
                     </div>
                   </div>
                 ))}

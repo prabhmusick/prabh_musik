@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useMemo } from "react";
 import { useAudioPlayer } from "@/app/contexts/audio-player-context";
 import { useAppShell } from "@/app/contexts/app-shell-context";
 import { useRouter, usePathname } from "next/navigation";
@@ -30,6 +30,55 @@ export function GlobalAudioPlayer() {
   const [shareStatus, setShareStatus] = useState("");
   const [isQueueOpen, setIsQueueOpen] = useState(false);
   const prevVolumeRef = useRef(1);
+
+  const waveformRef = useRef<HTMLDivElement>(null);
+  const [barCount, setBarCount] = useState<number>(80);
+  const [hoverRatio, setHoverRatio] = useState<number | null>(null);
+  const [isDragging, setIsDragging] = useState<boolean>(false);
+
+  useEffect(() => {
+    const el = waveformRef.current;
+    if (!el) return;
+
+    const updateBars = () => {
+      const width = el.clientWidth;
+      if (width > 0) {
+        // ~5px slot per bar (3px bar + 2px gap)
+        const targetCount = Math.max(28, Math.min(260, Math.floor(width / 5)));
+        setBarCount((prev) => (Math.abs(prev - targetCount) >= 2 ? targetCount : prev));
+      }
+    };
+
+    updateBars();
+    const ro = new ResizeObserver(() => updateBars());
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [currentBeat]);
+
+  const waveformBars = useMemo(() => {
+    let seed = 42;
+    if (currentBeat?.id) {
+      const idStr = String(currentBeat.id);
+      for (let i = 0; i < idStr.length; i++) {
+        seed = (seed * 31 + idStr.charCodeAt(i)) & 0xffffffff;
+      }
+    }
+    const seedOffset = Math.abs(seed % 1000) / 100;
+
+    return Array.from({ length: barCount }, (_, i) => {
+      const t = barCount > 1 ? i / (barCount - 1) : 0.5;
+      const env = Math.sin(t * Math.PI);
+      const wave =
+        0.48 * Math.sin(t * 18.8 + seedOffset) +
+        0.32 * Math.sin(t * 36.4 + seedOffset * 1.5) +
+        0.20 * Math.sin(t * 72.1 + seedOffset * 2.3);
+      const normalized = Math.max(
+        0.12,
+        Math.min(1, 0.22 + 0.58 * Math.abs(wave) + 0.20 * env),
+      );
+      return normalized;
+    });
+  }, [barCount, currentBeat?.id]);
 
   // Expose a safe testing hook on window for automated verification
   useEffect(() => {
@@ -125,18 +174,7 @@ export function GlobalAudioPlayer() {
     }
   };
 
-  const waveformBars = Array.from({ length: 120 }, (_, i) => {
-    const wave =
-      Math.sin(i * 0.21) + Math.sin(i * 0.09 + 1.3) + Math.sin(i * 0.045 + 2.2);
-    const normalized = Math.abs(wave / 3);
-    return 6 + Math.round(normalized * 22);
-  });
-
   const handlePurchase = () => {
-    if (!isAuthenticated) {
-      router.push("/login");
-      return;
-    }
     addToCart(currentBeat);
   };
 
@@ -149,15 +187,52 @@ export function GlobalAudioPlayer() {
     }
   };
 
-  const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    seekByRatio((e.clientX - rect.left) / rect.width);
+  const getRatioFromPointer = (clientX: number, el: HTMLElement) => {
+    const rect = el.getBoundingClientRect();
+    if (rect.width <= 0) return 0;
+    return Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
   };
 
-  const handleTouchSeek = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (!e.touches[0]) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    seekByRatio((e.touches[0].clientX - rect.left) / rect.width);
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {}
+    setIsDragging(true);
+    const ratio = getRatioFromPointer(e.clientX, e.currentTarget);
+    seekByRatio(ratio);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const ratio = getRatioFromPointer(e.clientX, e.currentTarget);
+    setHoverRatio(ratio);
+    if (isDragging) {
+      seekByRatio(ratio);
+    }
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (isDragging) {
+      try {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      } catch {}
+      setIsDragging(false);
+    }
+  };
+
+  const handlePointerCancel = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (isDragging) {
+      try {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      } catch {}
+      setIsDragging(false);
+    }
+    setHoverRatio(null);
+  };
+
+  const handlePointerLeave = () => {
+    if (!isDragging) {
+      setHoverRatio(null);
+    }
   };
 
   return (
@@ -221,11 +296,14 @@ export function GlobalAudioPlayer() {
           cursor: pointer;
           overflow: hidden;
           padding: 2px 0;
+          position: relative;
+          touch-action: none;
+          --bar-min: 4px;
+          --bar-max: 18px;
         }
         .pap-waveform-bar {
           flex: 1 1 0px;
-          min-width: 1.5px;
-          max-width: 3.5px;
+          min-width: 2px;
           border-radius: 999px;
           transition: background 0.12s linear;
         }
@@ -241,10 +319,9 @@ export function GlobalAudioPlayer() {
           }
           .pap-waveform {
             height: 20px;
-            gap: 1.5px;
-          }
-          .pap-waveform-bar:nth-child(2n) {
-            display: none;
+            gap: 2px;
+            --bar-min: 3px;
+            --bar-max: 15px;
           }
         }
 
@@ -751,28 +828,44 @@ export function GlobalAudioPlayer() {
             </span>
 
             <div
-              onClick={handleSeek}
-              onTouchStart={handleTouchSeek}
-              onTouchMove={handleTouchSeek}
+              ref={waveformRef}
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              onPointerCancel={handlePointerCancel}
+              onPointerLeave={handlePointerLeave}
               className="pap-waveform"
-              title="Click to seek"
+              title={
+                hoverRatio !== null && duration > 0
+                  ? `Seek to ${formatTime(hoverRatio * duration)}`
+                  : "Click or drag to seek"
+              }
               aria-label="Seek track"
               role="slider"
               aria-valuemin={0}
-              aria-valuemax={duration || 0}
-              aria-valuenow={currentTime}
+              aria-valuemax={Math.round(duration || 0)}
+              aria-valuenow={Math.round(currentTime)}
+              aria-valuetext={`${formatTime(currentTime)} of ${formatTime(duration || 0)}`}
             >
-              {waveformBars.map((barHeight, i) => {
-                const barProgress = i / (waveformBars.length - 1);
+              {waveformBars.map((norm, i) => {
+                const barProgress = waveformBars.length > 1 ? i / (waveformBars.length - 1) : 0;
                 const played = barProgress <= progressRatio;
+                const inHoverScrub =
+                  hoverRatio !== null &&
+                  !played &&
+                  hoverRatio > progressRatio &&
+                  barProgress <= hoverRatio;
+
                 return (
                   <span
                     key={i}
-                    className="pap-waveform-bar"
+                    className={`pap-waveform-bar${played ? " is-played" : ""}${inHoverScrub ? " is-hover" : ""}`}
                     style={{
-                      height: barHeight,
+                      height: `calc(var(--bar-min) + ${norm.toFixed(3)} * (var(--bar-max) - var(--bar-min)))`,
                       background: played
                         ? "#ffc043"
+                        : inHoverScrub
+                        ? "rgba(255, 192, 67, 0.45)"
                         : "rgba(255, 255, 255, 0.16)",
                     }}
                   />

@@ -206,7 +206,7 @@ class MemoryDB {
       return { success: true, results: [], meta: { changes: 0 } };
     }
 
-    if (upperSql.startsWith("INSERT INTO")) {
+    if (/^INSERT\s+(?:OR\s+\w+\s+)?INTO/i.test(upperSql)) {
       const isValuesInsert = /\bVALUES\b/i.test(rawSql);
       const insertMatch = rawSql.match(
         /INSERT\s+(?:OR\s+IGNORE\s+)?INTO\s+([^\s(]+)\s*(?:\(([^)]+)\))?/i,
@@ -410,17 +410,26 @@ class MemoryDB {
                 this.tables[tableName].schema[k].pk ||
                 this.tables[tableName].schema[k].unique,
             );
+            const isIgnore = /INSERT\s+OR\s+IGNORE/i.test(rawSql);
+            let skipRow = false;
             for (const col of uniqueCols) {
               if (newRow[col] !== undefined && newRow[col] !== null) {
                 const duplicate = this.tables[tableName].rows.find(
                   (r) => String(r[col]) === String(newRow[col]),
                 );
                 if (duplicate) {
+                  if (isIgnore) {
+                    skipRow = true;
+                    break;
+                  }
                   throw new Error(
                     `UNIQUE constraint failed: ${tableName}.${col}`,
                   );
                 }
               }
+            }
+            if (skipRow) {
+              continue;
             }
           }
 
@@ -1240,11 +1249,16 @@ const dbProxy = new Proxy(
   },
 );
 
+let initPromise = null;
+
 function init() {
   if (process.env.NODE_ENV === "test") {
     return Promise.resolve();
   }
-  return localD1Instance
+  if (initPromise) {
+    return initPromise;
+  }
+  initPromise = localD1Instance
     .prepare(
       "ALTER TABLE worked_with_artists ADD COLUMN show_on_music_production INTEGER NOT NULL DEFAULT 0",
     )
@@ -1316,7 +1330,32 @@ function init() {
             throw error;
           }
         }),
-    );
+    )
+    .then(async () => {
+      try {
+        const beatCountRow = await localD1Instance
+          .prepare("SELECT COUNT(*) AS cnt FROM beats")
+          .first();
+        const cnt = beatCountRow ? Number(beatCountRow.cnt || beatCountRow.count || 0) : 0;
+        if (cnt === 0) {
+          const seedStatements = [
+            `INSERT OR IGNORE INTO beats (id, public_id, title, slug, genre, audio_key, status, price_amount, duration, created_by, related_artist_name, plays) VALUES 
+             (1, 'bt_01J4P8Z6VXZ9Y8VXZ9Y8VXZ9Y1', 'The Mountain Storytelling', 'the-mountain-storytelling', 'Storytelling', '1780414576089-the_mountain-storytelling-audio-136105.mp3', 'published', 14900, 180, 1, 'Prabh Musik', 1200)`,
+            `INSERT OR IGNORE INTO beats (id, public_id, title, slug, genre, audio_key, status, price_amount, duration, created_by, related_artist_name, plays) VALUES 
+             (2, 'bt_01J4P8Z6VXZ9Y8VXZ9Y8VXZ9Y2', 'Intensity', 'intensity-by-audio-club', 'Cinematic', '1780413092408-intensity-by-audio-club-intensity-by-audio-club-343637.mp3', 'published', 19900, 210, 1, 'Prabh Musik', 950)`,
+            `INSERT OR IGNORE INTO beats (id, public_id, title, slug, genre, audio_key, status, price_amount, duration, created_by, related_artist_name, plays) VALUES 
+             (3, 'bt_01J4P8Z6VXZ9Y8VXZ9Y8VXZ9Y3', 'Funk & Breakbeat', 'funk-breakbeat', 'Funk', '1781353812166-alexguz-funk-amp-breakbeat-541097.mp3', 'published', 9900, 150, 1, 'Prabh Musik', 820)`,
+            `INSERT OR IGNORE INTO beats (id, public_id, title, slug, genre, audio_key, status, price_amount, duration, created_by, related_artist_name, plays) VALUES 
+             (4, 'bt_01J4P8Z6VXZ9Y8VXZ9Y8VXZ9Y4', 'Water Afro Pop', 'water-afro-pop', 'Afrobeat', '1781623228264-kontraa-water-afro-pop-music-445661.mp3', 'published', 14900, 200, 1, 'Prabh Musik', 1500)`
+          ];
+          for (const sql of seedStatements) {
+            await localD1Instance.prepare(sql).run().catch(() => {});
+          }
+        }
+      } catch (err) {
+        // Silently skip if table not ready or in mock mode
+      }
+    });
 }
 
 module.exports = {

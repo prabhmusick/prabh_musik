@@ -8,7 +8,13 @@ export function CartSidebar() {
   const router = useRouter();
   const { cart, cartOpen, closeCart, removeFromCart, clearCart } = useAppShell();
 
-  const total = cart.reduce((sum, item) => sum + (item.price || 0), 0);
+  const hasInvalidItem = cart.some(
+    (item) => item.price === null || item.price === undefined || typeof item.price !== "number" || item.price <= 0
+  );
+  const total = cart.reduce(
+    (sum, item) => sum + (typeof item.price === "number" && item.price > 0 ? item.price : 0),
+    0
+  );
   const itemCount = cart.length;
 
   if (!cartOpen) return null;
@@ -200,12 +206,17 @@ export function CartSidebar() {
                 >
                   <div
                     style={{
-                      color: "#fbbf24",
+                      color:
+                        typeof item.price === "number" && item.price > 0
+                          ? "#fbbf24"
+                          : "#ff6b6b",
                       fontWeight: 700,
                       fontSize: 13,
                     }}
                   >
-                    ₹{item.price?.toLocaleString("en-IN")}
+                    {typeof item.price === "number" && item.price > 0
+                      ? `₹${item.price.toLocaleString("en-IN")}`
+                      : "Price unavailable"}
                   </div>
                   <button
                     onClick={() => removeFromCart(item.id)}
@@ -299,27 +310,48 @@ export function CartSidebar() {
             </div>
 
             {/* Actions */}
+            {hasInvalidItem && (
+              <div
+                style={{
+                  background: "rgba(255, 107, 107, 0.12)",
+                  border: "1px solid rgba(255, 107, 107, 0.3)",
+                  borderRadius: "8px",
+                  padding: "8px 12px",
+                  color: "#ff6b6b",
+                  fontSize: "12px",
+                  lineHeight: "1.4",
+                }}
+              >
+                One or more items have invalid pricing. Please remove them to proceed.
+              </div>
+            )}
             <button
               onClick={() => {
+                if (hasInvalidItem) return;
                 router.push("/checkout");
                 closeCart();
               }}
+              disabled={hasInvalidItem}
               style={{
-                background: "#d4820a",
+                background: hasInvalidItem ? "rgba(255,255,255,0.1)" : "#d4820a",
                 border: "none",
-                color: "#000",
+                color: hasInvalidItem ? "rgba(255,255,255,0.4)" : "#000",
                 fontWeight: 700,
                 borderRadius: "8px",
                 padding: "12px 16px",
-                cursor: "pointer",
+                cursor: hasInvalidItem ? "not-allowed" : "pointer",
                 fontSize: 14,
                 transition: "background 0.2s ease",
               }}
               onMouseEnter={(e) => {
-                (e.currentTarget as HTMLElement).style.background = "#e8920a";
+                if (!hasInvalidItem) {
+                  (e.currentTarget as HTMLElement).style.background = "#e8920a";
+                }
               }}
               onMouseLeave={(e) => {
-                (e.currentTarget as HTMLElement).style.background = "#d4820a";
+                if (!hasInvalidItem) {
+                  (e.currentTarget as HTMLElement).style.background = "#d4820a";
+                }
               }}
             >
               Proceed to Checkout

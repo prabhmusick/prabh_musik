@@ -63,26 +63,10 @@ interface ApiResponse {
   duration: number;
 }
 
-function formatApiBeats(apiBeats: ApiResponse[]): Beat[] {
-  return apiBeats.map((beat: any, index: number) => ({
-    id: beat.public_id || beat.id || index + 1,
-    title: beat.title || beat.beat_name || "Untitled",
-    producer: beat.related_artist_name || beat.artist_name || "Prabh Musik",
-    price:
-      beat.price_amount !== undefined && beat.price_amount !== null
-        ? beat.price_amount / 100
-        : (beat.price ?? null),
-    cover:
-      beat.cover_url ||
-      beat.cover_image_url ||
-      beat.banner_url ||
-      beat.banner_image_url ||
-      "/beats_bg.png",
-    genre: beat.genre || "Music",
-    bpm: beat.bpm || 120,
-    previewUrl: beat.audio_url || beat.previewUrl || "",
-    plays: beat.play_count || Math.floor(Math.random() * 5000) + 120,
-  }));
+import { mapBeatDto } from "@/lib/mappers/beat.mapper";
+
+function formatApiBeats(apiBeats: any[]): Beat[] {
+  return (apiBeats || []).map((beat: any) => mapBeatDto(beat) as Beat);
 }
 
 async function fetchBeats(
