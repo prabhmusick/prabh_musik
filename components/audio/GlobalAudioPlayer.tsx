@@ -18,6 +18,9 @@ export function GlobalAudioPlayer() {
     volume,
     queue,
     playBeat,
+    playQueueIndex,
+    removeFromQueue,
+    clearQueue,
     togglePlay,
     seekByRatio,
     toggleLoop,
@@ -80,7 +83,7 @@ export function GlobalAudioPlayer() {
     });
   }, [barCount, currentBeat?.id]);
 
-  // Expose a safe testing hook on window for automated verification
+  // Expose safe testing hooks on window for automated verification
   useEffect(() => {
     if (typeof window !== "undefined") {
       (window as any).__PRABH_TEST_PLAY_BEAT__ = (customBeat?: any) => {
@@ -120,11 +123,52 @@ export function GlobalAudioPlayer() {
                 "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
               genre: "Trap",
             },
+            {
+              id: 3,
+              title: "Morning Drive",
+              producer: "Shiv",
+              price: 249.99,
+              cover: "/hip-hop.png",
+              bpm: 140,
+              previewUrl:
+                "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
+              genre: "Trap",
+            },
           ],
         );
       };
+
+      (window as any).__PRABH_AUDIO_PLAYER__ = {
+        playBeat,
+        playQueueIndex,
+        removeFromQueue,
+        clearQueue,
+        playNext,
+        playPrevious,
+        toggleLoop,
+        togglePlay,
+        closePlayer,
+        getQueue: () => queue,
+        getCurrentBeat: () => currentBeat,
+        getIsPlaying: () => isPlaying,
+        getIsLooping: () => isLooping,
+      };
     }
-  }, [playBeat]);
+  }, [
+    playBeat,
+    playQueueIndex,
+    removeFromQueue,
+    clearQueue,
+    playNext,
+    playPrevious,
+    toggleLoop,
+    togglePlay,
+    closePlayer,
+    queue,
+    currentBeat,
+    isPlaying,
+    isLooping,
+  ]);
 
   useEffect(() => {
     if (!shareStatus) return;
@@ -623,10 +667,31 @@ export function GlobalAudioPlayer() {
           font-size: 13px;
           font-weight: 700;
         }
+        .pap-queue-header-left {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
         .pap-queue-count {
-          margin-left: 6px;
+          margin-left: 2px;
           color: rgba(255, 255, 255, 0.45);
           font-weight: 500;
+        }
+        .pap-queue-clear-btn {
+          background: transparent;
+          border: 1px solid rgba(255, 255, 255, 0.14);
+          color: rgba(255, 255, 255, 0.6);
+          font-size: 10px;
+          font-weight: 600;
+          padding: 2px 7px;
+          border-radius: 4px;
+          cursor: pointer;
+          transition: all 0.15s ease;
+        }
+        .pap-queue-clear-btn:hover {
+          color: #ffc043;
+          border-color: rgba(255, 192, 67, 0.4);
+          background: rgba(255, 192, 67, 0.08);
         }
         .pap-queue-close {
           width: 28px;
@@ -666,7 +731,13 @@ export function GlobalAudioPlayer() {
           border-radius: 4px;
           background: rgba(255, 255, 255, 0.08);
         }
-        .pap-queue-meta { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+        .pap-queue-meta {
+          min-width: 0;
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 3px;
+        }
         .pap-queue-title, .pap-queue-producer {
           overflow: hidden;
           white-space: nowrap;
@@ -674,7 +745,33 @@ export function GlobalAudioPlayer() {
         }
         .pap-queue-title { font-size: 12px; font-weight: 600; }
         .pap-queue-producer { color: rgba(255, 255, 255, 0.5); font-size: 11px; }
-        .pap-queue-playing { margin-left: auto; color: #ffc043; font-size: 10px; }
+        .pap-queue-actions {
+          margin-left: auto;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-shrink: 0;
+        }
+        .pap-queue-playing { color: #ffc043; font-size: 10px; font-weight: 700; }
+        .pap-queue-remove-btn {
+          width: 22px;
+          height: 22px;
+          border-radius: 4px;
+          border: none;
+          background: transparent;
+          color: rgba(255, 255, 255, 0.4);
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          padding: 0;
+          flex-shrink: 0;
+        }
+        .pap-queue-remove-btn:hover {
+          color: #ff6b6b;
+          background: rgba(255, 107, 107, 0.14);
+        }
         .pap-queue-empty { padding: 24px 12px; text-align: center; color: rgba(255, 255, 255, 0.5); font-size: 12px; }
 
         .pap-close-btn-desktop {
@@ -1469,10 +1566,20 @@ export function GlobalAudioPlayer() {
       {isQueueOpen && (
         <section className="pap-queue-panel" aria-label="Playing queue">
           <div className="pap-queue-header">
-            <span>
-              Playing queue
+            <div className="pap-queue-header-left">
+              <span>Playing queue</span>
               <span className="pap-queue-count">{queue.length}</span>
-            </span>
+              {queue.length > 1 && (
+                <button
+                  type="button"
+                  onClick={clearQueue}
+                  className="pap-queue-clear-btn"
+                  title="Clear queue (keeps current track)"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
             <button
               type="button"
               onClick={() => setIsQueueOpen(false)}
@@ -1488,12 +1595,19 @@ export function GlobalAudioPlayer() {
                 const isCurrentBeat =
                   String(beat.id) === String(currentBeat.id);
                 return (
-                  <button
-                    type="button"
-                    key={`${beat.id}-${index}`}
-                    onClick={() => playBeat(beat, queue)}
+                  <div
+                    key={`queue-item-${beat.id || index}-${index}`}
+                    onClick={() => playQueueIndex(index)}
                     className={`pap-queue-item ${isCurrentBeat ? "current" : ""}`}
                     aria-current={isCurrentBeat ? "true" : undefined}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        playQueueIndex(index);
+                      }
+                    }}
                   >
                     {beat.cover ? (
                       <img
@@ -1505,15 +1619,34 @@ export function GlobalAudioPlayer() {
                       <span className="pap-queue-cover" />
                     )}
                     <span className="pap-queue-meta">
-                      <span className="pap-queue-title">{beat.title}</span>
-                      <span className="pap-queue-producer">
-                        {beat.producer}
+                      <span className="pap-queue-title" title={beat.title}>
+                        {beat.title}
+                      </span>
+                      <span
+                        className="pap-queue-producer"
+                        title={beat.producer || beat.artist || "Prabh Musik"}
+                      >
+                        {beat.producer || beat.artist || "Prabh Musik"}
                       </span>
                     </span>
-                    {isCurrentBeat && (
-                      <span className="pap-queue-playing">Playing</span>
-                    )}
-                  </button>
+                    <div className="pap-queue-actions">
+                      {isCurrentBeat && (
+                        <span className="pap-queue-playing">Playing</span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeFromQueue(index);
+                        }}
+                        className="pap-queue-remove-btn"
+                        aria-label={`Remove ${beat.title} from queue`}
+                        title="Remove from queue"
+                      >
+                        <X size={13} aria-hidden="true" />
+                      </button>
+                    </div>
+                  </div>
                 );
               })}
             </div>
