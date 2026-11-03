@@ -23,10 +23,32 @@ const OWNERSHIP_COLUMNS = `
   o.updated_at,
   u.name AS customer_name,
   u.email AS customer_email,
+  u.mobile AS customer_mobile,
+  u.address AS customer_address,
   b.title AS beat_title,
   b.genre AS beat_genre,
+  b.mood AS beat_mood,
+  b.bpm AS beat_bpm,
+  b.musical_key AS beat_key,
+  b.description AS beat_description,
+  b.duration AS beat_duration,
+  b.public_id AS beat_public_id,
+  b.currency_code AS currency_code,
   b.audio_key AS audio_key,
-  b.cover_key AS cover_key
+  b.cover_key AS cover_key,
+  b.artist_id AS artist_id,
+  a.public_id AS artist_public_id,
+  a.name AS artist_name,
+  a.email AS artist_email,
+  a.phone AS artist_phone,
+  ord.public_id AS order_public_id,
+  ord.total_amount AS order_total_amount,
+  ord.payment_method AS payment_method,
+  ord.payment_reference AS payment_reference,
+  ord.transaction_id AS order_transaction_id,
+  ord.gateway AS payment_gateway,
+  ord.status AS order_status,
+  ord.fulfillment_status AS fulfillment_status
 `;
 
 const run = (sql, params = []) => {
@@ -141,6 +163,8 @@ const getOwnershipById = async (id) => {
     FROM ownerships o
     JOIN users u ON o.user_id = u.id
     JOIN beats b ON o.beat_id = b.id
+    LEFT JOIN artists a ON b.artist_id = a.id
+    JOIN orders ord ON o.order_id = ord.id
     WHERE o.id = ?
   `;
   return get(sql, [id]);
@@ -156,6 +180,8 @@ const getOwnerships = async () => {
     FROM ownerships o
     JOIN users u ON o.user_id = u.id
     JOIN beats b ON o.beat_id = b.id
+    LEFT JOIN artists a ON b.artist_id = a.id
+    JOIN orders ord ON o.order_id = ord.id
     WHERE o.status = 'active'
     ORDER BY o.created_at DESC
   `;
@@ -172,6 +198,8 @@ const getOwnershipsByUser = async (userId) => {
     FROM ownerships o
     JOIN users u ON o.user_id = u.id
     JOIN beats b ON o.beat_id = b.id
+    LEFT JOIN artists a ON b.artist_id = a.id
+    JOIN orders ord ON o.order_id = ord.id
     WHERE o.user_id = ? AND o.status = 'active'
     ORDER BY o.created_at DESC
   `;
@@ -188,6 +216,8 @@ const getOwnershipsByBeat = async (beatId) => {
     FROM ownerships o
     JOIN users u ON o.user_id = u.id
     JOIN beats b ON o.beat_id = b.id
+    LEFT JOIN artists a ON b.artist_id = a.id
+    JOIN orders ord ON o.order_id = ord.id
     WHERE o.beat_id = ? AND o.status = 'active'
     ORDER BY o.created_at DESC
   `;
@@ -204,6 +234,8 @@ const getOwnershipsByOrder = async (orderId) => {
     FROM ownerships o
     JOIN users u ON o.user_id = u.id
     JOIN beats b ON o.beat_id = b.id
+    LEFT JOIN artists a ON b.artist_id = a.id
+    JOIN orders ord ON o.order_id = ord.id
     WHERE o.order_id = ? AND o.status = 'active'
     ORDER BY o.created_at DESC
   `;
@@ -220,6 +252,8 @@ const getOwnershipByUserAndBeat = async (userId, beatId) => {
     FROM ownerships o
     JOIN users u ON o.user_id = u.id
     JOIN beats b ON o.beat_id = b.id
+    LEFT JOIN artists a ON b.artist_id = a.id
+    JOIN orders ord ON o.order_id = ord.id
     WHERE o.user_id = ? AND o.beat_id = ? AND o.status = 'active'
     LIMIT 1
   `;
@@ -236,6 +270,8 @@ const getOwnershipByDownloadToken = async (token) => {
     FROM ownerships o
     JOIN users u ON o.user_id = u.id
     JOIN beats b ON o.beat_id = b.id
+    LEFT JOIN artists a ON b.artist_id = a.id
+    JOIN orders ord ON o.order_id = ord.id
     WHERE o.download_token = ? AND o.status = 'active'
     LIMIT 1
   `;
@@ -379,6 +415,8 @@ const getOwnershipByPublicId = async (publicId) => {
     FROM ownerships o
     JOIN users u ON o.user_id = u.id
     JOIN beats b ON o.beat_id = b.id
+    LEFT JOIN artists a ON b.artist_id = a.id
+    JOIN orders ord ON o.order_id = ord.id
     WHERE o.public_id = ?
   `;
   return get(sql, [publicId]);

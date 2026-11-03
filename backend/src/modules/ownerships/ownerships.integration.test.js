@@ -36,39 +36,48 @@ const seedData = async () => {
     db.serialize(() => {
       // 1. Insert Users
       db.run(
-        `INSERT INTO users (id, public_id, email, name, role, status) VALUES 
-         (1, 'usr_admin', 'admin@example.com', 'Admin User', 'admin', 'active'),
-         (2, 'usr_custA', 'customerA@example.com', 'Customer A', 'customer', 'active'),
-         (3, 'usr_custB', 'customerB@example.com', 'Customer B', 'customer', 'active')`,
+        `INSERT INTO users (id, public_id, email, name, role, status, mobile, address) VALUES
+         (1, 'usr_admin', 'admin@example.com', 'Admin User', 'admin', 'active', NULL, NULL),
+         (2, 'usr_custA', 'customerA@example.com', 'Customer A', 'customer', 'active', '555-0101', '123 Test Street'),
+         (3, 'usr_custB', 'customerB@example.com', 'Customer B', 'customer', 'active', NULL, NULL)`,
         [],
         (err) => {
           if (err) return reject(err);
 
-          // 2. Insert Beats
           db.run(
-            `INSERT INTO beats (id, public_id, title, slug, price_amount, currency_code, audio_key, status, created_by) VALUES 
-             (201, 'bt_201', 'Beat A', 'beat-a', 9900, 'INR', 'audio/201.mp3', 'published', 1),
-             (202, 'bt_202', 'Beat B', 'beat-b', 14900, 'INR', 'audio/202.mp3', 'published', 1)`,
+            `INSERT INTO artists (id, public_id, name, phone, email) VALUES
+             (31, 'art_31', 'Artist A', '555-0199', 'artist@example.com')`,
             [],
-            (err2) => {
-              if (err2) return reject(err2);
+            (artistErr) => {
+              if (artistErr) return reject(artistErr);
 
-              // 3. Insert Order
+              // 2. Insert Beats
               db.run(
-                `INSERT INTO orders (id, public_id, customer_id, total_amount, payment_method, status) VALUES 
-                 (10, 'ord_10', 2, 9900, 'card', 'paid')`,
+                `INSERT INTO beats (id, public_id, title, slug, price_amount, currency_code, genre, mood, bpm, musical_key, description, duration, artist_id, audio_key, status, created_by) VALUES
+                 (201, 'bt_201', 'Beat A', 'beat-a', 9900, 'INR', 'Hip Hop', 'Focused', 92, 'C minor', 'Test beat description', 180, 31, 'audio/201.mp3', 'published', 1),
+                 (202, 'bt_202', 'Beat B', 'beat-b', 14900, 'INR', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'audio/202.mp3', 'published', 1)`,
                 [],
-                (err3) => {
-                  if (err3) return reject(err3);
+                (err2) => {
+                  if (err2) return reject(err2);
 
-                  // 4. Insert Ownership
+                  // 3. Insert Order
                   db.run(
-                    `INSERT INTO ownerships (id, public_id, user_id, beat_id, order_id, license_type, purchase_price, status) VALUES 
-                     (50, 'own_50', 2, 201, 10, 'exclusive', 9900, 'active')`,
+                    `INSERT INTO orders (id, public_id, customer_id, total_amount, payment_method, payment_reference, transaction_id, gateway, status, fulfillment_status) VALUES
+                     (10, 'ord_10', 2, 9900, 'card', 'pi_test_10', 'txn_test_10', 'stripe', 'paid', 'completed')`,
                     [],
-                    (err4) => {
-                      if (err4) reject(err4);
-                      else resolve();
+                    (err3) => {
+                      if (err3) return reject(err3);
+
+                      // 4. Insert Ownership
+                      db.run(
+                        `INSERT INTO ownerships (id, public_id, user_id, beat_id, order_id, license_type, purchase_price, download_count, max_downloads, status) VALUES
+                         (50, 'own_50', 2, 201, 10, 'exclusive', 9900, 2, 20, 'active')`,
+                        [],
+                        (err4) => {
+                          if (err4) reject(err4);
+                          else resolve();
+                        }
+                      );
                     }
                   );
                 }
@@ -155,6 +164,19 @@ describe("Ownerships Integration Tests", () => {
       expect(res.status).toBe(200);
       expect(res.data.success).toBe(true);
       expect(res.data.data.public_id).toBe("own_50");
+      expect(res.data.data.beat_public_id).toBe("bt_201");
+      expect(res.data.data.beat_title).toBe("Beat A");
+      expect(res.data.data.artist_public_id).toBe("art_31");
+      expect(res.data.data.artist_name).toBe("Artist A");
+      expect(res.data.data.beat_genre).toBe("Hip Hop");
+      expect(res.data.data.customer_mobile).toBe("555-0101");
+      expect(res.data.data.order_public_id).toBe("ord_10");
+      expect(res.data.data.payment_reference).toBe("pi_test_10");
+      expect(res.data.data.order_transaction_id).toBe("txn_test_10");
+      expect(res.data.data.payment_gateway).toBe("stripe");
+      expect(res.data.data.order_status).toBe("paid");
+      expect(res.data.data.download_count).toBe(2);
+      expect(res.data.data.max_downloads).toBe(20);
     });
 
     test("Should permit admin to view customer A's license record", async () => {

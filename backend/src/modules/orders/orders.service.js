@@ -11,6 +11,7 @@ const logger = require("../../utils/logger");
 const formatOrderResponse = (order, items) => {
   return {
     id: order.id,
+    publicId: order.public_id,
     customer: {
       id: order.customer_id,
       name: order.customer_name,
@@ -18,6 +19,9 @@ const formatOrderResponse = (order, items) => {
     },
     totalAmount: order.total_amount,
     paymentMethod: order.payment_method,
+    paymentReference: order.payment_reference,
+    transactionId: order.transaction_id,
+    gateway: order.gateway,
     status: order.status,
     fulfillmentStatus: order.fulfillment_status,
     fulfilledAt: order.fulfilled_at,

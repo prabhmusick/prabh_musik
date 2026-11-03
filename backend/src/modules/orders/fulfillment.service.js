@@ -1,6 +1,7 @@
 const ordersRepository = require("./orders.repository");
 const ownershipsService = require("../ownerships/ownerships.service");
 const beatsService = require("../beats/beats.service");
+const emailService = require("../email/email.service");
 const AppError = require("../../errors/AppError");
 const logger = require("../../utils/logger");
 
@@ -11,12 +12,8 @@ const FULFILLMENT_STATUS = {
   FAILED: "failed"
 };
 
-/**
- * Audit / notification post-database hooks (stubbed placeholders)
- */
 const sendPurchaseEmail = async (order) => {
-  // TODO: Sprint 5 Email delivery integration
-  return;
+  return emailService.sendPurchaseConfirmation(order);
 };
 
 const generateDownloadAssets = async (order) => {
@@ -108,15 +105,29 @@ const processPaidOrder = async (order) => {
   });
 
   // 4. Side Effects executed safely after successful transaction commit
+  const warnings = [];
   try {
     await sendPurchaseEmail(order);
+  } catch (warningErr) {
+    const message = warningErr.message || String(warningErr);
+    warnings.push(message);
+    logger.warn({
+      event: "ORDER_PURCHASE_EMAIL_WARNING",
+      orderId: order.id,
+      message
+    });
+  }
+
+  try {
     await generateDownloadAssets(order);
     await queueAnalytics(order);
   } catch (warningErr) {
+    const message = warningErr.message || String(warningErr);
+    warnings.push(message);
     logger.warn({
       event: "ORDER_FULFILLMENT_WARNING",
       orderId: order.id,
-      message: warningErr.message || String(warningErr)
+      message
     });
   }
 
@@ -127,7 +138,7 @@ const processPaidOrder = async (order) => {
     ownershipsCreated: transactionResult.ownershipsCreated,
     fulfillmentStatus: FULFILLMENT_STATUS.COMPLETED,
     fulfilledAt: new Date().toISOString(),
-    warnings: []
+    warnings
   };
 };
 

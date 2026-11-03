@@ -52,6 +52,10 @@ STRIPE_SECRET_KEY=sk_test_51QQjqwBp0v8jXwXl...
 STRIPE_PUBLIC_KEY=pk_test_51QQjqwBp0v8jXwXl...
 ```
 
+### Purchase confirmation email
+
+The backend sends purchase confirmations through Resend after order fulfillment. Configure `RESEND_API_KEY` and a Resend-verified `EMAIL_FROM` address in `backend/.env` (see `backend/.env.example`). The email includes the order and beat/license details and attaches the stored master audio for each purchased beat. If the combined attachments exceed `PURCHASE_EMAIL_MAX_ATTACHMENT_BYTES`, remaining files are provided as signed R2 download links that expire after `PURCHASE_EMAIL_LINK_EXPIRY_SECONDS`. R2 credentials and `R2_BUCKET` must also be configured for file delivery.
+
 ### Packages Installed
 - `@stripe/react-stripe-js` - React Stripe integration
 - `stripe` - Stripe server SDK (backend)

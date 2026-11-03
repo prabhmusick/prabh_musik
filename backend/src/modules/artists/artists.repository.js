@@ -120,6 +120,14 @@ const findByPublicId = async (publicId) =>
     .bind(publicId)
     .first();
 
+const findById = async (id) =>
+  db
+    .prepare(
+      "SELECT id, public_id, name, phone, email, image_key FROM artists WHERE id = ?",
+    )
+    .bind(id)
+    .first();
+
 const create = async ({ name, phone, email, image_key }) => {
   const publicId = `art_${ulid()}`;
   await db
@@ -143,5 +151,6 @@ module.exports = {
   updateWorkedWithUrl,
   findWorkedWithById,
   findByPublicId,
+  findById,
   create,
 };

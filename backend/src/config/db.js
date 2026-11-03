@@ -608,8 +608,23 @@ class MemoryDB {
           }
         }
 
+        const baseAliasCandidate = fromTableMatch[2];
+        const baseAlias =
+          baseAliasCandidate &&
+          !["WHERE", "JOIN", "LEFT", "INNER", "ORDER", "GROUP", "LIMIT", "OFFSET"].includes(
+            baseAliasCandidate.toUpperCase(),
+          )
+            ? baseAliasCandidate
+            : tableName;
         let rows = this.tables[tableName]
-          ? [...this.tables[tableName].rows]
+          ? this.tables[tableName].rows.map((row) => {
+              const copy = { ...row };
+              Object.defineProperty(copy, "__sources", {
+                value: { [baseAlias]: row },
+                enumerable: false,
+              });
+              return copy;
+            })
           : [];
 
         const joinRegex =
@@ -617,6 +632,11 @@ class MemoryDB {
         let joinMatch;
         while ((joinMatch = joinRegex.exec(fromAndAfter)) !== null) {
           const joinTable = joinMatch[1].replace(/['"`]/g, "").trim();
+          const joinAliasCandidate = joinMatch[2];
+          const joinAlias =
+            joinAliasCandidate && joinAliasCandidate.toUpperCase() !== "ON"
+              ? joinAliasCandidate
+              : joinTable;
           const leftCol = joinMatch[3].replace(/['"`]/g, "").split(".").pop();
           const rightCol = joinMatch[4].replace(/['"`]/g, "").split(".").pop();
 
@@ -629,6 +649,13 @@ class MemoryDB {
                   String(j[rightCol] ?? j[leftCol]) ===
                   String(baseRow[leftCol] ?? baseRow[rightCol]),
               );
+              Object.defineProperty(joinedRow, "__sources", {
+                value: {
+                  ...baseRow.__sources,
+                  [joinAlias]: matchRow,
+                },
+                enumerable: false,
+              });
               if (matchRow) {
                 Object.keys(matchRow).forEach((key) => {
                   if (joinedRow[key] === undefined) {
@@ -721,8 +748,20 @@ class MemoryDB {
               if (expr === "*" || expr.endsWith(".*")) {
                 Object.assign(res, row);
               } else {
-                const colName = expr.replace(/['"`]/g, "").split(".").pop();
-                res[alias] = row[colName] !== undefined ? row[colName] : null;
+                const cleanExpr = expr.replace(/['"`]/g, "");
+                const qualifiedColumn = cleanExpr.match(
+                  /^([^\s.]+)\.([^\s.]+)$/,
+                );
+                const colName = cleanExpr.split(".").pop();
+                const sourceRow = qualifiedColumn
+                  ? row.__sources?.[qualifiedColumn[1]]
+                  : undefined;
+                res[alias] =
+                  sourceRow && Object.hasOwn(sourceRow, colName)
+                    ? sourceRow[colName]
+                    : row[colName] !== undefined
+                      ? row[colName]
+                      : null;
               }
             }
           });

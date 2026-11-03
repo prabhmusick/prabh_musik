@@ -88,14 +88,44 @@ export interface Activity {
 export interface Ownership {
   id: string;
   beatId: string;
+  beatPublicId?: string;
   beatTitle?: string;
+  beatGenre?: string;
+  beatMood?: string;
+  beatBpm?: number;
+  beatKey?: string;
+  beatDescription?: string;
+  beatDuration?: number;
   customerId: string;
   customerName?: string;
   customerEmail?: string;
-  licenseType: "exclusive" | "non-exclusive" | "basic";
+  customerMobile?: string;
+  customerAddress?: string;
+  artistName?: string;
+  artistPublicId?: string;
+  artistEmail?: string;
+  artistPhone?: string;
+  licenseType: "exclusive" | "non-exclusive" | "basic" | "premium";
   purchasedAt: string;
   pricePaid: number;
+  currencyCode?: string;
   transactionId: string;
+  paymentTransactionId?: string;
+  orderId?: string;
+  orderPublicId?: string;
+  orderTotalAmount?: number;
+  paymentMethod?: string;
+  paymentReference?: string;
+  paymentGateway?: string;
+  orderStatus?: string;
+  fulfillmentStatus?: string;
+  status?: string;
+  downloadCount?: number;
+  maxDownloads?: number | null;
+  expiresAt?: string | null;
+  revokedAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface DashboardMetrics {

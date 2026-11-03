@@ -55,13 +55,17 @@ export function OwnershipTable({ ownerships }: OwnershipTableProps) {
       id: "beat",
       header: "Beat Title",
       cell: ({ row }) => {
-        const beat = beats.find((b) => b.id === row.original.beatId);
+        const beat =
+          beats.find((b) => b.id === row.original.beatPublicId) ||
+          beats.find((b) => b.id === row.original.beatId);
+        const beatId = row.original.beatPublicId || row.original.beatId;
         return (
           <div className="flex items-center gap-2">
             <div className="h-7 w-7 rounded bg-neutral-900 overflow-hidden flex items-center justify-center shrink-0 border border-card-border">
               {beat?.assets.coverImage ? (
                 <img
                   src={beat.assets.coverImage}
+                  alt={`${beat.title} cover`}
                   className="h-full w-full object-cover"
                 />
               ) : (
@@ -71,7 +75,7 @@ export function OwnershipTable({ ownerships }: OwnershipTableProps) {
               )}
             </div>
             <Link
-              href={`/admin/beats/${row.original.beatId}`}
+              href={`/admin/beats/${beatId}`}
               className="font-semibold text-neutral-100 hover:underline"
             >
               {row.original.beatTitle || beat?.title || "Unknown Beat"}
@@ -84,13 +88,15 @@ export function OwnershipTable({ ownerships }: OwnershipTableProps) {
       id: "artist",
       header: "Artist",
       cell: ({ row }) => {
-        const beat = beats.find((b) => b.id === row.original.beatId);
+        const beat =
+          beats.find((b) => b.id === row.original.beatPublicId) ||
+          beats.find((b) => b.id === row.original.beatId);
         const artist = beat
           ? artists.find((a) => a.id === beat.artistId)
           : null;
         return (
           <span className="text-sm text-neutral-300">
-            {artist ? artist.stageName : "Unknown Artist"}
+            {row.original.artistName || artist?.stageName || "Unknown Artist"}
           </span>
         );
       },
@@ -129,7 +135,10 @@ export function OwnershipTable({ ownerships }: OwnershipTableProps) {
       header: "Price Paid",
       cell: ({ row }) => (
         <span className="font-mono font-semibold text-neutral-200">
-          ${row.original.pricePaid.toFixed(2)}
+          {new Intl.NumberFormat(undefined, {
+            style: "currency",
+            currency: row.original.currencyCode || "INR",
+          }).format(row.original.pricePaid)}
         </span>
       ),
     },
