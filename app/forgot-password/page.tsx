@@ -139,6 +139,10 @@ export default function ForgotPasswordPage() {
           font-family: 'Irish Grover', cursive;
         }
 
+        .signup-page-container .support-contact-box {
+          padding: 16px;
+        }
+
         @keyframes bounce-bar {
           0%, 100% { transform: scaleY(0.3); }
           50% { transform: scaleY(1); }
@@ -156,45 +160,6 @@ export default function ForgotPasswordPage() {
           className="flex items-center justify-between px-6 sm:px-10 lg:px-14 max-w-7xl mx-auto w-full h-full"
           aria-label="Navigation"
         >
-          {/* Logo */}
-          <Link
-            href="/"
-            className="flex items-center gap-2 group"
-            aria-label="Prabh Musik Home"
-          >
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#f59e0b] shadow-[0_0_15px_rgba(245,158,11,0.3)] group-hover:scale-105 transition-transform duration-300">
-              <svg
-                className="h-4 w-4 text-black"
-                fill="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
-                  stroke="black"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  fill="none"
-                />
-              </svg>
-            </span>
-            <span className="text-lg text-white font-irish font-normal tracking-wide">
-              Prabh{" "}
-              <span className="text-[#f59e0b] group-hover:text-[#ffb333] transition-colors duration-300">
-                Musik
-              </span>
-            </span>
-          </Link>
-
-          {/* Back to Login link */}
-          <p className="text-sm text-gray-400">
-            Remember your password?{" "}
-            <Link
-              href="/login"
-              className="font-bold text-white hover:text-[#f59e0b] hover:underline transition-colors duration-200"
-            >
-              Log in
-            </Link>
-          </p>
         </nav>
       </header>
 
@@ -300,7 +265,7 @@ export default function ForgotPasswordPage() {
             </div>
 
             {/* Informational Card */}
-            <div className="signup-card flex flex-col gap-6">
+            <div className="signup-card flex flex-col gap-5">
               {/* Recovery Status & Instructions */}
               <div className="flex flex-col gap-3">
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#f59e0b]/10 border border-[#f59e0b]/30 text-[#f59e0b] shadow-[0_0_20px_rgba(245,158,11,0.15)]">
@@ -319,7 +284,7 @@ export default function ForgotPasswordPage() {
                   </svg>
                 </div>
 
-                <p className="text-sm leading-relaxed text-gray-300">
+                <p className="text-sm leading-6 text-gray-300">
                   Self-service password recovery is currently unavailable. Please
                   contact Prabh Musik support and include the email address
                   associated with your account. Our team will help you regain
@@ -328,28 +293,48 @@ export default function ForgotPasswordPage() {
               </div>
 
               {/* Support Contact Box */}
-              <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-4 flex flex-col gap-1.5">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400">
-                  Official Support Email
-                </span>
-                <a
-                  href="mailto:support@prabhmusik.com?subject=Password%20Reset%20Request"
-                  className="text-base font-semibold text-[#f59e0b] hover:text-[#ffb333] transition-colors break-all"
-                  aria-label="Send email to support@prabhmusik.com"
-                >
-                  support@prabhmusik.com
-                </a>
-                <p className="text-xs text-gray-400 mt-1">
-                  Please send your message from or mention the email address you
-                  used to register your account.
-                </p>
+              <div className="support-contact-box rounded-xl border border-[#f59e0b]/20 bg-gradient-to-br from-[#f59e0b]/[0.07] to-white/[0.02]">
+                <div className="flex items-center gap-4">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#f59e0b]/20 bg-[#f59e0b]/10 text-[#f59e0b]">
+                    <svg
+                      className="h-4 w-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                      aria-hidden="true"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                      />
+                    </svg>
+                  </span>
+                  <div className="min-w-0">
+                    <span className="block text-[11px] font-bold uppercase tracking-[0.12em] text-gray-400">
+                      Official support email
+                    </span>
+                    <a
+                      href="mailto:support@prabhmusik.com?subject=Password%20Reset%20Request"
+                      className="mt-1 block break-all text-base font-semibold text-[#f59e0b] transition-colors hover:text-[#ffb333] focus-visible:rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f59e0b]"
+                      aria-label="Send email to support@prabhmusik.com"
+                    >
+                      support@prabhmusik.com
+                    </a>
+                    <p className="mt-2 text-xs leading-5 text-gray-400">
+                      Email us from your registered address, or include it in
+                      your message so we can verify your account.
+                    </p>
+                  </div>
+                </div>
               </div>
 
               {/* Actions */}
-              <div className="flex flex-col gap-3 pt-2">
+              <div className="flex flex-col gap-3 pt-1">
                 <a
                   href="mailto:support@prabhmusik.com?subject=Password%20Reset%20Request"
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#f59e0b] to-[#d97706] px-5 py-3.5 text-sm font-bold text-black shadow-[0_4px_20px_rgba(245,158,11,0.3)] hover:brightness-110 active:scale-[0.99] transition-all duration-200 cursor-pointer select-none"
+                  className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#f59e0b] to-[#d97706] px-5 py-3 text-sm font-bold text-black shadow-[0_6px_24px_rgba(245,158,11,0.22)] transition-all duration-200 hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#fbbf24] active:scale-[0.99] cursor-pointer select-none"
                   id="contact-support-btn"
                 >
                   <svg
@@ -370,7 +355,7 @@ export default function ForgotPasswordPage() {
 
                 <Link
                   href="/login"
-                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/[0.1] bg-white/[0.03] px-5 py-3 text-sm font-semibold text-white/90 hover:bg-white/[0.08] hover:text-white transition-all duration-200"
+                  className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/[0.1] bg-white/[0.025] px-5 py-3 text-sm font-semibold text-white/85 transition-all duration-200 hover:border-white/[0.18] hover:bg-white/[0.07] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#fbbf24]"
                   id="back-to-login-btn"
                 >
                   <svg
