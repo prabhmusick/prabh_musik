@@ -5,6 +5,7 @@ import { useAudioPlayer } from "@/app/contexts/audio-player-context";
 import { useAppShell } from "@/app/contexts/app-shell-context";
 import { useRouter, usePathname } from "next/navigation";
 import { ListMusic, X } from "lucide-react";
+import { ShareModal } from "@/components/ShareModal";
 
 export function GlobalAudioPlayer() {
   const pathname = usePathname();
@@ -31,6 +32,7 @@ export function GlobalAudioPlayer() {
   } = useAudioPlayer();
   const { isAuthenticated, addToCart } = useAppShell();
   const [shareStatus, setShareStatus] = useState("");
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isQueueOpen, setIsQueueOpen] = useState(false);
   const prevVolumeRef = useRef(1);
 
@@ -152,6 +154,9 @@ export function GlobalAudioPlayer() {
         getCurrentBeat: () => currentBeat,
         getIsPlaying: () => isPlaying,
         getIsLooping: () => isLooping,
+        openShareModal: () => setIsShareModalOpen(true),
+        closeShareModal: () => setIsShareModalOpen(false),
+        getIsShareModalOpen: () => isShareModalOpen,
       };
     }
   }, [
@@ -168,6 +173,7 @@ export function GlobalAudioPlayer() {
     currentBeat,
     isPlaying,
     isLooping,
+    isShareModalOpen,
   ]);
 
   useEffect(() => {
@@ -192,30 +198,8 @@ export function GlobalAudioPlayer() {
   const canPlayPrevious = queueIndex > 0;
   const canPlayNext = queueIndex >= 0 && queueIndex < queue.length - 1;
 
-  const handleShare = async () => {
-    const url = new URL("/beat", window.location.origin);
-    url.searchParams.set("search", currentBeat.title);
-    const shareData = {
-      title: currentBeat.title,
-      text: `Listen to ${currentBeat.title} by ${currentBeat.producer} on Prabh Musik`,
-      url: url.toString(),
-    };
-
-    try {
-      if (navigator.share) {
-        await navigator.share(shareData);
-        setShareStatus("Shared");
-      } else if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(shareData.url);
-        setShareStatus("Link copied");
-      } else {
-        setShareStatus("Not supported");
-      }
-    } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") return;
-      console.error("Failed to share beat link", error);
-      setShareStatus("Failed to share");
-    }
+  const handleShare = () => {
+    setIsShareModalOpen(true);
   };
 
   const handlePurchase = () => {
@@ -1655,6 +1639,13 @@ export function GlobalAudioPlayer() {
           )}
         </section>
       )}
+
+      {/* Prabh Musik Beat Share Modal */}
+      <ShareModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        beat={currentBeat}
+      />
     </>
   );
 }

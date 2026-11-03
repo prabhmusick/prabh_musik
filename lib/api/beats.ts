@@ -128,6 +128,81 @@ export async function fetchBeatById(id: number): Promise<Beat> {
 }
 
 /**
+ * Fetch a beat by public ID, slug, or numeric ID with multiple fallback strategies.
+ * Resolves against backend /api/beats/:publicId, /api/beats/slug/:slug, or catalog lookup.
+ */
+export async function fetchBeatByIdOrSlug(
+  idOrSlug: string | number,
+): Promise<any | null> {
+  const query = String(idOrSlug || "").trim();
+  if (!query) return null;
+
+  // 1. Try /api/beats/:publicId
+  try {
+    const res = await fetch(`${API_BASE_URL}/beats/${encodeURIComponent(query)}`, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+      next: { revalidate: 60 },
+    });
+    if (res.ok) {
+      const json: any = await res.json();
+      const beatData = json?.data ?? json?.item ?? json;
+      if (
+        beatData &&
+        (beatData.title || beatData.public_id || beatData.id || beatData.beat_name)
+      ) {
+        return beatData;
+      }
+    }
+  } catch (err) {
+    // Continue to next resolution strategy
+  }
+
+  // 2. Try /api/beats/slug/:slug
+  try {
+    const res = await fetch(
+      `${API_BASE_URL}/beats/slug/${encodeURIComponent(query)}`,
+      {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+        next: { revalidate: 60 },
+      },
+    );
+    if (res.ok) {
+      const json: any = await res.json();
+      const beatData = json?.data ?? json?.item ?? json;
+      if (
+        beatData &&
+        (beatData.title || beatData.public_id || beatData.id || beatData.beat_name)
+      ) {
+        return beatData;
+      }
+    }
+  } catch (err) {
+    // Continue to next resolution strategy
+  }
+
+  // 3. Fallback: fetch all beats and match by public_id, slug, id, or title
+  try {
+    const beats = await fetchBeats();
+    const normalizedQuery = query.toLowerCase();
+    const match = beats.find((b: any) => {
+      return (
+        String(b.public_id || "").toLowerCase() === normalizedQuery ||
+        String(b.slug || "").toLowerCase() === normalizedQuery ||
+        String(b.id || "").toLowerCase() === normalizedQuery ||
+        String(b.title || b.beat_name || "").toLowerCase() === normalizedQuery
+      );
+    });
+    if (match) return match;
+  } catch (err) {
+    console.error("Error finding beat in catalog fallback:", err);
+  }
+
+  return null;
+}
+
+/**
  * Fetch beats with filters
  * @param filters - Filter parameters (genre, mood, etc.)
  * @returns Promise<Beat[]> - Filtered array of beats
