@@ -12,10 +12,13 @@ import api, { setAccessToken, clearAccessToken } from "../../lib/api";
 import { mapUserDto } from "../../lib/mappers/user.mapper";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
 
+import { mapBeatDto } from "../../lib/mappers/beat.mapper";
+
 export interface BeatItem {
   id: number | string;
   title: string;
   producer: string;
+  artist?: string;
   price: number | null;
   cover: string;
   genre?: string;
@@ -84,6 +87,23 @@ function persistValue<T>(key: string, value: T | null) {
   window.localStorage.setItem(key, JSON.stringify(value));
 }
 
+function migrateStoredCart(items: any[]): BeatItem[] {
+  if (!Array.isArray(items)) return [];
+  const valid: BeatItem[] = [];
+  for (const item of items) {
+    if (!item || typeof item !== "object") continue;
+    try {
+      const normalized = mapBeatDto(item);
+      if (normalized.id !== undefined && normalized.id !== null) {
+        valid.push(normalized);
+      }
+    } catch {
+      // Silently discard completely corrupted non-beat items
+    }
+  }
+  return valid;
+}
+
 export function AppShellProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
   const { data: currentUser } = useCurrentUser();
@@ -97,19 +117,27 @@ export function AppShellProvider({ children }: { children: React.ReactNode }) {
   const [hydrated, setHydrated] = useState(false);
 
   const syncCartAfterLogin = async (localCart: BeatItem[]) => {
-    const serverResponse = await api.get("/cart");
-    const serverCart = serverResponse.data.data || [];
-    const merged = Array.from(
-      new Map(
-        [...serverCart, ...localCart].map((item) => [String(item.id), item]),
-      ).values(),
-    );
-    const response = await api.put("/cart", { items: merged });
-    setCart(response.data.data || []);
+    try {
+      const serverResponse = await api.get("/cart");
+      const serverCart = serverResponse.data.data || [];
+      const combined = [...serverCart, ...localCart];
+      const migrated = migrateStoredCart(combined);
+      const merged = Array.from(
+        new Map(
+          migrated.map((item) => [String(item.id), item]),
+        ).values(),
+      );
+      const response = await api.put("/cart", { items: merged });
+      const finalCart = response.data.data || [];
+      setCart(migrateStoredCart(finalCart));
+    } catch (err) {
+      console.error("Failed to sync cart after login", err);
+    }
   };
 
   useEffect(() => {
-    setCart(getStoredValue<BeatItem[]>(CART_STORAGE_KEY, []));
+    const rawCart = getStoredValue<any[]>(CART_STORAGE_KEY, []);
+    setCart(migrateStoredCart(rawCart));
     setWishlist(
       getStoredValue<BeatItem[]>(WISHLIST_STORAGE_KEY, defaultWishlist),
     );
@@ -224,11 +252,13 @@ export function AppShellProvider({ children }: { children: React.ReactNode }) {
   };
 
   const addToCart = (beat: BeatItem) => {
+    if (!beat) return;
+    const canonicalBeat = mapBeatDto(beat);
     setCart((current) => {
-      if (current.some((item) => item.id === beat.id)) {
+      if (current.some((item) => String(item.id) === String(canonicalBeat.id))) {
         return current;
       }
-      const next = [...current, beat];
+      const next = [...current, canonicalBeat];
       if (user) {
         api.put("/cart", { items: next }).catch((error) => {
           console.error("Failed to persist cart", error);
@@ -241,7 +271,7 @@ export function AppShellProvider({ children }: { children: React.ReactNode }) {
 
   const removeFromCart = (id: number | string) => {
     setCart((current) => {
-      const next = current.filter((item) => item.id !== id);
+      const next = current.filter((item) => String(item.id) !== String(id));
       if (user) {
         api.put("/cart", { items: next }).catch((error) => {
           console.error("Failed to persist cart", error);
@@ -268,11 +298,13 @@ export function AppShellProvider({ children }: { children: React.ReactNode }) {
   };
 
   const toggleWishlist = (beat: BeatItem) => {
+    if (!beat) return;
+    const canonicalBeat = mapBeatDto(beat);
     setWishlist((current) => {
-      const exists = current.some((item) => item.id === beat.id);
+      const exists = current.some((item) => String(item.id) === String(canonicalBeat.id));
       return exists
-        ? current.filter((item) => item.id !== beat.id)
-        : [...current, beat];
+        ? current.filter((item) => String(item.id) !== String(canonicalBeat.id))
+        : [...current, canonicalBeat];
     });
   };
 

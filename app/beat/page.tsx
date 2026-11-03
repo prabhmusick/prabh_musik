@@ -4,12 +4,13 @@ import {
   fetchBeatsWithFilters,
   fetchBeats as fetchBeatsAPI,
 } from "@/lib/api/beats";
-import { useAppShell } from "../contexts/app-shell-context";
+import { useAppShell, BeatItem } from "../contexts/app-shell-context";
 import { useAudioPlayer } from "../contexts/audio-player-context";
 import { useRouter, useSearchParams } from "next/navigation";
 import { BEAT_GENRES } from "@/constants/beat-genres";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { CANONICAL_DOMAIN, createBreadcrumbSchema } from "@/lib/seo/schemas";
+import { mapBeatDto } from "@/lib/mappers/beat.mapper";
 
 const beatCatalogCollectionPageSchema = {
   "@type": "CollectionPage",
@@ -34,39 +35,12 @@ const beatCatalogBreadcrumbSchema = createBreadcrumbSchema(
   ],
 );
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Canonical Types ──────────────────────────────────────────────────────────
 
-interface Beat {
-  id: number;
-  title: string;
-  producer: string;
-  price: number | null;
-  cover: string;
-  genre: string;
-  bpm: number;
-  previewUrl: string;
-  plays: number;
-}
-
-// ─── API Integration ──────────────────────────────────────────────────────────
-
-interface ApiResponse {
-  id: number;
-  beat_name: string;
-  artist_name: string;
-  price: number;
-  cover_image_url: string;
-  banner_image_url: string;
-  genre: string;
-  bpm: number;
-  audio_url: string;
-  duration: number;
-}
-
-import { mapBeatDto } from "@/lib/mappers/beat.mapper";
+export type Beat = BeatItem;
 
 function formatApiBeats(apiBeats: any[]): Beat[] {
-  return (apiBeats || []).map((beat: any) => mapBeatDto(beat) as Beat);
+  return (apiBeats || []).map((beat: any) => mapBeatDto(beat));
 }
 
 async function fetchBeats(
@@ -168,7 +142,15 @@ function PriceButton({
   onPurchase: (selectedBeat: Beat) => void;
 }) {
   const [hov, setHov] = useState(false);
-  const free = price === null;
+  const free = price === null || price === 0;
+  const formattedPrice =
+    typeof price === "number" && price > 0
+      ? `₹${price.toLocaleString("en-IN", {
+          minimumFractionDigits: price % 1 !== 0 ? 2 : 0,
+          maximumFractionDigits: 2,
+        })}`
+      : "Free";
+
   return (
     <button
       onMouseEnter={() => setHov(true)}
@@ -218,7 +200,7 @@ function PriceButton({
         <circle cx="20" cy="21" r="1" />
         <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
       </svg>
-      {free ? "Free" : `₹${price!.toLocaleString("en-IN")}`}
+      {formattedPrice}
     </button>
   );
 }
@@ -1292,13 +1274,14 @@ function BeatMarketplaceContent() {
     const matchesGenre = !filters.genre || b.genre === filters.genre;
     let matchesBpm = true;
     if (filters.bpmRange) {
+      const bpm = typeof b.bpm === "number" ? b.bpm : 0;
       if (filters.bpmRange.includes("60-90"))
-        matchesBpm = b.bpm >= 60 && b.bpm <= 90;
+        matchesBpm = bpm >= 60 && bpm <= 90;
       else if (filters.bpmRange.includes("90-130"))
-        matchesBpm = b.bpm > 90 && b.bpm <= 130;
+        matchesBpm = bpm > 90 && bpm <= 130;
       else if (filters.bpmRange.includes("130-160"))
-        matchesBpm = b.bpm > 130 && b.bpm <= 160;
-      else if (filters.bpmRange.includes("160+")) matchesBpm = b.bpm > 160;
+        matchesBpm = bpm > 130 && bpm <= 160;
+      else if (filters.bpmRange.includes("160+")) matchesBpm = bpm > 160;
     }
     let matchesPrice = true;
     if (filters.priceRange) {
@@ -1316,13 +1299,9 @@ function BeatMarketplaceContent() {
 
   const handlePurchase = useCallback(
     (beat: Beat) => {
-      if (!isAuthenticated) {
-        router.push("/login");
-        return;
-      }
       addToCart(beat);
     },
-    [addToCart, isAuthenticated, router],
+    [addToCart],
   );
 
   const handlePlayBeat = useCallback(
@@ -1696,7 +1675,7 @@ function BeatMarketplaceContent() {
                             marginTop: 2,
                           }}
                         >
-                          {beat.producer} 👑 · {beat.genre} · {beat.bpm} BPM
+                          {beat.producer || beat.artist || "Prabh Musik"} 👑 · {beat.genre}{beat.bpm ? ` · ${beat.bpm} BPM` : ""}
                         </p>
                       </div>
                       <div

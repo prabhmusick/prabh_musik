@@ -292,7 +292,7 @@ function CheckoutForm({ cart, user, onCheckoutComplete }: any) {
                       <img src={item.cover} alt={item.title} />
                       <div style={{ flex: 1 }}>
                         <div className="title">{item.title}</div>
-                        <div className="meta">{item.producer || "Unknown"}</div>
+                        <div className="meta">{item.producer || item.artist || "Prabh Musik"}</div>
                       </div>
                       <div
                         style={{
@@ -304,8 +304,11 @@ function CheckoutForm({ cart, user, onCheckoutComplete }: any) {
                         }}
                       >
                         {typeof item.price === "number" && item.price > 0
-                          ? `₹${item.price.toLocaleString("en-IN")}`
-                          : "Unavailable"}
+                          ? `₹${item.price.toLocaleString("en-IN", {
+                              minimumFractionDigits: item.price % 1 !== 0 ? 2 : 0,
+                              maximumFractionDigits: 2,
+                            })}`
+                          : "Price unavailable"}
                       </div>
                     </div>
                   ))}
@@ -318,7 +321,12 @@ function CheckoutForm({ cart, user, onCheckoutComplete }: any) {
                     }}
                   >
                     <span>Subtotal</span>
-                    <span>₹{total.toLocaleString("en-IN")}</span>
+                    <span>
+                      ₹{total.toLocaleString("en-IN", {
+                        minimumFractionDigits: total % 1 !== 0 ? 2 : 0,
+                        maximumFractionDigits: 2,
+                      })}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -336,7 +344,10 @@ function CheckoutForm({ cart, user, onCheckoutComplete }: any) {
                   ? "Processing..."
                   : hasInvalidItem
                     ? "Invalid Pricing in Cart"
-                    : `Pay ₹${total.toLocaleString("en-IN")}`}
+                    : `Pay ₹${total.toLocaleString("en-IN", {
+                        minimumFractionDigits: total % 1 !== 0 ? 2 : 0,
+                        maximumFractionDigits: 2,
+                      })}`}
               </button>
             </form>
           </div>
@@ -394,7 +405,7 @@ function CheckoutForm({ cart, user, onCheckoutComplete }: any) {
                       <div
                         style={{ color: "rgba(255,255,255,0.5)", fontSize: 12 }}
                       >
-                        {item.producer}
+                        {item.producer || item.artist || "Prabh Musik"}
                       </div>
                     </div>
                     <div
@@ -408,8 +419,11 @@ function CheckoutForm({ cart, user, onCheckoutComplete }: any) {
                       }}
                     >
                       {typeof item.price === "number" && item.price > 0
-                        ? `₹${item.price.toLocaleString("en-IN")}`
-                        : "Unavailable"}
+                        ? `₹${item.price.toLocaleString("en-IN", {
+                            minimumFractionDigits: item.price % 1 !== 0 ? 2 : 0,
+                            maximumFractionDigits: 2,
+                          })}`
+                        : "Price unavailable"}
                     </div>
                   </div>
                 ))}
@@ -433,7 +447,12 @@ function CheckoutForm({ cart, user, onCheckoutComplete }: any) {
                   }}
                 >
                   <span>Subtotal</span>
-                  <span>₹{total.toLocaleString("en-IN")}</span>
+                  <span>
+                    ₹{total.toLocaleString("en-IN", {
+                      minimumFractionDigits: total % 1 !== 0 ? 2 : 0,
+                      maximumFractionDigits: 2,
+                    })}
+                  </span>
                 </div>
                 <div
                   style={{
@@ -458,7 +477,12 @@ function CheckoutForm({ cart, user, onCheckoutComplete }: any) {
                   }}
                 >
                   <span>Total</span>
-                  <span>₹{total.toLocaleString("en-IN")}</span>
+                  <span>
+                    ₹{total.toLocaleString("en-IN", {
+                      minimumFractionDigits: total % 1 !== 0 ? 2 : 0,
+                      maximumFractionDigits: 2,
+                    })}
+                  </span>
                 </div>
               </div>
 

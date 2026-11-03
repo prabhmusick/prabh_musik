@@ -1337,16 +1337,18 @@ function init() {
           .prepare("SELECT COUNT(*) AS cnt FROM beats")
           .first();
         const cnt = beatCountRow ? Number(beatCountRow.cnt || beatCountRow.count || 0) : 0;
-        if (cnt === 0) {
+        if (cnt < 5) {
           const seedStatements = [
-            `INSERT OR IGNORE INTO beats (id, public_id, title, slug, genre, audio_key, status, price_amount, duration, created_by, related_artist_name, plays) VALUES 
-             (1, 'bt_01J4P8Z6VXZ9Y8VXZ9Y8VXZ9Y1', 'The Mountain Storytelling', 'the-mountain-storytelling', 'Storytelling', '1780414576089-the_mountain-storytelling-audio-136105.mp3', 'published', 14900, 180, 1, 'Prabh Musik', 1200)`,
-            `INSERT OR IGNORE INTO beats (id, public_id, title, slug, genre, audio_key, status, price_amount, duration, created_by, related_artist_name, plays) VALUES 
-             (2, 'bt_01J4P8Z6VXZ9Y8VXZ9Y8VXZ9Y2', 'Intensity', 'intensity-by-audio-club', 'Cinematic', '1780413092408-intensity-by-audio-club-intensity-by-audio-club-343637.mp3', 'published', 19900, 210, 1, 'Prabh Musik', 950)`,
-            `INSERT OR IGNORE INTO beats (id, public_id, title, slug, genre, audio_key, status, price_amount, duration, created_by, related_artist_name, plays) VALUES 
-             (3, 'bt_01J4P8Z6VXZ9Y8VXZ9Y8VXZ9Y3', 'Funk & Breakbeat', 'funk-breakbeat', 'Funk', '1781353812166-alexguz-funk-amp-breakbeat-541097.mp3', 'published', 9900, 150, 1, 'Prabh Musik', 820)`,
-            `INSERT OR IGNORE INTO beats (id, public_id, title, slug, genre, audio_key, status, price_amount, duration, created_by, related_artist_name, plays) VALUES 
-             (4, 'bt_01J4P8Z6VXZ9Y8VXZ9Y8VXZ9Y4', 'Water Afro Pop', 'water-afro-pop', 'Afrobeat', '1781623228264-kontraa-water-afro-pop-music-445661.mp3', 'published', 14900, 200, 1, 'Prabh Musik', 1500)`
+            `INSERT OR IGNORE INTO beats (id, public_id, title, slug, genre, audio_key, status, price_amount, duration, created_by, related_artist_name, plays, bpm) VALUES 
+             (1, 'bt_01J4P8Z6VXZ9Y8VXZ9Y8VXZ9Y1', 'The Mountain Storytelling', 'the-mountain-storytelling', 'Storytelling', '1780414576089-the_mountain-storytelling-audio-136105.mp3', 'published', 14900, 180, 1, 'Prabh Musik', 1200, 120)`,
+            `INSERT OR IGNORE INTO beats (id, public_id, title, slug, genre, audio_key, status, price_amount, duration, created_by, related_artist_name, plays, bpm) VALUES 
+             (2, 'bt_01J4P8Z6VXZ9Y8VXZ9Y8VXZ9Y2', 'Intensity', 'intensity-by-audio-club', 'Cinematic', '1780413092408-intensity-by-audio-club-intensity-by-audio-club-343637.mp3', 'published', 19900, 210, 1, 'Prabh Musik', 950, 110)`,
+            `INSERT OR IGNORE INTO beats (id, public_id, title, slug, genre, audio_key, status, price_amount, duration, created_by, related_artist_name, plays, bpm) VALUES 
+             (3, 'bt_01J4P8Z6VXZ9Y8VXZ9Y8VXZ9Y3', 'Funk & Breakbeat', 'funk-breakbeat', 'Funk', '1781353812166-alexguz-funk-amp-breakbeat-541097.mp3', 'published', 9900, 150, 1, 'Prabh Musik', 820, 105)`,
+            `INSERT OR IGNORE INTO beats (id, public_id, title, slug, genre, audio_key, status, price_amount, duration, created_by, related_artist_name, plays, bpm) VALUES 
+             (4, 'bt_01J4P8Z6VXZ9Y8VXZ9Y8VXZ9Y4', 'Water Afro Pop', 'water-afro-pop', 'Afrobeat', '1781623228264-kontraa-water-afro-pop-music-445661.mp3', 'published', 14900, 200, 1, 'Prabh Musik', 1500, 115)`,
+            `INSERT OR IGNORE INTO beats (id, public_id, title, slug, genre, audio_key, status, price_amount, duration, created_by, related_artist_name, plays, bpm) VALUES 
+             (5, 'bt_01J4P8Z6VXZ9Y8VXZ9Y8VXZ9Y5', 'Urban Trap Anthem', 'urban-trap-anthem', 'Trap', '1780414576089-the_mountain-storytelling-audio-136105.mp3', 'published', 24999, 195, 1, 'Shiv', 2400, 140)`
           ];
           for (const sql of seedStatements) {
             await localD1Instance.prepare(sql).run().catch(() => {});

@@ -176,7 +176,7 @@ export function CartSidebar() {
                       marginBottom: 6,
                     }}
                   >
-                    by {item.producer}
+                    by {item.producer || item.artist || "Prabh Musik"}
                   </div>
                   {item.genre && (
                     <div
@@ -215,7 +215,10 @@ export function CartSidebar() {
                     }}
                   >
                     {typeof item.price === "number" && item.price > 0
-                      ? `₹${item.price.toLocaleString("en-IN")}`
+                      ? `₹${item.price.toLocaleString("en-IN", {
+                          minimumFractionDigits: item.price % 1 !== 0 ? 2 : 0,
+                          maximumFractionDigits: 2,
+                        })}`
                       : "Price unavailable"}
                   </div>
                   <button
@@ -279,7 +282,12 @@ export function CartSidebar() {
                 }}
               >
                 <span>Subtotal</span>
-                <span>₹{total.toLocaleString("en-IN")}</span>
+                <span>
+                  ₹{total.toLocaleString("en-IN", {
+                    minimumFractionDigits: total % 1 !== 0 ? 2 : 0,
+                    maximumFractionDigits: 2,
+                  })}
+                </span>
               </div>
               <div
                 style={{
@@ -305,7 +313,12 @@ export function CartSidebar() {
                 }}
               >
                 <span>Total</span>
-                <span style={{ color: "#fbbf24" }}>₹{total.toLocaleString("en-IN")}</span>
+                <span style={{ color: "#fbbf24" }}>
+                  ₹{total.toLocaleString("en-IN", {
+                    minimumFractionDigits: total % 1 !== 0 ? 2 : 0,
+                    maximumFractionDigits: 2,
+                  })}
+                </span>
               </div>
             </div>
 
